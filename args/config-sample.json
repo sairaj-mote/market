@@ -1,0 +1,9 @@
+{
+    "secret": "Secret_For_Session__Enter_A_Strong_String(Text/Password)",
+    "port": "8080",
+
+    "sql_user": "mySQL_user",
+    "sql_pwd": "mySQL_password",
+    "sql_db": "supernode",
+    "sql_host": "localhost"
+}
