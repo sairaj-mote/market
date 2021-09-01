@@ -33,7 +33,7 @@ function Database(user, password, dbname, host = 'localhost') {
     Object.defineProperty(db, "TxQuery", {
         value: (queries) => new Promise((resolve, reject) => {
             db.connect.then(conn => {
-                conn.beginTransaction((err) => {
+                conn.beginTransaction(err => {
                     if (err)
                         conn.rollback(() => {
                             conn.release();
@@ -42,8 +42,17 @@ function Database(user, password, dbname, host = 'localhost') {
                     else {
                         (function queryFn(result) {
                             if (!queries.length) {
-                                conn.release();
-                                resolve(result);
+                                conn.commit(err => {
+                                    if (err)
+                                        conn.rollback(() => {
+                                            conn.release();
+                                            reject(err);
+                                        });
+                                    else {
+                                        conn.release();
+                                        resolve(result);
+                                    }
+                                });
                             } else {
                                 let q_i = queries.shift();
                                 const callback = function(err, res) {
