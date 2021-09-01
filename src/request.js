@@ -22,7 +22,6 @@ const maxSessionTimeout = 60 * oneDay;
 function SignUp(req, res) {
     let data = req.body,
         session = req.session;
-    console.debug(session.random, data);
     if (floCrypto.getFloID(data.pubKey) !== data.floID)
         res.status(INVALID.e_code).send("Invalid Public Key");
     if (!session.random)
@@ -32,8 +31,12 @@ function SignUp(req, res) {
     else {
         DB.query("INSERT INTO Users(floID, pubKey, session_time) VALUES (?, ?, NULL)", [data.floID, data.pubKey])
             .then(_ => res.send("Account Created")).catch(error => {
-                console.error(error);
-                res.status(INTERNAL.e_code).send("Account creation failed! Try Again Later!");
+                if (error.code === "ER_DUP_ENTRY")
+                    res.status(INVALID.e_code).send("Account already exist");
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Account creation failed! Try Again Later!");
+                }
             });
     }
 }
@@ -41,25 +44,32 @@ function SignUp(req, res) {
 function Login(req, res) {
     let data = req.body,
         session = req.session;
-    if (floCrypto.getFloID(data.pubKey) !== data.floID)
-        res.status(INVALID.e_code).send("Invalid Public Key");
     if (!session.random)
         res.status(INVALID.e_code).send("Invalid Session");
-    else if (!floCrypto.verifySign(session.random, data.sign, data.pubKey))
-        res.status(INVALID.e_code).send("Invalid Signature");
-    else {
-        if (data.saveSession) {
-            DB.query("UPDATE Users SET session_id=?, session_time=DEFAULT WHERE floID=?", [req.sessionID, data.floID])
-                .then(_ => session.cookie.maxAge = maxSessionTimeout)
-                .catch(e => console.error(e)).finally(_ => {
-                    session.user_id = data.floID;
-                    res.send("Login Successful");
-                });
-        } else {
-            session.user_id = data.floID;
-            res.send("Login Successful");
+    DB.query("SELECT pubKey FROM Users WHERE floID=?", [data.floID]).then(result => {
+        if (result.length < 1) {
+            res.status(INVALID.e_code).send("floID not registered");
+            return;
         }
-    }
+        let pubKey = result[0].pubKey;
+        if (floCrypto.getFloID(pubKey) !== data.floID) //This should not happen as pubKey should be validated at signup
+            res.status(INVALID.e_code).send("Public Key mis-match");
+        else if (!floCrypto.verifySign(session.random, data.sign, pubKey))
+            res.status(INVALID.e_code).send("Invalid Signature");
+        else {
+            if (data.saveSession) {
+                DB.query("UPDATE Users SET session_id=?, session_time=DEFAULT WHERE floID=?", [req.sessionID, data.floID])
+                    .then(_ => session.cookie.maxAge = maxSessionTimeout)
+                    .catch(e => console.error(e)).finally(_ => {
+                        session.user_id = data.floID;
+                        res.send("Login Successful");
+                    });
+            } else {
+                session.user_id = data.floID;
+                res.send("Login Successful");
+            }
+        }
+    }).catch(error => reject(error))
 }
 
 function Logout(req, res) {
@@ -67,7 +77,7 @@ function Logout(req, res) {
     DB.query("UPDATE Users SET session_id=NULL, session_time=NULL WHERE floID=?", [session.user_id])
         .then(_ => null).catch(e => console.log(e)).finally(_ => {
             session.destroy();
-            res.send('Logout successful')
+            res.send('Logout successful');
         });
 }
 
@@ -133,6 +143,10 @@ function Account(req, res) {
         setLogin("Login required");
     else {
         DB.query("SELECT session_id, session_time FROM Users WHERE floID=?", [req.session.user_id]).then(result => {
+            if (result.length < 1) {
+                res.status(INVALID.e_code).send("floID not registered");
+                return;
+            }
             let {
                 session_id,
                 session_time
@@ -141,7 +155,6 @@ function Account(req, res) {
                 setLogin("Session Expired! Re-login required");
             else {
                 let floID = req.session.user_id;
-                res.cookie('floID', floID);
                 market.getAccountDetails(floID)
                     .then(result => res.send(result));
             }
