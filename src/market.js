@@ -1,10 +1,55 @@
 var net_FLO_price; //container for FLO price (from API or by model)
 var DB; //container for database
+const REFRESH_INTERVAL = 60 * 1000; //1 min
+
+function getRates() {
+    return new Promise((resolve, reject) => {
+        getRates.FLO_USD().then(FLO_rate => {
+            getRates.USD_INR().then(INR_rate => {
+                net_FLO_price = FLO_rate * INR_rate;
+                console.debug('Rates:', FLO_rate, INR_rate, net_FLO_price);
+                resolve(net_FLO_price);
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
+}
+
+getRates.FLO_USD = function() {
+    return new Promise((resolve, reject) => {
+        fetch('https://api.coinlore.net/api/ticker/?id=67').then(response => {
+            if (response.ok) {
+                response.json()
+                    .then(result => resolve(result[0].price_usd))
+                    .catch(error => reject(error));
+            } else
+                reject(response.status);
+        }).catch(error => reject(error));
+    });
+}
+
+getRates.USD_INR = function() {
+    return new Promise((resolve, reject) => {
+        fetch('https://api.exchangerate-api.com/v4/latest/usd').then(response => {
+            if (response.ok) {
+                response.json()
+                    .then(result => resolve(result.rates['INR']))
+                    .catch(error => reject(error));
+            } else
+                reject(response.status);
+        }).catch(error => reject(error));
+    });
+}
 
 function addSellOrder(floID, quantity, min_price) {
     return new Promise((resolve, reject) => {
+        if (!floID || !floCrypto.validateAddr(floID))
+            return reject(INVALID("Invalid FLO ID"));
+        else if (typeof quantity !== "number" || quantity <= 0)
+            return reject(INVALID(`Invalid quantity (${quantity})`));
+        else if (typeof min_price !== "number" || min_price <= 0)
+            return reject(INVALID(`Invalid min_price (${min_price})`));
         DB.query("SELECT SUM(quantity) as total FROM Vault WHERE floID=?", [floID]).then(result => {
-            let total = result.pop()["total"];
+            let total = result.pop()["total"] || 0;
             if (total < quantity)
                 return reject(INVALID("Insufficient FLO"));
             DB.query("SELECT SUM(quantity) as locked FROM SellOrder WHERE floID=?", [floID]).then(result => {
@@ -49,7 +94,15 @@ function addSellOrder(floID, quantity, min_price) {
 
 function addBuyOrder(floID, quantity, max_price) {
     return new Promise((resolve, reject) => {
+        if (!floID || !floCrypto.validateAddr(floID))
+            return reject(INVALID("Invalid FLO ID"));
+        else if (typeof quantity !== "number" || quantity <= 0)
+            return reject(INVALID(`Invalid quantity (${quantity})`));
+        else if (typeof max_price !== "number" || max_price <= 0)
+            return reject(INVALID(`Invalid max_price (${max_price})`));
         DB.query("SELECT rupeeBalance FROM Users WHERE floID=?", [floID]).then(result => {
+            if (result.length < 1)
+                return reject(INVALID("FLO ID not registered"));
             let total = result.pop()["rupeeBalance"];
             if (total < quantity * max_price)
                 return reject(INVALID("Insufficient Rupee balance"));
@@ -75,6 +128,8 @@ function matchBuyAndSell() {
         getBestSeller(buyer_best.quantity, cur_price).then(result => {
             let seller_best = result.sellOrder,
                 txQueries = result.txQueries;
+            console.debug("Sell:", seller_best.id, "Buy:", buyer_best.id);
+
             //process the Txn
             var tx_quantity;
             if (seller_best.quantity > buyer_best.quantity)
@@ -96,7 +151,7 @@ function matchBuyAndSell() {
 
 function getBestBuyer(cur_price, n = 0) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM BuyOrder WHERE maxPrice >= ? ORDER BY time_placed LIMIT=?,1", [cur_price, n]).then(result => {
+        DB.query("SELECT * FROM BuyOrder WHERE maxPrice >= ? ORDER BY time_placed LIMIT ?,1", [cur_price, n]).then(result => {
             let buyOrder = result.shift();
             if (!buyOrder)
                 return reject("No valid buyers available");
@@ -117,7 +172,7 @@ function getBestBuyer(cur_price, n = 0) {
 function getBestSeller(maxQuantity, cur_price, n = 0) {
     return new Promise((resolve, reject) => {
         //TODO: Add order conditions for priority.
-        DB.query("SELECT * FROM SellOrder WHERE minPrice <=? ORDER BY time_placed LIMIT=?,1", [cur_price, n]).then(result => {
+        DB.query("SELECT * FROM SellOrder WHERE minPrice <=? ORDER BY time_placed LIMIT ?,1", [cur_price, n]).then(result => {
             let sellOrder = result.shift();
             if (!sellOrder)
                 return reject("No valid sellers available");
@@ -171,7 +226,7 @@ function processBuyOrder(seller_best, buyer_best, txQueries) {
 }
 
 function processSellOrder(seller_best, buyer_best, txQueries) {
-    let quantity = buyer_best.quantity;
+    let quantity = seller_best.quantity;
     //Sell order is completed, buy order is partially done.
     txQueries.push(["DELETE FROM SellOrder WHERE id=?", [seller_best.id]]);
     txQueries.push(["UPDATE BuyOrder SET quantity=quantity-? WHERE id=?", [quantity, buyer_best.id]]);
@@ -193,7 +248,7 @@ function updateBalance(seller_best, buyer_best, txQueries, cur_price, quantity) 
     //Add coins to Buyer
     txQueries.push(["INSERT INTO Vault(floID, base, quantity) VALUES (?, ?, ?)", [buyer_best.floID, cur_price, quantity]])
     //Record transaction
-    txQueries.push(["INSERT INTO Transactions (seller, buyer, quantity, unitValue) VALUES (?, ?, ?)", [seller_best.floID, buyer_best.floID, quantity, cur_price]]);
+    txQueries.push(["INSERT INTO Transactions (seller, buyer, quantity, unitValue) VALUES (?, ?, ?, ?)", [seller_best.floID, buyer_best.floID, quantity, cur_price]]);
     return;
 }
 
@@ -236,6 +291,17 @@ function getAccountDetails(floID) {
         });
     });
 }
+
+function intervalFunction() {
+    let old_rate = net_FLO_price;
+    getRates().then(cur_rate => {
+        matchBuyAndSell();
+    }).catch(error => console.error(error));
+}
+
+intervalFunction();
+
+let refresher = setInterval(intervalFunction, REFRESH_INTERVAL);
 
 module.exports = {
     addBuyOrder,
