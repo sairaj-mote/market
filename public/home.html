@@ -16,33 +16,33 @@
         <fieldset>
             <legend>Login</legend>
             <input type="password" name="priv-key" placeholder="Enter Private Key" />
-            <input type="text" name="sid" style="display: none;"/>
-            <input type="button" name="login" value="login" /><br/>
-            <input type="checkbox" name="remember-me" checked/>RememberMe
+            <input type="text" name="sid" style="display: none;" />
+            <input type="button" name="login" value="login" onclick="UI_evt.login();" /><br />
+            <input type="checkbox" name="remember-me" checked />RememberMe
         </fieldset>
     </form>
     <div id="user-container">
         <fieldset>
             <legend>User</legend>
-            <span id="user_id"></span><br/>
-            FLO: <span id="flo_bal"></span><br/>
-            Rupee: <span id="rupee_bal"></span><br/>
-            <button id="logout">logout</button>
+            <span id="user_id"></span><br />
+            FLO: <span id="flo_bal"></span><br />
+            Rupee: <span id="rupee_bal"></span><br />
+            <button onclick="UI_evt.logout();">logout</button>
         </fieldset>
-        <form id="buy">
+        <form id="buy-form">
             <fieldset>
                 <legend>Buy</legend>
                 <input type="number" name="quantity" placeholder="Enter Quantity" />
                 <input type="number" name="max-price" placeholder="Enter Max Price" />
-                <input type="button" name="buy" value="buy" />
+                <input type="button" name="buy" value="buy" onclick="UI_evt.buy();" />
             </fieldset>
         </form>
-        <form id="sell">
+        <form id="sell-form">
             <fieldset>
                 <legend>Sell</legend>
                 <input type="number" name="quantity" placeholder="Enter Quantity" />
                 <input type="number" name="min-price" placeholder="Enter Min Price" />
-                <input type="button" name="sell" value="sell" />
+                <input type="button" name="sell" value="sell" onclick="UI_evt.sell();" />
             </fieldset>
         </form>
     </div>
@@ -153,38 +153,43 @@
 
         function account() {
             getAccount().then(acc => {
+                console.debug(acc);
                 document.getElementById("login-form").style.display = "none";
                 document.getElementById('user-container').style.display = "block";
                 document.getElementById("user_id").textContent = acc.floID;
-                let flo_total = acc.coins.reduce((a, x) => x.quantity, 0);
-                let flo_locked = acc.sellOrders.reduce((a, x) => x.quantity);
+                let flo_total = acc.coins.reduce((a, x) => a + x.quantity, 0);
+                let flo_locked = acc.sellOrders.reduce((a, x) => a + x.quantity, 0);
                 let flo_net = flo_total - flo_locked;
+                console.debug("FLO", flo_total, flo_locked, flo_net);
                 document.getElementById("flo_bal").textContent = flo_net + "(+" + flo_locked + ")";
                 let rupee_total = acc.rupee_total;
-                let rupee_locked = acc.buyOrders.reduce((a, x) => x.quantity * x.maxPrice, 0);
+                let rupee_locked = acc.buyOrders.reduce((a, x) => a + x.quantity * x.maxPrice, 0);
                 let rupee_net = rupee_total - rupee_locked;
+                console.debug("RUPEE", rupee_total, rupee_locked, rupee_net);
                 document.getElementById("rupee_bal").textContent = rupee_net + "(+" + rupee_locked + ")";
             }).catch(error => {
-                if(error instanceof ResponseError){
+                if (error instanceof ResponseError) {
                     let response = JSON.parse(error.data)
                     console.log(error);
                     console.log(response);
                     document.getElementById('user-container').style.display = "none";
                     document.getElementById("login-form").style.display = "block";
                     document.forms['login-form']["sid"].value = response.sid;
-                } else 
+                } else
                     console.error(error);
             })
         }
 
-        document.getElementById("logout").onclick = (evt) => {
+        const UI_evt = {};
+
+        UI_evt.logout = function() {
             logout().then(result => {
                 console.warn(result);
                 location.reload();
-            }).catch(error => console.error(error));                
+            }).catch(error => console.error(error));
         };
 
-        document.forms['login-form']['login'].onclick = evt => {
+        UI_evt.login = function() {
             let formInputs = document.forms['login-form'];
             let privKey = formInputs['priv-key'].value;
             let sid = formInputs['sid'].value;
@@ -193,7 +198,21 @@
                 console.log(result);
                 account();
             }).catch(error => console.error(error));
-        }
+        };
+
+        UI_evt.sell = function() {
+            let formInputs = document.forms['sell-form'];
+            sell(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["min-price"].value))
+                .then(result => console.log(result))
+                .catch(error => console.error(error));
+        };
+
+        UI_evt.buy = function() {
+            let formInputs = document.forms['buy-form'];
+            buy(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["max-price"].value))
+                .then(result => console.log(result))
+                .catch(error => console.error(error));
+        };
 
         (function init() {
             account();

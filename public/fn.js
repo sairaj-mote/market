@@ -93,7 +93,7 @@ function login(privKey, sid, rememberMe = false) {
     return new Promise((resolve, reject) => {
         let pubKey = floCrypto.getPubKeyHex(privKey);
         let floID = floCrypto.getFloID(pubKey);
-        if(!floID || !floCrypto.verifyPrivKey(privKey, floID))
+        if (!floID || !floCrypto.verifyPrivKey(privKey, floID))
             return reject("Invalid Private key");
         let sign = floCrypto.signData(sid, privKey);
         fetch("/login", {
@@ -125,6 +125,10 @@ function logout() {
 
 function buy(quantity, max_price) {
     return new Promise((resolve, reject) => {
+        if (typeof quantity !== "number" || quantity <= 0)
+            return reject(INVALID(`Invalid quantity (${quantity})`));
+        else if (typeof max_price !== "number" || max_price <= 0)
+            return reject(INVALID(`Invalid max_price (${max_price})`));
         fetch('/buy', {
                 method: "POST",
                 headers: {
@@ -144,6 +148,10 @@ function buy(quantity, max_price) {
 
 function sell(quantity, min_price) {
     return new Promise((resolve, reject) => {
+        if (typeof quantity !== "number" || quantity <= 0)
+            return reject(INVALID(`Invalid quantity (${quantity})`));
+        else if (typeof min_price !== "number" || min_price <= 0)
+            return reject(INVALID(`Invalid min_price (${min_price})`));
         fetch('/sell', {
                 method: "POST",
                 headers: {
