@@ -41,6 +41,9 @@ module.exports = function App(secret, DB) {
     app.post('/buy', Request.PlaceBuyOrder);
     app.post('/sell', Request.PlaceSellOrder);
 
+    //cancel sell or buy order
+    app.post('/cancel', Request.CancelOrder);
+
     //list sell or buy order
     app.get('/list-sellorders', Request.ListSellOrders);
     app.get('/list-buyorders', Request.ListBuyOrders);

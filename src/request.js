@@ -109,6 +109,20 @@ function PlaceBuyOrder(req, res) {
         });
 }
 
+function CancelOrder(req, res) {
+    let data = req.body,
+        session = req.session;
+    market.cancelOrder(data.orderType, data.orderID, session.user_id)
+        .then(result => res.send(result))
+        .catch(error => {
+            console.error(error);
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else
+                res.status(INTERNAL.e_code).send("Order cancellation failed! Try again later!");
+        });
+}
+
 function ListSellOrders(req, res) {
     //TODO: Limit size (best)
     DB.query("SELECT * FROM SellOrder ORDER BY time_placed")
@@ -168,6 +182,7 @@ module.exports = {
     Logout,
     PlaceBuyOrder,
     PlaceSellOrder,
+    CancelOrder,
     ListSellOrders,
     ListBuyOrders,
     ListTransactions,

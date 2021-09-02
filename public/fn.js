@@ -84,7 +84,7 @@ function signUp(privKey, sid) {
             }).then(result => responseParse(result, false)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
-            .catch(error => console.error(error));
+            .catch(error => reject(error));
     })
 
 }
@@ -109,7 +109,7 @@ function login(privKey, sid, rememberMe = false) {
             }).then(result => responseParse(result, false)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
-            .catch(error => console.error(error));
+            .catch(error => reject(error));
     })
 }
 
@@ -126,9 +126,9 @@ function logout() {
 function buy(quantity, max_price) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= 0)
-            return reject(INVALID(`Invalid quantity (${quantity})`));
+            return reject(`Invalid quantity (${quantity})`);
         else if (typeof max_price !== "number" || max_price <= 0)
-            return reject(INVALID(`Invalid max_price (${max_price})`));
+            return reject(`Invalid max_price (${max_price})`);
         fetch('/buy', {
                 method: "POST",
                 headers: {
@@ -141,7 +141,7 @@ function buy(quantity, max_price) {
             }).then(result => responseParse(result, false)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
-            .catch(error => console.error(error))
+            .catch(error => reject(error))
     })
 
 }
@@ -149,9 +149,9 @@ function buy(quantity, max_price) {
 function sell(quantity, min_price) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= 0)
-            return reject(INVALID(`Invalid quantity (${quantity})`));
+            return reject(`Invalid quantity (${quantity})`);
         else if (typeof min_price !== "number" || min_price <= 0)
-            return reject(INVALID(`Invalid min_price (${min_price})`));
+            return reject(`Invalid min_price (${min_price})`);
         fetch('/sell', {
                 method: "POST",
                 headers: {
@@ -164,7 +164,27 @@ function sell(quantity, min_price) {
             }).then(result => responseParse(result, false)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
-            .catch(error => console.error(error))
+            .catch(error => reject(error))
     })
 
+}
+
+function cancelOrder(type, id) {
+    return new Promise((resolve, reject) => {
+        if (type !== "buy" && type !== "sell")
+            return reject(`Invalid type (${type}): type should be sell (or) buy`);
+        fetch('/cancel', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orderType: type,
+                    orderID: id
+                })
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error))
+    })
 }

@@ -120,6 +120,30 @@ function addBuyOrder(floID, quantity, max_price) {
     });
 }
 
+function cancelOrder(type, id, floID) {
+    return new Promise((resolve, reject) => {
+        if (!floID || !floCrypto.validateAddr(floID))
+            return reject(INVALID("Invalid FLO ID"));
+        let tableName;
+        if (type === "buy")
+            tableName = "BuyOrder";
+        else if (type === "sell")
+            tableName = "SellOrder";
+        else
+            return reject(INVALID("Invalid Order type! Order type must be buy (or) sell"));
+        DB.query(`SELECT floID FROM ${tableName} WHERE id=?`, [id]).then(result => {
+            if (result.length < 1)
+                return reject(INVALID("Order not found!"));
+            else if (result[0].floID !== floID)
+                return reject(INVALID("Order doesnt belong to the current user"));
+            //Delete the order 
+            DB.query(`DELETE FROM ${tableName} WHERE id=?`, [id])
+                .then(result => resolve(tableName + "#" + id + " cancelled successfully"))
+                .catch(error => reject(error));
+        }).catch(error => reject(error));
+    });
+}
+
 function matchBuyAndSell() {
     let cur_price = net_FLO_price;
     //get the best buyer
@@ -306,6 +330,7 @@ let refresher = setInterval(intervalFunction, REFRESH_INTERVAL);
 module.exports = {
     addBuyOrder,
     addSellOrder,
+    cancelOrder,
     getAccountDetails,
     set DB(db) {
         DB = db;
