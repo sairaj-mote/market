@@ -209,11 +209,13 @@
             }).catch(error => console.error(error))
         }
 
-        function refresh() {
+        function refresh(init = false) {
             console.info("refresh");
             list_buy();
             list_sell();
             list_txns();
+            if (init || document.getElementById('user-container').style.display === "block")
+                account();
         }
 
         function account() {
@@ -342,10 +344,7 @@
                 .catch(error => console.error(o, error)))
         };
 
-        (function init() {
-            account();
-            refresh();
-        })();
+        refresh(true);
     </script>
 
 </body>
