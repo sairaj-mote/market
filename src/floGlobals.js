@@ -8,8 +8,8 @@ const floGlobals = {
         FLO: ['https://livenet.flocha.in/', 'https://flosight.duckdns.org/'],
         FLO_TEST: ['https://testnet-flosight.duckdns.org', 'https://testnet.flocha.in/']
     },
-    //sendAmt: 0.001,
-    //fee: 0.0005,
+    sendAmt: 0.001,
+    fee: 0.0005,
 };
 
 (typeof global !== "undefined" ? global : window).cryptocoin = floGlobals.blockchain;

@@ -30,7 +30,7 @@ function Database(user, password, dbname, host = 'localhost') {
         })
     });
 
-    Object.defineProperty(db, "TxQuery", {
+    Object.defineProperty(db, "transaction", {
         value: (queries) => new Promise((resolve, reject) => {
             db.connect.then(conn => {
                 conn.beginTransaction(err => {

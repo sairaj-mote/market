@@ -54,6 +54,12 @@ module.exports = function App(secret, DB) {
     //get account details
     app.get('/account', Request.Account);
 
+    //withdraw and deposit request
+    app.post('deposit-flo', Request.DepositFLO);
+    app.post('withdraw-flo', Request.WithdrawFLO);
+    app.post('deposit-rupee', Request.DepositRupee);
+    app.post('withdraw-rupee', Request.WithdrawRupee);
+
     Request.DB = DB;
     return app;
 }

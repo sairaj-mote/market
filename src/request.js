@@ -273,6 +273,130 @@ function Account(req, res) {
     }
 }
 
+function DepositFLO(req, res) {
+    let data = req.body,
+        session = req.session;
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "deposit_FLO",
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.depositCoins(session.user_id, data.txid).then(result => {
+            storeRequest(session.user_id, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            }
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
+}
+
+function WithdrawFLO(req, res) {
+    let data = req.body,
+        session = req.session;
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "withdraw_FLO",
+        amount: data.amount,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.withdrawCoins(session.user_id, data.amount).then(result => {
+            storeRequest(session.user_id, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            }
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
+}
+
+function DepositRupee(req, res) {
+    let data = req.body,
+        session = req.session;
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "deposit_Rupee",
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.depositTokens(session.user_id, data.txid).then(result => {
+            storeRequest(session.user_id, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            }
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
+}
+
+function WithdrawRupee(req, res) {
+    let data = req.body,
+        session = req.session;
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "withdraw_Rupee",
+        amount: data.amount,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.withdrawTokens(session.user_id, data.amount).then(result => {
+            storeRequest(session.user_id, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            }
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
+}
+
 module.exports = {
     SignUp,
     Login,
@@ -284,6 +408,10 @@ module.exports = {
     ListBuyOrders,
     ListTransactions,
     Account,
+    DepositFLO,
+    WithdrawFLO,
+    DepositRupee,
+    WithdrawRupee,
     set DB(db) {
         DB = db;
         market.DB = db;
