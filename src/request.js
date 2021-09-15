@@ -19,108 +19,205 @@ INTERNAL.e_code = 500;
 const oneDay = 1000 * 60 * 60 * 24;
 const maxSessionTimeout = 60 * oneDay;
 
+function validateRequestFromFloID(request, sign, floID, proxy = true) {
+    return new Promise((resolve, reject) => {
+        DB.query("SELECT " + (proxy ? "proxyKey as key FROM Session" : "pubKey as key FROM Users") + " WHERE floID=?", [floID]).then(result => {
+            if (result.length < 1)
+                return reject(INVALID(proxy ? "Session not active" : "User not registered"));
+            let req_str = validateRequest(request, sign, result[0].key);
+            req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
+        }).catch(error => reject(error));
+    });
+}
+
+function validateRequest(request, sign, pubKey) {
+    if (typeof request !== "object")
+        return INVALID("Request is not an object");
+    let req_str = Object.keys(request).sort().map(r => r + ":" + request[r]).join("|");
+    try {
+        if (floCrypto.verifySign(req_str, sign, pubKey))
+            return req_str;
+        else
+            return INVALID("Invalid request signature! Re-login if this error occurs frequently");
+    } catch {
+        return INVALID("Corrupted sign/key");
+    }
+}
+
+function storeRequest(floID, req_str, sign) {
+    DB.query("INSERT INTO Request_Log (floID, request, sign) VALUES (?,?,?)", [floID, req_str, sign])
+        .then(_ => null).catch(error => console.error(error));
+}
+
 function SignUp(req, res) {
     let data = req.body,
         session = req.session;
     if (floCrypto.getFloID(data.pubKey) !== data.floID)
-        res.status(INVALID.e_code).send("Invalid Public Key");
+        return res.status(INVALID.e_code).send("Invalid Public Key");
     if (!session.random)
-        res.status(INVALID.e_code).send("Invalid Session");
-    else if (!floCrypto.verifySign(session.random, data.sign, data.pubKey))
-        res.status(INVALID.e_code).send("Invalid Signature");
-    else {
-        DB.query("INSERT INTO Users(floID, pubKey, session_time) VALUES (?, ?, NULL)", [data.floID, data.pubKey])
-            .then(_ => res.send("Account Created")).catch(error => {
-                if (error.code === "ER_DUP_ENTRY")
-                    res.status(INVALID.e_code).send("Account already exist");
-                else {
-                    console.error(error);
-                    res.status(INTERNAL.e_code).send("Account creation failed! Try Again Later!");
-                }
-            });
-    }
+        return res.status(INVALID.e_code).send("Invalid Session");
+    let req_str = validateRequest({
+        type: "create_account",
+        random: session.random,
+        time: data.time
+    }, data.sign, data.pubKey);
+    if (req_str instanceof INVALID)
+        return res.status(INVALID.e_code).send(req_str.message);
+    DB.query("INSERT INTO Users(floID, pubKey) VALUES (?, ?)", [data.floID, data.pubKey]).then(result => {
+        storeRequest(session.floID, req_str, data.sign);
+        res.send("Account Created");
+    }).catch(error => {
+        if (error.code === "ER_DUP_ENTRY")
+            res.status(INVALID.e_code).send("Account already exist");
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Account creation failed! Try Again Later!");
+        }
+    });
 }
 
 function Login(req, res) {
     let data = req.body,
         session = req.session;
     if (!session.random)
-        res.status(INVALID.e_code).send("Invalid Session");
-    DB.query("SELECT pubKey FROM Users WHERE floID=?", [data.floID]).then(result => {
-        if (result.length < 1) {
-            res.status(INVALID.e_code).send("floID not registered");
-            return;
-        }
-        let pubKey = result[0].pubKey;
-        if (floCrypto.getFloID(pubKey) !== data.floID) //This should not happen as pubKey should be validated at signup
-            res.status(INVALID.e_code).send("Public Key mis-match");
-        else if (!floCrypto.verifySign(session.random, data.sign, pubKey))
-            res.status(INVALID.e_code).send("Invalid Signature");
+        return res.status(INVALID.e_code).send("Invalid Session");
+    validateRequestFromFloID({
+        type: "login",
+        random: session.random,
+        proxyKey: data.proxyKey,
+        time: data.time
+    }, data.sign, data.floID, false).then(req_str => {
+        DB.query("INSERT INTO Session (floID, session_id, proxyKey) VALUES (?, ?, ?) " +
+            "ON DUPLICATE KEY UPDATE session_id=?, session_time=DEFAULT, proxyKey=?",
+            [data.floID, req.sessionID, data.proxyKey, req.sessionID, data.proxyKey]).then(_ => {
+            if (data.saveSession)
+                session.cookie.maxAge = maxSessionTimeout;
+            session.user_id = data.floID;
+            res.send("Login Successful");
+        }).catch(error => {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Login failed! Try again later!");
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
         else {
-            if (data.saveSession) {
-                DB.query("UPDATE Users SET session_id=?, session_time=DEFAULT WHERE floID=?", [req.sessionID, data.floID])
-                    .then(_ => session.cookie.maxAge = maxSessionTimeout)
-                    .catch(e => console.error(e)).finally(_ => {
-                        session.user_id = data.floID;
-                        res.send("Login Successful");
-                    });
-            } else {
-                session.user_id = data.floID;
-                res.send("Login Successful");
-            }
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
         }
-    }).catch(error => reject(error))
+    })
 }
 
 function Logout(req, res) {
     let session = req.session;
-    DB.query("UPDATE Users SET session_id=NULL, session_time=NULL WHERE floID=?", [session.user_id])
-        .then(_ => null).catch(e => console.log(e)).finally(_ => {
-            session.destroy();
-            res.send('Logout successful');
-        });
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("No logged in user found in this session");
+    DB.query("DELETE FROM Session WHERE floID=?", [session.user_id]).then(_ => {
+        session.destroy();
+        res.send('Logout successful');
+    }).catch(error => {
+        console.error(error);
+        res.status(INTERNAL.e_code).send("Logout failed! Try again later! Contact support if this error occurs frequently");
+    });
 }
 
 function PlaceSellOrder(req, res) {
     let data = req.body,
         session = req.session;
-    market.addSellOrder(session.user_id, data.quantity, data.min_price)
-        .then(result => res.send('Sell Order placed successfully'))
-        .catch(error => {
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "sell_order",
+        quantity: data.quantity,
+        min_price: data.min_price,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.addSellOrder(session.user_id, data.quantity, data.min_price)
+            .then(result => {
+                storeRequest(session.user_id, req_str, data.sign);
+                res.send('Sell Order placed successfully');
+            }).catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
+                }
+            });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
             console.error(error);
-            if (error instanceof INVALID)
-                res.status(INVALID.e_code).send(error.message);
-            else
-                res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
-        });
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
 }
 
 function PlaceBuyOrder(req, res) {
     let data = req.body,
         session = req.session;
-    market.addBuyOrder(session.user_id, data.quantity, data.max_price)
-        .then(result => res.send('Buy Order placed successfully'))
-        .catch(error => {
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "buy_order",
+        quantity: data.quantity,
+        max_price: data.max_price,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.addBuyOrder(session.user_id, data.quantity, data.max_price)
+            .then(result => {
+                storeRequest(session.user_id, req_str, data.sign);
+                res.send('Buy Order placed successfully');
+            }).catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
+                }
+            });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
             console.error(error);
-            if (error instanceof INVALID)
-                res.status(INVALID.e_code).send(error.message);
-            else
-                res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
-        });
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
 }
 
 function CancelOrder(req, res) {
     let data = req.body,
         session = req.session;
-    market.cancelOrder(data.orderType, data.orderID, session.user_id)
-        .then(result => res.send(result))
-        .catch(error => {
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    validateRequestFromFloID({
+        type: "cancel_order",
+        order: data.orderType,
+        id: data.orderID,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.cancelOrder(data.orderType, data.orderID, session.user_id)
+            .then(result => {
+                storeRequest(session.user_id, req_str, data.sign);
+                res.send(result);
+            }).catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Order cancellation failed! Try again later!");
+                }
+            });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
             console.error(error);
-            if (error instanceof INVALID)
-                res.status(INVALID.e_code).send(error.message);
-            else
-                res.status(INTERNAL.e_code).send("Order cancellation failed! Try again later!");
-        });
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
 }
 
 function ListSellOrders(req, res) {
@@ -156,7 +253,7 @@ function Account(req, res) {
     if (!req.session.user_id)
         setLogin("Login required");
     else {
-        DB.query("SELECT session_id, session_time FROM Users WHERE floID=?", [req.session.user_id]).then(result => {
+        DB.query("SELECT session_id, session_time FROM Session WHERE floID=?", [req.session.user_id]).then(result => {
             if (result.length < 1) {
                 res.status(INVALID.e_code).send("floID not registered");
                 return;
