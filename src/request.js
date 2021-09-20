@@ -59,12 +59,12 @@ function SignUp(req, res) {
     let req_str = validateRequest({
         type: "create_account",
         random: session.random,
-        time: data.time
+        timestamp: data.timestamp
     }, data.sign, data.pubKey);
     if (req_str instanceof INVALID)
         return res.status(INVALID.e_code).send(req_str.message);
     DB.query("INSERT INTO Users(floID, pubKey) VALUES (?, ?)", [data.floID, data.pubKey]).then(result => {
-        storeRequest(session.floID, req_str, data.sign);
+        storeRequest(data.floID, req_str, data.sign);
         res.send("Account Created");
     }).catch(error => {
         if (error.code === "ER_DUP_ENTRY")
@@ -85,7 +85,7 @@ function Login(req, res) {
         type: "login",
         random: session.random,
         proxyKey: data.proxyKey,
-        time: data.time
+        timestamp: data.timestamp
     }, data.sign, data.floID, false).then(req_str => {
         DB.query("INSERT INTO Session (floID, session_id, proxyKey) VALUES (?, ?, ?) " +
             "ON DUPLICATE KEY UPDATE session_id=?, session_time=DEFAULT, proxyKey=?",
