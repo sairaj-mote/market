@@ -21,10 +21,10 @@ const maxSessionTimeout = 60 * oneDay;
 
 function validateRequestFromFloID(request, sign, floID, proxy = true) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT " + (proxy ? "proxyKey as key FROM Session" : "pubKey as key FROM Users") + " WHERE floID=?", [floID]).then(result => {
+        DB.query("SELECT " + (proxy ? "proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
-            let req_str = validateRequest(request, sign, result[0].key);
+            let req_str = validateRequest(request, sign, result[0].pubKey);
             req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
         }).catch(error => reject(error));
     });
@@ -87,12 +87,13 @@ function Login(req, res) {
         proxyKey: data.proxyKey,
         timestamp: data.timestamp
     }, data.sign, data.floID, false).then(req_str => {
-        DB.query("INSERT INTO Session (floID, session_id, proxyKey) VALUES (?, ?, ?) " +
+        DB.query("INSERT INTO Sessions (floID, session_id, proxyKey) VALUES (?, ?, ?) " +
             "ON DUPLICATE KEY UPDATE session_id=?, session_time=DEFAULT, proxyKey=?",
             [data.floID, req.sessionID, data.proxyKey, req.sessionID, data.proxyKey]).then(_ => {
             if (data.saveSession)
                 session.cookie.maxAge = maxSessionTimeout;
             session.user_id = data.floID;
+            storeRequest(data.floID, req_str, data.sign);
             res.send("Login Successful");
         }).catch(error => {
             console.error(error);
@@ -103,7 +104,7 @@ function Login(req, res) {
             res.status(INVALID.e_code).send(error.message);
         else {
             console.error(error);
-            res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
+            res.status(INTERNAL.e_code).send("Login failed! Try again later!");
         }
     })
 }
@@ -112,7 +113,7 @@ function Logout(req, res) {
     let session = req.session;
     if (!session.user_id)
         return res.status(INVALID.e_code).send("No logged in user found in this session");
-    DB.query("DELETE FROM Session WHERE floID=?", [session.user_id]).then(_ => {
+    DB.query("DELETE FROM Sessions WHERE floID=?", [session.user_id]).then(_ => {
         session.destroy();
         res.send('Logout successful');
     }).catch(error => {
@@ -253,7 +254,7 @@ function Account(req, res) {
     if (!req.session.user_id)
         setLogin("Login required");
     else {
-        DB.query("SELECT session_id, session_time FROM Session WHERE floID=?", [req.session.user_id]).then(result => {
+        DB.query("SELECT session_id, session_time FROM Sessions WHERE floID=?", [req.session.user_id]).then(result => {
             if (result.length < 1) {
                 res.status(INVALID.e_code).send("floID not registered");
                 return;
@@ -283,7 +284,7 @@ function DepositFLO(req, res) {
         txid: data.txid,
         timestamp: data.timestamp
     }, data.sign, session.user_id).then(req_str => {
-        market.depositCoins(session.user_id, data.txid).then(result => {
+        market.depositFLO(session.user_id, data.txid).then(result => {
             storeRequest(session.user_id, req_str, data.sign);
             res.send(result);
         }).catch(error => {
@@ -314,7 +315,7 @@ function WithdrawFLO(req, res) {
         amount: data.amount,
         timestamp: data.timestamp
     }, data.sign, session.user_id).then(req_str => {
-        market.withdrawCoins(session.user_id, data.amount).then(result => {
+        market.withdrawFLO(session.user_id, data.amount).then(result => {
             storeRequest(session.user_id, req_str, data.sign);
             res.send(result);
         }).catch(error => {
@@ -345,7 +346,7 @@ function DepositRupee(req, res) {
         txid: data.txid,
         timestamp: data.timestamp
     }, data.sign, session.user_id).then(req_str => {
-        market.depositTokens(session.user_id, data.txid).then(result => {
+        market.depositRupee(session.user_id, data.txid).then(result => {
             storeRequest(session.user_id, req_str, data.sign);
             res.send(result);
         }).catch(error => {
@@ -376,7 +377,7 @@ function WithdrawRupee(req, res) {
         amount: data.amount,
         timestamp: data.timestamp
     }, data.sign, session.user_id).then(req_str => {
-        market.withdrawTokens(session.user_id, data.amount).then(result => {
+        market.withdrawRupee(session.user_id, data.amount).then(result => {
             storeRequest(session.user_id, req_str, data.sign);
             res.send(result);
         }).catch(error => {
@@ -412,6 +413,7 @@ module.exports = {
     WithdrawFLO,
     DepositRupee,
     WithdrawRupee,
+    periodicProcess: market.periodicProcess,
     set DB(db) {
         DB = db;
         market.DB = db;

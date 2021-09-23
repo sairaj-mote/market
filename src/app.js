@@ -3,6 +3,8 @@ const cookieParser = require("cookie-parser");
 const sessions = require('express-session');
 const Request = require('./request');
 
+const REFRESH_INTERVAL = 60 * 1000; //1 min
+
 module.exports = function App(secret, DB) {
 
     const app = express();
@@ -55,11 +57,13 @@ module.exports = function App(secret, DB) {
     app.get('/account', Request.Account);
 
     //withdraw and deposit request
-    app.post('deposit-flo', Request.DepositFLO);
-    app.post('withdraw-flo', Request.WithdrawFLO);
-    app.post('deposit-rupee', Request.DepositRupee);
-    app.post('withdraw-rupee', Request.WithdrawRupee);
+    app.post('/deposit-flo', Request.DepositFLO);
+    app.post('/withdraw-flo', Request.WithdrawFLO);
+    app.post('/deposit-rupee', Request.DepositRupee);
+    app.post('/withdraw-rupee', Request.WithdrawRupee);
 
     Request.DB = DB;
+    Request.periodicProcess();
+    let refresher = setInterval(Request.periodicProcess, REFRESH_INTERVAL);
     return app;
 }
