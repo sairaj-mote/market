@@ -4761,9 +4761,9 @@
             }
 
             buffer = buffer.concat(bitjs.numToBytes(parseInt(this.locktime), 4));
-            flohex = ascii_to_hexa(this.floData);
-            floDataCount = this.floData.length;
-
+            var flohex = ascii_to_hexa(this.floData);
+            var floDataCount = this.floData.length;
+            var floDataCountString;
             //flochange -- creating unique data character count logic for floData. This string is prefixed before actual floData string in Raw Transaction
             if (floDataCount < 16) {
                 floDataCountString = floDataCount.toString(16);
