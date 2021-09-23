@@ -1,5 +1,7 @@
 {
     "secret": "Secret_For_Session__Enter_A_Strong_String(Text/Password)",
+    "blockchain_id": "FLO_ID_of_the_admin",
+    "blockchain_private": "Private_Key_of_the_Admin",
     "port": "8080",
 
     "sql_user": "mySQL_user",
