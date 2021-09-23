@@ -360,25 +360,21 @@
         //Broadcast signed Tx in blockchain using API
         broadcastTx: function(signedTxHash) {
             return new Promise((resolve, reject) => {
-                var request = new XMLHttpRequest();
-                var url = this.util.serverList[this.util.curPos] + 'api/tx/send';
-                //console.log(url);
                 if (signedTxHash.length < 1)
-                    reject("Empty Signature");
-                else {
-                    var params = `{"rawtx":"${signedTxHash}"}`;
-                    request.open('POST', url, true);
-                    //Send the proper header information along with the request
-                    request.setRequestHeader('Content-type', 'application/json');
-                    request.onload = function() {
-                        if (request.readyState == 4 && request.status == 200) {
-                            console.log(request.response);
-                            resolve(JSON.parse(request.response).txid.result);
-                        } else
-                            reject(request.responseText);
-                    }
-                    request.send(params);
-                }
+                    return reject("Empty Signature");
+                var url = this.util.serverList[this.util.curPos] + 'api/tx/send';
+                fetch(url, {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: `{"rawtx":"${signedTxHash}"}`
+                }).then(response => {
+                    if (response.ok)
+                        response.json().then(data => resolve(data.txid.result));
+                    else
+                        response.text().then(data => resolve(data));
+                }).catch(error => reject(error));
             })
         },
 
