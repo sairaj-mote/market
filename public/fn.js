@@ -289,11 +289,9 @@ function depositFLO(quantity, userID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
             return reject(`Invalid quantity (${quantity})`);
-        floBlockchainAPI.sendTx(userID, floGlobals.adminID, quantity, privKey, 'Deposit FLO in market').then(result => {
-            if (!result.txid || !result.txid.result || result.txid.error)
-                return reject(result);
+        floBlockchainAPI.sendTx(userID, floGlobals.adminID, quantity, privKey, 'Deposit FLO in market').then(txid => {
             let request = {
-                txid: result.txid.result,
+                txid: txid,
                 timestamp: Date.now()
             };
             request.sign = signRequest({
@@ -345,13 +343,11 @@ function withdrawFLO(quantity, proxySecret) {
 
 function depositRupee(quantity, userID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
-        if (!floGlobals.verifyPrivKey(privKey, userID))
+        if (!floCrypto.verifyPrivKey(privKey, userID))
             return reject("Invalid Private Key");
-        tokenAPI.sendToken(privKey, quantity, 'Deposit Rupee in market').then(result => {
-            if (!result.txid || !result.txid.result || result.txid.error)
-                return reject(result);
+        tokenAPI.sendToken(privKey, quantity, 'Deposit Rupee in market').then(txid => {
             let request = {
-                txid: result.txid.result,
+                txid: txid,
                 timestamp: Date.now()
             };
             request.sign = signRequest({
