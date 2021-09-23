@@ -13,10 +13,10 @@
     <script id="floGlobals">
         /* Constants for FLO blockchain operations !!Make sure to add this at begining!! */
         const floGlobals = {
-    
+
             //Required for all
             blockchain: "FLO",
-    
+
             //Required for blockchain API operators
             apiURL: {
                 FLO: ['https://livenet.flocha.in/', 'https://flosight.duckdns.org/'],
@@ -51,6 +51,7 @@
             <span id="user_id"></span><br />
             FLO: <span id="flo_bal"></span><br />
             Rupee: <span id="rupee_bal"></span><br />
+            <button onclick="proxy.lock();">Add password lock</button><br />
             <button onclick="UI_evt.logout();">logout</button>
             <form id="buy-form">
                 <fieldset>
@@ -190,7 +191,63 @@
     </div>
 
     <script>
-        var user_id, proxy_secret; //container for user ID and proxy private-key
+        var user_id; //container for user ID and proxy private-key
+
+        const proxy = {
+            private: null,
+            public: null,
+            lock() {
+                if (!this.private)
+                    throw "No proxy key found!";
+                let pwd = prompt("Enter password: ");
+                if (!pwd)
+                    alert("Password cannot be empty");
+                else if (pwd.length < 4)
+                    alert("Password minimum length is 4");
+                else {
+                    let tmp = Crypto.AES.encrypt(this.private, pwd);
+                    localStorage.setItem("proxy_secret", "?" + tmp);
+                    alert("Successfully locked with Password");
+                }
+            },
+            clear() {
+                localStorage.removeItem("proxy_secret");
+                this.private = null;
+                this.public = null;
+            },
+            set secret(key) {
+                localStorage.setItem("proxy_secret", key);
+                this.private = key;
+                this.public = floCrypto.getPubKeyHex(key);
+            },
+            get secret() {
+                if (this.private)
+                    return this.private;
+                try {
+                    let tmp = localStorage.getItem("proxy_secret");
+                    if (typeof tmp === "string" && tmp.startsWith("?")) {
+                        let pwd = prompt("Enter password: ");
+                        if (!pwd)
+                            throw "Password Required for making transactions";
+                        else {
+                            try {
+                                tmp = Crypto.AES.decrypt(tmp.substring(1), pwd);
+                            } catch (error) {
+                                throw "Incorrect Password! Password Required for making transactions";
+                            }
+
+                        }
+                    }
+                    this.private = tmp;
+                    this.public = floCrypto.getPubKeyHex(tmp);
+                    return this.private;
+                } catch (error) {
+                    alert(error);
+                    console.error(error);
+                    throw "Unable to fetch Proxy secret";
+                }
+            }
+        }
 
         function toggle_view(id) {
             let element = document.getElementById(id);
@@ -248,7 +305,11 @@
         function refresh(init = false) {
             if (init) {
                 console.info("init");
-                proxy_secret = localStorage.getItem("proxy_secret");
+                try {
+                    proxy.secret;
+                } catch (error) {
+                    console.warn(error);
+                }
             } else
                 console.info("refresh");
             list_buy();
@@ -351,7 +412,7 @@
         UI_evt.logout = function() {
             logout().then(result => {
                 console.warn(result);
-                localStorage.removeItem("proxy_secret");
+                proxy.clear();
                 location.reload();
             }).catch(error => console.error(error));
         };
@@ -361,18 +422,17 @@
             let privKey = formInputs['priv-key'].value;
             let sid = formInputs['sid'].value;
             let rememberMe = formInputs['remember-me'].checked;
-            let proxy = floCrypto.generateNewID();
-            login(privKey, proxy.pubKey, sid, rememberMe).then(result => {
+            let tmpKey = floCrypto.generateNewID();
+            login(privKey, tmpKey.pubKey, sid, rememberMe).then(result => {
                 console.log(result);
-                proxy_secret = proxy.privKey;
-                localStorage.setItem("proxy_secret", proxy_secret);
+                proxy.secret = tmpKey.privKey;
                 account();
             }).catch(error => console.error(error));
         };
 
         UI_evt.sell = function() {
             let formInputs = document.forms['sell-form'];
-            sell(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["min-price"].value, proxy_secret))
+            sell(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["min-price"].value), proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(error))
                 .finally(_ => formInputs.reset());
@@ -380,7 +440,7 @@
 
         UI_evt.buy = function() {
             let formInputs = document.forms['buy-form'];
-            buy(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["max-price"].value, proxy_secret))
+            buy(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["max-price"].value), proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(error))
                 .finally(_ => formInputs.reset());
@@ -398,7 +458,7 @@
                     cancel.push([type, id]);
                 }
             }
-            cancel.forEach(o => cancelOrder(o[0], o[1], proxy_secret)
+            cancel.forEach(o => cancelOrder(o[0], o[1], proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(o, error)))
         };
@@ -406,7 +466,7 @@
         UI_evt.depositFLO = function() {
             let formInputs = document.forms['deposit-withdraw-form'];
             let privKey = prompt("Enter private key");
-            depositFLO(parseFloat(formInputs["quantity"].value), user_id, privKey, proxy_secret)
+            depositFLO(parseFloat(formInputs["quantity"].value), user_id, privKey, proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(error))
                 .finally(_ => formInputs.reset());
@@ -415,7 +475,7 @@
         UI_evt.depositRupee = function() {
             let formInputs = document.forms['deposit-withdraw-form'];
             let privKey = prompt("Enter private key");
-            depositRupee(parseFloat(formInputs["quantity"].value), user_id, privKey, proxy_secret)
+            depositRupee(parseFloat(formInputs["quantity"].value), user_id, privKey, proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(error))
                 .finally(_ => formInputs.reset());
@@ -423,7 +483,7 @@
 
         UI_evt.withdrawFLO = function() {
             let formInputs = document.forms['deposit-withdraw-form'];
-            withdrawFLO(parseFloat(formInputs["quantity"].value), proxy_secret)
+            withdrawFLO(parseFloat(formInputs["quantity"].value), proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(error))
                 .finally(_ => formInputs.reset());
@@ -431,7 +491,7 @@
 
         UI_evt.withdrawRupee = function() {
             let formInputs = document.forms['deposit-withdraw-form'];
-            withdrawRupee(parseFloat(formInputs["quantity"].value), proxy_secret)
+            withdrawRupee(parseFloat(formInputs["quantity"].value), proxy.secret)
                 .then(result => console.log(result))
                 .catch(error => console.error(error))
                 .finally(_ => formInputs.reset());
