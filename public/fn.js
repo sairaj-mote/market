@@ -268,7 +268,7 @@ function cancelOrder(type, id, proxySecret) {
             type: "cancel_order",
             order: type,
             id: id,
-            timestamp: data.timestamp
+            timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 

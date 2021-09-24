@@ -107,7 +107,6 @@ function addSellOrder(floID, quantity, min_price) {
             DB.query("SELECT SUM(quantity) AS locked FROM SellOrder WHERE floID=?", [floID]).then(result => {
                 let locked = result.pop()["locked"] || 0;
                 let available = total - locked;
-                console.debug(total, locked, available);
                 if (available < quantity)
                     return reject(INVALID("Insufficient FLO (Some FLO are locked in another sell order)"));
                 DB.query("INSERT INTO SellOrder(floID, quantity, minPrice) VALUES (?, ?, ?)", [floID, quantity, min_price])
@@ -135,7 +134,6 @@ function addBuyOrder(floID, quantity, max_price) {
             DB.query("SELECT SUM(maxPrice * quantity) AS locked FROM BuyOrder WHERE floID=?", [floID]).then(result => {
                 let locked = result.pop()["locked"] || 0;
                 let available = total - locked;
-                console.debug(total, locked, available);
                 if (available < quantity * max_price)
                     return reject(INVALID("Insufficient Rupee balance (Some rupee tokens are locked in another buy order)"));
                 DB.query("INSERT INTO BuyOrder(floID, quantity, maxPrice) VALUES (?, ?, ?)", [floID, quantity, max_price])
@@ -569,7 +567,6 @@ function withdrawRupee(floID, amount) {
             DB.query("SELECT SUM(quantity) AS locked FROM SellOrder WHERE floID=?", [floID]).then(result => {
                 let locked = result.pop()["locked"] || 0;
                 let available = total - locked;
-                console.debug(total, locked, available);
                 if (available < required_flo)
                     return reject(INVALID(`Insufficient FLO (Some FLO are locked in sell orders)! Required ${required_flo} FLO to withdraw tokens`));
                 DB.query("SELECT rupeeBalance FROM Users WHERE floID=?", [floID]).then(result => {

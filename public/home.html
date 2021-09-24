@@ -303,14 +303,9 @@
         }
 
         function refresh(init = false) {
-            if (init) {
+            if (init)
                 console.info("init");
-                try {
-                    proxy.secret;
-                } catch (error) {
-                    console.warn(error);
-                }
-            } else
+            else
                 console.info("refresh");
             list_buy();
             list_sell();
@@ -381,7 +376,11 @@
                     row.insertCell().textContent = o.unitValue;
                     row.insertCell().textContent = new Date(o.tx_time);
                 });
-
+                try {
+                    proxy.secret;
+                } catch (error) {
+                    console.warn(error);
+                }
             }).catch(error => {
                 if (error instanceof ResponseError) {
                     let response = JSON.parse(error.data)
@@ -390,6 +389,7 @@
                     document.getElementById('user-container').style.display = "none";
                     document.getElementById("login-form").style.display = "block";
                     document.forms['login-form']["sid"].value = response.sid;
+                    proxy.clear();
                 } else
                     console.error(error);
             })
