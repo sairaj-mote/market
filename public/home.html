@@ -35,6 +35,7 @@
 </head>
 
 <body>
+    <div>Current FLO Rate: <span id="cur-rate"></span></div>
     <form id="login-form">
         <fieldset>
             <legend>Login</legend>
@@ -302,6 +303,14 @@
             }).catch(error => console.error(error))
         }
 
+        function get_rate() {
+            getRate().then(rate => {
+                console.log("Rate: ", rate);
+                let container = document.getElementById("cur-rate");
+                container.textContent = "Rs " + parseFloat(rate).toFixed(2);
+            }).catch(error => console.error(error))
+        }
+
         function refresh(init = false) {
             if (init)
                 console.info("init");
@@ -310,6 +319,7 @@
             list_buy();
             list_sell();
             list_txns();
+            get_rate();
             if (init || document.getElementById('user-container').style.display === "block")
                 account();
         }

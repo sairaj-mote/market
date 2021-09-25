@@ -114,6 +114,16 @@ function getTransactionList() {
     });
 }
 
+function getRate() {
+    return new Promise((resolve, reject) => {
+        fetch('/get-rate')
+            .then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error));
+    });
+}
+
 function signRequest(request, privKey) {
     if (typeof request !== "object")
         throw Error("Request is not an object");

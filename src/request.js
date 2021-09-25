@@ -243,6 +243,11 @@ function ListTransactions(req, res) {
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
 
+function getRate(req, res) {
+    let rate = market.returnRates();
+    res.send(`${rate}`);
+}
+
 function Account(req, res) {
     const setLogin = function(message) {
         let randID = floCrypto.randString(16, true);
@@ -409,6 +414,7 @@ module.exports = {
     ListSellOrders,
     ListBuyOrders,
     ListTransactions,
+    getRate,
     Account,
     DepositFLO,
     WithdrawFLO,
