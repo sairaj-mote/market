@@ -66,6 +66,8 @@ function Database(user, password, dbname, host = 'localhost') {
                                         queryFn(result);
                                     }
                                 };
+                                if (!Array.isArray(q_i))
+                                    q_i = [q_i];
                                 if (q_i[1])
                                     conn.query(q_i[0], q_i[1], callback);
                                 else
