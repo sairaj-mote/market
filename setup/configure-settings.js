@@ -1,15 +1,13 @@
 const fs = require('fs');
 const getInput = require('./getInput');
 
-var config, flag = false;
+var config, flag_new;
 try {
     config = require('./args/config.json');
-    flag = true;
+    flag_new = false;
 } catch (error) {
     config = {
         "secret": null,
-        "blockchain_id": null,
-        "blockchain_private": null,
         "port": "8080",
 
         "sql_user": null,
@@ -17,7 +15,20 @@ try {
         "sql_db": "exchange",
         "sql_host": "localhost"
     };
+    flag_new = true;
 }
+
+function flaggedYesOrNo(text) {
+    return new Promise((resolve) => {
+        if (flag_new)
+            resolve(true);
+        else
+            getInput.YesOrNo(text)
+            .then(result => resolve(result))
+            .catch(error => reject(error))
+    })
+}
+
 
 function configurePort() {
     return new Promise(resolve => {
@@ -30,7 +41,7 @@ function configurePort() {
 
 function configureSQL() {
     return new Promise(resolve => {
-        getInput.YesOrNo('Do you want to re-configure mySQL connection').then(value => {
+        flaggedYesOrNo('Do you want to re-configure mySQL connection').then(value => {
             if (value) {
                 console.log('Enter mySQL connection values: ')
                 getInput.Text('Host', config['sql_host']).then(host => {
@@ -52,32 +63,51 @@ function configureSQL() {
     })
 };
 
+function randomizeSessionSecret() {
+    return new Promise((resolve) => {
+        flaggedYesOrNo('Do you want to randomize the session secret').then(value => {
+            if (value) {
+                let N = Math.floor(Math.random() * (64 - 32 + 1)) + 32;
+                var secret = '';
+                var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                for (var i = 0; i < N; i++)
+                    secret += characters.charAt(Math.floor(Math.random() * characters.length));
+                config['secret'] = secret
+                resolve(true);
+            } else
+                resolve(false);
+        })
+    })
+}
+
 function configure() {
     return new Promise((resolve, reject) => {
         configurePort().then(port_result => {
-            configureSQL().then(sql_result => {
-                fs.writeFile(__dirname + '/../args/config.json', JSON.stringify(config), 'utf8', (err) => {
-                    if (err) {
-                        console.error(err);
-                        return reject(false);
-                    }
-                    console.log('Configuration successful!');
-                    if (sql_result) {
-                        getInput.YesOrNo('Do you want to create schema in the database').then(value => {
-                            if (value) {
-                                const createSchema = require('./create-schema');
-                                createSchema().then(result => resolve(result))
-                                    .catch(error => {
-                                        console.log('Retry using: \n' + 'npm run create-schema');
-                                        reject(error);
-                                    });
-                            } else {
-                                console.log('To create schema, use: \n' + 'npm run create-schema');
-                                resolve(true);
-                            }
-                        });
-                    } else
-                        resolve(true);
+            randomizeSessionSecret().then(secret_result => {
+                configureSQL().then(sql_result => {
+                    fs.writeFile(__dirname + '/../args/config.json', JSON.stringify(config), 'utf8', (err) => {
+                        if (err) {
+                            console.error(err);
+                            return reject(false);
+                        }
+                        console.log('Configuration successful!');
+                        if (sql_result) {
+                            getInput.YesOrNo('Do you want to create schema in the database').then(value => {
+                                if (value) {
+                                    const createSchema = require('./create-schema');
+                                    createSchema().then(result => resolve(result))
+                                        .catch(error => {
+                                            console.log('Retry using: \n' + 'npm run create-schema');
+                                            reject(error);
+                                        });
+                                } else {
+                                    console.log('To create schema, use: \n' + 'npm run create-schema');
+                                    resolve(true);
+                                }
+                            });
+                        } else
+                            resolve(true);
+                    })
                 })
             })
         });
