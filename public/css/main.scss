@@ -341,22 +341,19 @@ ul {
     fill: var(--accent-color);
   }
 }
-#confirmation_popup {
+#confirmation_popup,
+#prompt_popup {
   flex-direction: column;
-
   h4 {
     font-weight: 500;
     margin-bottom: 0.5rem;
   }
-
   sm-button {
     margin: 0;
   }
-
   .flex {
     padding: 0;
     margin-top: 1rem;
-
     sm-button:first-of-type {
       margin-right: 0.6rem;
       margin-left: auto;
@@ -368,6 +365,20 @@ button:active,
 .button:active,
 .interact:active {
   transform: scale(0.96);
+}
+
+.popup__header {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0 1.5rem 0 0.5rem;
+  align-items: center;
+  grid-template-columns: auto 1fr auto;
+}
+
+.popup__header__close {
+  padding: 0.5rem;
+  cursor: pointer;
 }
 
 #main_page {
@@ -517,12 +528,11 @@ strip-option {
 #home {
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr auto;
   grid-template-columns: minmax(0, 1fr);
 }
 
 #main_header {
-  padding: 1.5rem;
+  padding: 1.8rem 1.5rem;
   display: grid;
   gap: 1rem;
   align-items: center;
@@ -532,7 +542,7 @@ strip-option {
 #trade_form {
   --width: min(24rem, 100%);
   align-self: flex-start;
-  padding: 0 1.5rem;
+  padding: 1rem 1.5rem;
 }
 #quantity_selector {
   .button {
@@ -551,19 +561,41 @@ strip-option {
   font-weight: 500;
   min-width: 8ch;
 }
+#orders_section {
+  padding: 1.5rem;
+}
 #user_section {
   gap: 1.5rem;
-  padding: 0 1.5rem;
+  padding: 1.5rem;
   align-content: flex-start;
 }
 .user_section__header {
 }
+.wallet_actions__wrapper {
+  grid-column: span 3;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  .button {
+    flex: 1;
+  }
+}
 .balance-card {
   display: grid;
-  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.3rem 1rem;
+  padding: 0.5rem 0;
   border-radius: 0.5rem;
+  &.is-locked {
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    .label {
+      font-size: 0.8rem;
+      color: rgba(var(--text-color), 0.8);
+    }
+  }
+  &:not(.is-locked) {
+    grid-template-columns: auto 1fr auto;
+  }
   &__icon {
     display: flex;
     align-content: center;
@@ -581,25 +613,44 @@ strip-option {
     font-size: 0.9rem;
     font-weight: 500;
   }
-  &__amount {
-    font-size: 1rem;
-    font-weight: 700;
-  }
-  &__actions {
-    grid-column: span 3;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    .button {
-      flex: 1;
+  &__amount-wrapper {
+    grid-column: span 2;
+    gap: 0.3rem 1rem;
+    grid-template-columns: 1fr 1fr;
+    & > :nth-child(even) {
+      text-align: right;
     }
   }
 }
-@media screen and (max-width: 640px) {
+.loader-button-wrapper {
+  display: flex;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  sm-button,
+  slide-button {
+    width: 100%;
+    z-index: 1;
+    transition: clip-path 0.3s;
+    clip-path: circle(100%);
+    &.clip {
+      pointer-events: none;
+      clip-path: circle(0);
+    }
+  }
+  sm-spinner {
+    position: absolute;
+  }
+}
+@media screen and (max-width: 40rem) {
   sm-button {
     --padding: 0.9rem 1.6rem;
   }
 }
-@media screen and (min-width: 640px) {
+@media screen and (min-width: 40rem) {
+  sm-popup {
+    --width: 24rem;
+  }
   .h1 {
     font-size: 2rem;
   }
@@ -615,6 +666,9 @@ strip-option {
   .h4 {
     font-size: 1rem;
   }
+  .popup__header {
+    padding: 1rem 1.5rem 0 0.5rem;
+  }
   #confirmation_popup {
     --width: 24rem;
   }
@@ -622,24 +676,28 @@ strip-option {
     grid-template-columns: 1fr 90vw 1fr;
   }
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 64rem) {
 }
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 64rem) {
   .page-layout {
     grid-template-columns: 1fr 80vw 1fr;
   }
   #home {
+    align-items: flex-start;
+    padding: 1.5vmax 3vmax;
     grid-template-columns: 24rem minmax(0, 1fr) 20rem;
-    grid-template-rows: auto 1fr;
-  }
-  #main_header {
-    grid-column: span 3;
+    gap: 1rem;
+    & > * {
+      border-radius: 0.5rem;
+      background-color: var(--foreground-color);
+      border: solid thin rgba(var(--text-color), 0.1);
+    }
   }
   .hide-on-desktop {
     display: none;
   }
 }
-@media screen and (min-width: 1920px) {
+@media screen and (min-width: 120rem) {
   .page-layout {
     grid-template-columns: 1fr 70vw 1fr;
   }
