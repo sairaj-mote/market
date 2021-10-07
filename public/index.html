@@ -165,7 +165,7 @@
             <sm-form id="trade_form">
                 <div class="flex space-between align-center">
                     <h4>Trade FLO</h4>
-                    <strip-select id="trade_type_selector">
+                    <strip-select id="trade_type_selector" class="tab">
                         <strip-option value="buy" selected>Buy</strip-option>
                         <strip-option value="sell">Sell</strip-option>
                     </strip-select>
@@ -187,21 +187,56 @@
             </sm-form>
         </section>
         <section id="orders_section" class="grid gap-1-5">
-            <div class="flex space-between align-center">
-                <h4>My orders</h4>
-                <strip-select id="orders_scope_selector">
-                    <strip-option value="active" selected>Open</strip-option>
-                    <strip-option value="completed">Completed</strip-option>
-                </strip-select>
-            </div>
-            <div class="table" style="--table-columns: 4;">
-                <div class="table__header table__row">
-                    <div></div>
-                    <div>Quantity</div>
-                    <div>At price</div>
-                    <div>Order placed</div>
+            <div id="orders_section__header" class="flex">
+                <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
+                    <sm-tab-header target="orders_tab">
+                        <sm-tab>My orders</sm-tab>
+                        <sm-tab>Market orders</sm-tab>
+                    </sm-tab-header>
+                    <sm-select id="orders_scope_selector" class="tab" align-select="right">
+                        <sm-option value="active" selected>Open</sm-option>
+                        <sm-option value="completed">Completed</sm-option>
+                    </sm-select>
+                </div>
+                <div id="orders_section__header--secondary"
+                    class="flex w-100 align-center space-between hide-completely">
+                    <button class="" onclick="clearSelection()" title="Clear all selection">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                            viewBox="0 0 24 24" width="24px">
+                            <path d="M0 0h24v24H0V0z" fill="none" />
+                            <path
+                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+                        </svg>
+                        <span id="selected_orders"></span>
+                    </button>
+                    <div class="options">
+                        <button class="button" title="Cancel selected orders" onclick="cancelAll()">
+                            Cancel selected
+                        </button>
+                    </div>
                 </div>
             </div>
+            <sm-tab-panels id="orders_tab">
+                <div class="table">
+                    <ul id="my_order_list"></ul>
+                </div>
+                <div class="table">
+                    <ul id="market_order_list">
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                        sdgkmsdg <br>
+                    </ul>
+                </div>
+            </sm-tab-panels>
         </section>
         <section id="user_section" class="grid">
             <h4 class="flex align-center user_section__header">
@@ -215,7 +250,7 @@
                 My wallet
             </h4>
             <div id="wallet_actions">
-                <p>Select asset</p>
+                <p class="label">Select asset</p>
                 <sm-select id="wallet_asset_selector">
                     <sm-option value="FLO">FLO</sm-option>
                     <sm-option value="Rupee">Rupee</sm-option>
@@ -414,6 +449,28 @@
             <span class="label">Available</span>
             <span class="available-balance"></span>
         </div>
+    </template>
+    <template id="order_template">
+        <li class="table__row order-card">
+            <sm-checkbox></sm-checkbox>
+            <div class="grid">
+                <div class="order-card__type capitalize"></div>
+                <div class="order-card__quantity"></div>
+            </div>
+            <div class="grid">
+                <span class="label order-card__price-type">Unit price</span>
+                <div class="order-card__price"></div>
+            </div>
+            <time class="order-card__time"></time>
+            <button class="cancel-order" title="Cancel this order">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" />
+                </svg>
+                <span>Cancel</span>
+            </button>
+        </li>
     </template>
     <script id="ui_utils">
         // Global variables
@@ -654,7 +711,7 @@
                         return `${month} ${year}`;
                 }
                 else
-                    return `${month} ${date} ${year}, ${finalHours}`;
+                    return `${finalHours}, ${month} ${date} ${year}`;
             } catch (e) {
                 console.error(e);
                 return time;
@@ -962,6 +1019,51 @@
             getRef(containerId).append(card)
         }
 
+        const myBuyOrders = [
+            {
+                id: 'dfs5g16sdg1',
+                time_placed: generateRandomDate(),
+                quantity: 14.5,
+                maxPrice: 1.36,
+            },
+            {
+                id: 'f4gd1d56fg1',
+                time_placed: generateRandomDate(),
+                quantity: 78.3,
+                maxPrice: 1.26,
+            },
+            {
+                id: 's4dg5s4d1g98',
+                time_placed: generateRandomDate(),
+                quantity: 14.5,
+                maxPrice: 1.28,
+            },
+        ]
+        const mySellOrders = [
+            {
+                id: 'sd8g45g419s6',
+                time_placed: generateRandomDate(),
+                quantity: 15,
+                minPrice: 1.16,
+            },
+            {
+                id: 's59d1g9ws18d',
+                time_placed: generateRandomDate(),
+                quantity: 8.3,
+                minPrice: 1.86,
+            },
+            {
+                id: 'w899e1g4d1g98',
+                time_placed: generateRandomDate(),
+                quantity: 18.5,
+                minPrice: 1.64,
+            },
+        ]
+
+        function generateRandomDate() {
+            return new Date() - Math.floor(Math.random() * 10000000000);
+        }
+
         function account() {
             getAccount().then(acc => {
                 console.debug(acc);
@@ -983,28 +1085,9 @@
                 let rupee_net = rupee_total - rupee_locked;
                 console.debug("RUPEE", rupee_total, rupee_locked, rupee_net);
                 showBalance("rupee_balance", rupee_net, rupee_locked)
-                //My buy orders
-                let container = document.getElementById("my-buy-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                acc.buyOrders.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().innerHTML = `<input type="checkbox">`;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.maxPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-                //My sell orders
-                container = document.getElementById("my-sell-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                acc.sellOrders.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().innerHTML = `<input type="checkbox">`;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.minPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
+                //My orders
+                renderOpenOrders(acc.buyOrders, acc.sellOrders)
+
                 //My Transactions
                 container = document.getElementById("my-transactions").getElementsByTagName("tbody")[0];
                 container.innerHTML = '';
@@ -1098,6 +1181,21 @@
         refresh(true);
     </script>
     <script>
+        const render = {
+            orderCard(orderDetails = {}) {
+                const { id, quantity, price, time, type } = orderDetails
+                const card = getRef('order_template').content.cloneNode(true).firstElementChild
+                card.dataset.id = id
+                card.dataset.type = type
+                card.querySelector('.order-card__type').textContent = type
+                card.querySelector('.order-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Max price' : 'Min price'
+                card.querySelector('.order-card__price').textContent = `₹${price}`
+                card.querySelector('.order-card__time').textContent = getFormattedTime(time, true)
+                return card
+            }
+        }
+
         function showProcess(id) {
             getRef(id).children[0].classList.add('clip')
             getRef(id).append(document.createElement('sm-spinner'))
@@ -1202,6 +1300,160 @@
                 hideProcess('wallet_popup__cta_wrapper')
             }
         })
+        const selectedOrders = new Map()
+        const slideInLeft = [
+            {
+                opacity: 0,
+                transform: 'translateX(1.5rem)'
+            },
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            }
+        ]
+        const slideOutLeft = [
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            },
+            {
+                opacity: 0,
+                transform: 'translateX(-1.5rem)'
+            },
+        ]
+        const slideInRight = [
+            {
+                opacity: 0,
+                transform: 'translateX(-1.5rem)'
+            },
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            }
+        ]
+        const slideOutRight = [
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            },
+            {
+                opacity: 0,
+                transform: 'translateX(1.5rem)'
+            },
+        ]
+        getRef('my_order_list').addEventListener('change', e => {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            const target = e.target.parentNode;
+            target.classList.toggle('order-card--selected')
+            if (e.target.checked) {
+                selectedOrders.set(target.dataset.id, target.dataset.type)
+            } else {
+                selectedOrders.delete(target.dataset.id)
+            }
+            getRef('selected_orders').textContent = `${selectedOrders.size} selected`
+            if (selectedOrders.size === 1 && !getRef('orders_section__header').children[0].classList.contains('hide-completely')) {
+                getRef('orders_section__header').children[0].animate(slideOutLeft, animOptions)
+                    .onfinish = () => {
+                        getRef('orders_section__header').children[0].classList.add('hide-completely')
+                        getRef('orders_section__header').children[1].classList.remove('hide-completely')
+                        getRef('orders_section__header').children[1].animate(slideInLeft, animOptions)
+                    }
+            } else if (selectedOrders.size === 0 && getRef('orders_section__header').children[0].classList.contains('hide-completely')) {
+                getRef('orders_section__header').children[1].animate(slideOutRight, animOptions)
+                    .onfinish = () => {
+                        getRef('orders_section__header').children[1].classList.add('hide-completely')
+                        getRef('orders_section__header').children[0].classList.remove('hide-completely')
+                        getRef('orders_section__header').children[0].animate(slideInRight, animOptions)
+                    }
+            }
+        })
+        function clearSelection() {
+            getRef('my_order_list').querySelectorAll('sm-checkbox[checked]').forEach(elem => elem.checked = false)
+        }
+        getRef('my_order_list').addEventListener('click', e => {
+            if (e.target.closest('.cancel-order')) {
+                getConfirmation('Cancel this order?').then(res => {
+                    if (res) {
+                        const target = e.target.closest('.order-card')
+                        const id = target.dataset.id
+                        const type = target.dataset.type
+                        cancelOrder(type, id, proxy.secret)
+                            .then(() => {
+                                notify('Order cancelled', 'success')
+                                target.remove()
+                            })
+                            .catch(err => notify(err, 'error'))
+                    }
+                })
+            }
+        })
+        function cancelAll() {
+            getConfirmation('Cancel all selected orders?').then(res => {
+                if (res) {
+                    try {
+                        selectedOrders.forEach(async (type, id) => {
+                            await cancelOrder(type, id, proxy.secret)
+                                .then(() => {
+                                    getRef('my_order_list').querySelector(`data-id="${id}"`).remove()
+                                })
+                        })
+                        notify('All selected orders cancelled', 'success')
+                    }
+                    catch (err) {
+                        notify(err, 'error')
+                    }
+                }
+            })
+        }
+
+        function renderAllOrders(buyOrders, sellOrders) {
+            getRef('my_order_list').innerHTML = '';
+            const frag = document.createDocumentFragment()
+            const allOpenOrders = [...(buyOrders || myBuyOrders), ...(sellOrders || mySellOrders)].sort((a, b) => b.time_placed - a.time_placed)
+            console.log(allOpenOrders)
+            allOpenOrders.forEach(order => {
+                const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                const orderDetails = {
+                    id,
+                    quantity,
+                    type: minPrice ? 'sell' : 'buy',
+                    price: minPrice || maxPrice,
+                    time: time_placed
+                }
+                frag.append(render.orderCard(orderDetails))
+            })
+            getRef('my_order_list').append(frag)
+        }
+        function renderOpenOrders(buyOrders, sellOrders) {
+            getRef('my_order_list').innerHTML = '';
+            const frag = document.createDocumentFragment()
+            const allOpenOrders = [...(buyOrders || myBuyOrders), ...(sellOrders || mySellOrders)].sort((a, b) => b.time_placed - a.time_placed)
+            allOpenOrders.forEach(order => {
+                const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                const orderDetails = {
+                    id,
+                    quantity,
+                    type: minPrice ? 'sell' : 'buy',
+                    price: minPrice || maxPrice,
+                    time: time_placed
+                }
+                frag.append(render.orderCard(orderDetails))
+            })
+            getRef('my_order_list').append(frag)
+        }
+        renderOpenOrders()
+        getRef('orders_scope_selector').addEventListener('change', e => {
+            if (e.target.value === 'open') {
+                renderOpenOrders()
+            } else {
+                renderCompletedOrders()
+            }
+        })
+
     </script>
 </body>
 
