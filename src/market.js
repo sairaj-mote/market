@@ -52,8 +52,6 @@ const tokenAPI = {
     }
 }
 
-
-
 function getRates() {
     return new Promise((resolve, reject) => {
         getRates.FLO_USD().then(FLO_rate => {
@@ -90,6 +88,10 @@ getRates.USD_INR = function() {
                 reject(response.status);
         }).catch(error => reject(error));
     });
+}
+
+function returnRates() {
+    return net_FLO_price;
 }
 
 function addSellOrder(floID, quantity, min_price) {
@@ -657,6 +659,7 @@ function transactionReCheck() {
 }
 
 module.exports = {
+    returnRates,
     addBuyOrder,
     addSellOrder,
     cancelOrder,

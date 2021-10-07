@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,31 +10,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-    <script id="floGlobals">
-        /* Constants for FLO blockchain operations !!Make sure to add this at beginning!! */
-        const floGlobals = {
-
-            //Required for all
-            blockchain: "FLO",
-
-            //Required for blockchain API operators
-            apiURL: {
-                FLO: ['https://livenet.flocha.in/', 'https://flosight.duckdns.org/'],
-                FLO_TEST: ['https://testnet-flosight.duckdns.org/', 'https://testnet.flocha.in/']
-            },
-            tokenURL: "https://ranchimallflo.duckdns.org/",
-            token: "rupee",
-            adminID: "FKAEdnPfjXLHSYwrXQu377ugN4tXU7VGdf",
-            sendAmt: 0.001,
-            fee: 0.0005,
-        }
-    </script>
+    <script src="floGlobals.js"></script>
     <script src="https://sairajzero.github.io/Standard_Operations/cdn/floCrypto.js"></script>
     <script src="https://github.com/sairajzero/Standard_Operations/releases/download/test/floBlockchainAPI.js"></script>
     <script src="fn.js"></script>
 </head>
 
 <body>
+    <div>Current FLO Rate: <span id="cur-rate"></span></div>
     <form id="login-form">
         <fieldset>
             <legend>Login</legend>
@@ -682,6 +666,14 @@
             }).catch(error => console.error(error))
         }
 
+        function get_rate() {
+            getRate().then(rate => {
+                console.log("Rate: ", rate);
+                let container = document.getElementById("cur-rate");
+                container.textContent = "Rs " + parseFloat(rate).toFixed(2);
+            }).catch(error => console.error(error))
+        }
+
         function refresh(init = false) {
             if (init)
                 console.info("init");
@@ -690,6 +682,7 @@
             list_buy();
             list_sell();
             list_txns();
+            get_rate();
             if (init || document.getElementById('user-container').style.display === "block")
                 account();
         }

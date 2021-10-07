@@ -50,8 +50,9 @@ module.exports = function App(secret, DB) {
     app.get('/list-sellorders', Request.ListSellOrders);
     app.get('/list-buyorders', Request.ListBuyOrders);
 
-    //list all process transactions
+    //list all process transactions and rate
     app.get('/list-transactions', Request.ListTransactions);
+    app.get('/get-rate', Request.getRate)
 
     //get account details
     app.get('/account', Request.Account);
