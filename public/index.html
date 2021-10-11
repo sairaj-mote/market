@@ -148,7 +148,7 @@
         <h4>Loading RanchiMall Market</h4>
     </article>
     <article id="home" class="page">
-        <section>
+        <section class="card">
             <header id="main_header">
                 <div class="logo">
                     <svg class="main-logo" viewBox="0 0 27.25 32">
@@ -170,10 +170,12 @@
                         <strip-option value="sell">Sell</strip-option>
                     </strip-select>
                 </div>
-                <sm-input id="get_price" variant="outlined" placeholder="Max price" type="number" step="0.00000001"
+                <sm-input id="get_price" variant="outlined" placeholder="Max price (₹)" type="number" step="0.00001"
                     required hiderequired animate>
                 </sm-input>
-                <sm-input id="get_quantity" variant="outlined" placeholder="Quantity" type="number" step="0.00000001"
+                <sm-input id="get_quantity" variant="outlined" placeholder="Quantity (FLO)" type="number"
+                    step="0.00000001" required hiderequired animate></sm-input>
+                <sm-input id="get_total" variant="outlined" placeholder="Total (₹)" type="number" min="1" step="0.01"
                     required hiderequired animate>
                 </sm-input>
                 <div id="quantity_selector" class="flex align-center">
@@ -183,62 +185,58 @@
                     <button class="button" value="75">75%</button>
                     <button class="button" value="100">100%</button>
                 </div>
-                <sm-button id="trade_button" class="uppercase" variant="primary" onclick="tradeFlo()">BUY</sm-button>
+                <div id="trade_button_wrapper" class="stateful-button-wrapper flex align-center justify-center">
+                    <sm-button id="trade_button" class="uppercase w-100" variant="primary" onclick="tradeFlo()">BUY FLO
+                    </sm-button>
+                </div>
             </sm-form>
         </section>
-        <section id="orders_section" class="grid gap-1-5">
-            <div id="orders_section__header" class="flex">
-                <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
-                    <sm-tab-header target="orders_tab">
-                        <sm-tab>My orders</sm-tab>
-                        <sm-tab>Market orders</sm-tab>
-                    </sm-tab-header>
-                    <sm-select id="orders_scope_selector" class="tab" align-select="right">
-                        <sm-option value="active" selected>Open</sm-option>
-                        <sm-option value="completed">Completed</sm-option>
-                    </sm-select>
-                </div>
-                <div id="orders_section__header--secondary"
-                    class="flex w-100 align-center space-between hide-completely">
-                    <button class="" onclick="clearSelection()" title="Clear all selection">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
-                            viewBox="0 0 24 24" width="24px">
-                            <path d="M0 0h24v24H0V0z" fill="none" />
-                            <path
-                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
-                        </svg>
-                        <span id="selected_orders"></span>
-                    </button>
-                    <div class="options">
-                        <button class="button" title="Cancel selected orders" onclick="cancelAll()">
-                            Cancel selected
+        <section id="orders_section" class="grid gap-1">
+            <section id="my_orders_section" class="grid gap-1 card">
+                <div id="my_orders_section__header" class="orders_section__header flex">
+                    <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
+                        <h4>
+                            My orders
+                        </h4>
+                        <strip-select id="my_orders_category_selector" class="tab">
+                            <strip-option value="open" selected>Open</strip-option>
+                            <strip-option value="completed">History</strip-option>
+                        </strip-select>
+                    </div>
+                    <div id="orders_section__header--secondary"
+                        class="flex w-100 align-center space-between hide-completely">
+                        <button class="" onclick="clearSelection()" title="Clear all selection">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                                viewBox="0 0 24 24" width="24px">
+                                <path d="M0 0h24v24H0V0z" fill="none" />
+                                <path
+                                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+                            </svg>
+                            <span id="selected_orders"></span>
                         </button>
+                        <div class="options">
+                            <button class="button" title="Cancel selected orders" onclick="cancelAll()">
+                                Cancel selected
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <sm-tab-panels id="orders_tab">
-                <div class="table">
-                    <ul id="my_order_list"></ul>
+                <ul id="orders_list"></ul>
+            </section>
+            <section id="market_orders_section" class="grid gap-1 card">
+                <div class="orders_section__header flex space-between align-center">
+                    <h4>
+                        Market orders
+                    </h4>
+                    <strip-select id="market_orders_category_selector" class="tab">
+                        <strip-option value="open" selected>Open</strip-option>
+                        <strip-option value="completed">History</strip-option>
+                    </strip-select>
                 </div>
-                <div class="table">
-                    <ul id="market_order_list">
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                        sdgkmsdg <br>
-                    </ul>
-                </div>
-            </sm-tab-panels>
+                <ul id="market_orders_list"></ul>
+            </section>
         </section>
-        <section id="user_section" class="grid">
+        <section id="user_section" class="grid card">
             <h4 class="flex align-center user_section__header">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
                     viewBox="0 0 24 24" width="24px">
@@ -307,10 +305,36 @@
             <sm-input id="get_private_key" variant="outlined" placeholder="FLO private key" type="password" required
                 error-text="Invalid private key" hiderequired animate>
             </sm-input>
-            <div id="wallet_popup__cta_wrapper" class="loader-button-wrapper">
-                <sm-button id="wallet_popup__cta" variant="primary"></sm-button>
+            <div id="wallet_popup__cta_wrapper" class="stateful-button-wrapper">
+                <sm-button id="wallet_popup__cta" class="uppercase" variant="primary"></sm-button>
             </div>
         </sm-form>
+    </sm-popup>
+    <sm-popup id="transaction_info_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h4>Transaction details</h4>
+        </header>
+        <div class="grid gap-1-5">
+            <div class="grid">
+                <h5 class="label capitalize">Buyer</h5>
+                <sm-copy id="transaction__buyer"></sm-copy>
+            </div>
+            <div class="grid">
+                <h5 class="label capitalize">Seller</h5>
+                <sm-copy id="transaction__seller"></sm-copy>
+            </div>
+            <div class="grid">
+                <h5 class="label">Completed</h5>
+                <h4 id="transaction_time"></h4>
+            </div>
+        </div>
     </sm-popup>
     <form id="login-form">
         <fieldset>
@@ -328,115 +352,9 @@
             <span id="user_id"></span><br />
             <button onclick="proxy.lock();">Add password lock</button><br />
             <button onclick="UI_evt.logout();">logout</button>
-            <button onclick="toggle_view('my-profile');">Toggle</button>
-            <div id="my-profile">
-                <div id="my-orders">
-                    <fieldset>
-                        <legend>My Orders</legend>
-                        <fieldset id="my-buy-orders">
-                            <legend>Buying</legend>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Select</th>
-                                        <th>Quantity</th>
-                                        <th>Max Price</th>
-                                        <th>Order Placed</th>
-                                    </tr>
-                                </thead>
-                                <tbody data-type="buy"></tbody>
-                            </table>
-                        </fieldset>
-                        <fieldset id="my-sell-orders">
-                            <legend>Selling</legend>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Select</th>
-                                        <th>Quantity</th>
-                                        <th>Min Price</th>
-                                        <th>Order placed</th>
-                                    </tr>
-                                </thead>
-                                <tbody data-type="sell"></tbody>
-                            </table>
-                        </fieldset>
-                        <button name="cancel-orders" onclick="UI_evt.cancelOrders();">Cancel Orders</button>
-                    </fieldset>
-                </div>
-                <div id="my-transactions">
-                    <fieldset>
-                        <legend>My Transactions</legend>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Sold/Brought</th>
-                                    <th>To/From</th>
-                                    <th>Quantity</th>
-                                    <th>Unit Value</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </fieldset>
-                </div>
-            </div>
         </fieldset>
     </div>
-    <button onclick="toggle_view('all-container');">Toggle All</button>
     <button onclick="refresh();">Refresh</button>
-    <div id="all-container">
-        <div id="buy-orders">
-            <fieldset>
-                <legend>BuyOrders</legend>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Buyer</th>
-                            <th>Quantity</th>
-                            <th>Max Price</th>
-                            <th>Order Placed</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </fieldset>
-        </div>
-        <div id="sell-orders">
-            <fieldset>
-                <legend>SellOrders</legend>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Seller</th>
-                            <th>Quantity</th>
-                            <th>Min Price</th>
-                            <th>Order Placed</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </fieldset>
-        </div>
-        <div id="transactions">
-            <fieldset>
-                <legend>Transactions</legend>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Seller</th>
-                            <th>Buyer</th>
-                            <th>Quantity</th>
-                            <th>Unit Value</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </fieldset>
-        </div>
-    </div>
     <template id="net_balance_template">
         <span class="available-balance"></span>
     </template>
@@ -451,7 +369,7 @@
         </div>
     </template>
     <template id="order_template">
-        <li class="table__row order-card">
+        <li class="list__item order-card">
             <sm-checkbox></sm-checkbox>
             <div class="grid">
                 <div class="order-card__type capitalize"></div>
@@ -471,6 +389,93 @@
                 <span>Cancel</span>
             </button>
         </li>
+    </template>
+    <template id="market_order_template">
+        <div class="market-order-card">
+            <div class="order-card__quantity"></div>
+            <div class="order-card__price"></div>
+        </div>
+    </template>
+    <template id="transaction_template">
+        <li class="list__item transaction-card align-center">
+            <div class="grid">
+                <div class="transaction-card__type capitalize"></div>
+                <div class="transaction-card__quantity"></div>
+            </div>
+            <div class="grid">
+                <span class="label transaction-card__price-type">Unit price</span>
+                <div class="transaction-card__price"></div>
+            </div>
+            <div class="grid">
+                <span class="label transaction-card__price-type">Total</span>
+                <div class="transaction-card__total"></div>
+            </div>
+            <button class="more-info" title="View transaction details">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+            </button>
+        </li>
+    </template>
+    <template id="market_transaction_template">
+        <li class="list__item transaction-card align-center">
+            <div class="transaction-card__quantity"></div>
+            <div class="transaction-card__price"></div>
+            <div class="transaction-card__total"></div>
+            <button class="more-info" title="View transaction details">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+            </button>
+        </li>
+    </template>
+    <template id="market_order_list_template">
+        <h4 class="grid list__header">
+            <div>Quantity</div>
+            <div>Buy price</div>
+            <div>Sell price</div>
+            <div>Quantity</div>
+        </h4>
+        <section id="buyers_list"></section>
+        <section id="sellers_list"></section>
+    </template>
+    <template id="market_transaction_list_template">
+        <h4 class="grid list__header">
+            <div>Quantity</div>
+            <div>Unit price</div>
+            <div>Total</div>
+            <div></div>
+        </h4>
+    </template>
+    <template id="success_template">
+        <div class="stateful-result stateful-result--success">
+            <div class="result__background result__background--success"></div>
+            <div class="icon-wrapper flex align-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                    viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
+                </svg>
+                <span>Success</span>
+            </div>
+        </div>
+    </template>
+    <template id="failure_template">
+        <div class="stateful-result stateful-result--failure">
+            <div class="result__background"></div>
+            <div class="icon-wrapper flex align-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                    viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <path
+                        d="M11 15h2v2h-2v-2zm0-8h2v6h-2V7zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+                </svg>
+                <span>Failed</span>
+            </div>
+        </div>
     </template>
     <script id="ui_utils">
         // Global variables
@@ -518,7 +523,7 @@
         }
 
         // returns dom with specified element
-        function createElement(tagName, options) {
+        function createElement(tagName, options = {}) {
             const { className, textContent, innerHTML, attributes = {} } = options
             const elem = document.createElement(tagName)
             for (let attribute in attributes) {
@@ -620,14 +625,11 @@
             const { isPassword = true, cancelText = 'Cancel', confirmText = 'OK' } = options
             showPopup('prompt_popup', true)
             getRef('prompt_title').textContent = title;
-            let input = getRef('prompt_input');
-            input.setAttribute("placeholder", message)
+            getRef('prompt_message').textContent = message;
             let buttons = getRef('prompt_popup').querySelectorAll("sm-button");
             if (isPassword)
-                input.setAttribute("type", "text")
-            else
-                input.setAttribute("type", "password")
-            input.focusIn()
+                getRef('prompt_input').setAttribute("type", "password")
+            getRef('prompt_input').focusIn()
             buttons[0].textContent = cancelText;
             buttons[1].textContent = confirmText;
             return new Promise((resolve, reject) => {
@@ -636,7 +638,7 @@
                     return;
                 }
                 buttons[1].onclick = () => {
-                    let value = input.value;
+                    const value = getRef('prompt_input').value;
                     hidePopup()
                     resolve(value)
                 }
@@ -941,69 +943,12 @@
             }
         }
 
-        function toggle_view(id) {
-            let element = document.getElementById(id);
-            if (element.style.display === "none")
-                element.style.display = "block";
-            else
-                element.style.display = "none";
-        }
-
-        function list_buy() {
-            getBuyList().then(list => {
-                let container = document.getElementById("buy-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                list.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().textContent = o.floID;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.maxPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-            }).catch(error => console.error(error))
-        }
-
-        function list_sell() {
-            getSellList().then(list => {
-                let container = document.getElementById("sell-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                list.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().textContent = o.floID;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.minPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-            }).catch(error => console.error(error))
-        }
-
-        function list_txns() {
-            getTransactionList().then(list => {
-                let container = document.getElementById("transactions").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                list.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().textContent = o.seller;
-                    row.insertCell().textContent = o.buyer;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.unitValue;
-                    row.insertCell().textContent = new Date(o.tx_time);
-                });
-            }).catch(error => console.error(error))
-        }
-
         function refresh(init = false) {
             if (init)
                 console.info("init");
             else
                 console.info("refresh");
-            list_buy();
-            list_sell();
-            list_txns();
-            if (init || document.getElementById('user-container').style.display === "block")
-                account();
+            account();
         }
 
         function showBalance(containerId, availableBalance = 0, lockedBalance = 0) {
@@ -1060,12 +1005,81 @@
             },
         ]
 
+        const myTransactions = [
+            {
+                id: 'sd8g45g419s6',
+                tx_time: generateRandomDate(),
+                quantity: 15,
+                unitValue: 1.16,
+                buyer: 'w8eg4w8eg4w98werg9'
+            },
+            {
+                id: 's59d1g9ws18d',
+                tx_time: generateRandomDate(),
+                quantity: 8.3,
+                unitValue: 1.86,
+                buyer: 'w8eg4w8eg4w98werg9'
+            },
+            {
+                id: 'w899e1g4d1g98',
+                tx_time: generateRandomDate(),
+                quantity: 18.5,
+                unitValue: 1.64,
+                buyer: 'w8eg4w8eg4w98werg9'
+            },
+        ]
+
+        const market = {
+            buyOrders: [
+                {
+                    id: 'dfs5g16sdg1',
+                    time_placed: generateRandomDate(),
+                    quantity: 14.5,
+                    maxPrice: 1.36,
+                },
+                {
+                    id: 'f4gd1d56fg1',
+                    time_placed: generateRandomDate(),
+                    quantity: 78.3,
+                    maxPrice: 1.26,
+                },
+                {
+                    id: 's4dg5s4d1g98',
+                    time_placed: generateRandomDate(),
+                    quantity: 14.5,
+                    maxPrice: 1.28,
+                },
+            ],
+            sellOrders: [
+                {
+                    id: 'sd8g45g419s6',
+                    time_placed: generateRandomDate(),
+                    quantity: 15,
+                    minPrice: 1.16,
+                },
+                {
+                    id: 's59d1g9ws18d',
+                    time_placed: generateRandomDate(),
+                    quantity: 8.3,
+                    minPrice: 1.86,
+                },
+                {
+                    id: 'w899e1g4d1g98',
+                    time_placed: generateRandomDate(),
+                    quantity: 18.5,
+                    minPrice: 1.64,
+                },
+            ]
+        }
+
         function generateRandomDate() {
             return new Date() - Math.floor(Math.random() * 10000000000);
         }
 
+        let accountDetails = {}
         function account() {
             getAccount().then(acc => {
+                accountDetails = acc
                 console.debug(acc);
                 //Element display
                 document.getElementById("login-form").style.display = "none";
@@ -1086,28 +1100,7 @@
                 console.debug("RUPEE", rupee_total, rupee_locked, rupee_net);
                 showBalance("rupee_balance", rupee_net, rupee_locked)
                 //My orders
-                renderOpenOrders(acc.buyOrders, acc.sellOrders)
-
-                //My Transactions
-                container = document.getElementById("my-transactions").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                acc.transactions.forEach(o => {
-                    let type, other;
-                    if (o.seller === acc.floID) {
-                        type = 'Sold To';
-                        other = o.buyer === acc.floID ? 'MySelf' : o.buyer;
-                    } else if (o.buyer === acc.floID) {
-                        type = 'Brought From';
-                        other = o.seller;
-                    } else
-                        return;
-                    let row = container.insertRow();
-                    row.insertCell().textContent = type;
-                    row.insertCell().textContent = other;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.unitValue;
-                    row.insertCell().textContent = new Date(o.tx_time);
-                });
+                renderUserOrders()
                 try {
                     proxy.secret;
                 } catch (error) {
@@ -1181,6 +1174,9 @@
         refresh(true);
     </script>
     <script>
+        function formatAmount(amount) {
+            return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR' })
+        }
         const render = {
             orderCard(orderDetails = {}) {
                 const { id, quantity, price, time, type } = orderDetails
@@ -1190,10 +1186,45 @@
                 card.querySelector('.order-card__type').textContent = type
                 card.querySelector('.order-card__quantity').textContent = `${quantity} FLO`
                 card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Max price' : 'Min price'
-                card.querySelector('.order-card__price').textContent = `₹${price}`
+                card.querySelector('.order-card__price').textContent = formatAmount(price)
                 card.querySelector('.order-card__time').textContent = getFormattedTime(time, true)
                 return card
-            }
+            },
+            transactionCard(transactionDetails = {}) {
+                const { buyer, seller, type, other, quantity, unitValue, time } = transactionDetails
+                const card = getRef('transaction_template').content.cloneNode(true).firstElementChild
+                card.dataset.type = type
+                card.querySelector('.transaction-card__type').textContent = type
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.more-info').dataset.buyer = buyer
+                card.querySelector('.more-info').dataset.seller = seller
+                card.querySelector('.more-info').dataset.other = other
+                card.querySelector('.more-info').dataset.time = time
+                return card
+            },
+            marketOrderCard(orderDetails = {}) {
+                const { id, quantity, price, time, type } = orderDetails
+                const card = getRef('market_order_template').content.cloneNode(true).firstElementChild
+                card.dataset.id = id
+                card.dataset.type = type
+                card.classList.add(`market-order-card--${type}`)
+                card.querySelector('.order-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.order-card__price').textContent = formatAmount(price)
+                return card
+            },
+            marketTransactionCard(transactionDetails = {}) {
+                const { buyer, seller, quantity, unitValue, time } = transactionDetails
+                const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.more-info').dataset.time = time
+                card.querySelector('.more-info').dataset.buyer = buyer
+                card.querySelector('.more-info').dataset.seller = seller
+                return card
+            },
         }
 
         function showProcess(id) {
@@ -1208,25 +1239,32 @@
         getRef('trade_type_selector').addEventListener('change', e => {
             tradeType = e.detail.value
             getRef('get_price').setAttribute('placeholder', tradeType === 'buy' ? 'Max price' : 'Min price')
-            getRef('trade_button').textContent = tradeType
+            getRef('trade_button').textContent = `${tradeType} FLO`
             getRef('quantity_type').textContent = tradeType === 'buy' ? `Rupee` : `FLO`
         })
         async function tradeFlo() {
             const quantity = parseFloat(getRef('get_quantity').value)
             const price = parseFloat(getRef('get_price').value)
+            showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
                     await buy(quantity, price, proxy.secret)
                 } else {
                     await sell(quantity, price, proxy.secret)
                 }
+                getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
             }
             catch (err) {
+                getRef('trade_button_wrapper').append(getRef('failure_template').content.cloneNode(true))
                 notify(err, 'error')
             }
             finally {
                 getRef('trade_form').reset()
+                hideProcess('trade_button_wrapper')
+                setTimeout(() => {
+                    getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
+                }, 100);
             }
         }
         const balance = {
@@ -1240,13 +1278,29 @@
             // Get latest balance and exchange rate
             if (e.target.closest('button')) {
                 const target = e.target.closest('button')
+                const unitPrice = parseFloat(getRef('get_price').value)
                 const fraction = parseInt(target.value) / 100
                 if (tradeType === 'buy') {
-                    getRef('get_quantity').value = parseFloat(((balance.rupee * fraction) / rate.flo).toFixed(8))
+                    getRef('get_total').value = parseFloat((fraction * balance.rupee).toFixed(2))
+                    getRef('get_quantity').value = parseFloat(((balance.rupee * fraction) / unitPrice).toFixed(5))
                 } else {
-                    getRef('get_quantity').value = parseFloat((balance.flo * fraction).toFixed(8))
+                    getRef('get_total').value = parseFloat(((fraction * balance.flo) * rate.flo).toFixed(2))
+                    getRef('get_quantity').value = parseFloat((balance.flo * fraction).toFixed(5))
                 }
             }
+        })
+        getRef('get_price').addEventListener('keyup', e => {
+            const unitPrice = parseFloat(getRef('get_price').value) || 0
+            const quantity = parseFloat(getRef('get_quantity').value) || 0
+            getRef('get_total').value = parseFloat((quantity * unitPrice).toFixed(2)) || 0
+        })
+        getRef('get_quantity').addEventListener('keyup', e => {
+            const unitPrice = parseFloat(getRef('get_price').value)
+            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitPrice).toFixed(2)) || 0
+        })
+        getRef('get_total').addEventListener('keyup', e => {
+            const unitPrice = parseFloat(getRef('get_price').value)
+            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitPrice).toFixed(5)) || 0
         })
         getRef('wallet_actions').addEventListener('click', e => {
             if (e.target.closest('.button')) {
@@ -1254,7 +1308,7 @@
                 showPopup('wallet_popup')
                 const type = target.value
                 const asset = getRef('wallet_asset_selector').value
-                getRef('wallet_popup__cta').textContent = `${type}`
+                getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
                 if (type === 'withdraw') {
@@ -1273,7 +1327,6 @@
             const asset = getRef('wallet_asset_selector').value
             const type = e.target.getAttribute('value')
             const quantity = parseFloat(getRef('get_quantity').value)
-            console.log(type, asset)
             try {
                 showProcess('wallet_popup__cta_wrapper')
                 if (type === 'deposit') {
@@ -1341,7 +1394,7 @@
                 transform: 'translateX(1.5rem)'
             },
         ]
-        getRef('my_order_list').addEventListener('change', e => {
+        getRef('orders_list').addEventListener('change', e => {
             const animOptions = {
                 duration: 150,
                 easing: 'ease',
@@ -1355,26 +1408,26 @@
                 selectedOrders.delete(target.dataset.id)
             }
             getRef('selected_orders').textContent = `${selectedOrders.size} selected`
-            if (selectedOrders.size === 1 && !getRef('orders_section__header').children[0].classList.contains('hide-completely')) {
-                getRef('orders_section__header').children[0].animate(slideOutLeft, animOptions)
+            if (selectedOrders.size === 1 && !getRef('my_orders_section__header').children[0].classList.contains('hide-completely')) {
+                getRef('my_orders_section__header').children[0].animate(slideOutLeft, animOptions)
                     .onfinish = () => {
-                        getRef('orders_section__header').children[0].classList.add('hide-completely')
-                        getRef('orders_section__header').children[1].classList.remove('hide-completely')
-                        getRef('orders_section__header').children[1].animate(slideInLeft, animOptions)
+                        getRef('my_orders_section__header').children[0].classList.add('hide-completely')
+                        getRef('my_orders_section__header').children[1].classList.remove('hide-completely')
+                        getRef('my_orders_section__header').children[1].animate(slideInLeft, animOptions)
                     }
-            } else if (selectedOrders.size === 0 && getRef('orders_section__header').children[0].classList.contains('hide-completely')) {
-                getRef('orders_section__header').children[1].animate(slideOutRight, animOptions)
+            } else if (selectedOrders.size === 0 && getRef('my_orders_section__header').children[0].classList.contains('hide-completely')) {
+                getRef('my_orders_section__header').children[1].animate(slideOutRight, animOptions)
                     .onfinish = () => {
-                        getRef('orders_section__header').children[1].classList.add('hide-completely')
-                        getRef('orders_section__header').children[0].classList.remove('hide-completely')
-                        getRef('orders_section__header').children[0].animate(slideInRight, animOptions)
+                        getRef('my_orders_section__header').children[1].classList.add('hide-completely')
+                        getRef('my_orders_section__header').children[0].classList.remove('hide-completely')
+                        getRef('my_orders_section__header').children[0].animate(slideInRight, animOptions)
                     }
             }
         })
         function clearSelection() {
-            getRef('my_order_list').querySelectorAll('sm-checkbox[checked]').forEach(elem => elem.checked = false)
+            getRef('orders_list').querySelectorAll('sm-checkbox[checked]').forEach(elem => elem.checked = false)
         }
-        getRef('my_order_list').addEventListener('click', e => {
+        getRef('orders_list').addEventListener('click', e => {
             if (e.target.closest('.cancel-order')) {
                 getConfirmation('Cancel this order?').then(res => {
                     if (res) {
@@ -1389,18 +1442,26 @@
                             .catch(err => notify(err, 'error'))
                     }
                 })
+            } else if (e.target.closest('.more-info')) {
+                const target = e.target.closest('.more-info')
+                showPopup('transaction_info_popup')
+                getRef('transaction__buyer').value = target.dataset.buyer
+                getRef('transaction__seller').value = target.dataset.seller
+                getRef('transaction_time').textContent = getFormattedTime(target.dataset.time)
             }
         })
         function cancelAll() {
-            getConfirmation('Cancel all selected orders?').then(res => {
+            getConfirmation('Cancel all selected orders?').then(async res => {
                 if (res) {
                     try {
-                        selectedOrders.forEach(async (type, id) => {
-                            await cancelOrder(type, id, proxy.secret)
-                                .then(() => {
-                                    getRef('my_order_list').querySelector(`data-id="${id}"`).remove()
-                                })
-                        })
+                        await Promise.all(
+                            selectedOrders.map((type, id) => {
+                                cancelOrder(type, id, proxy.secret)
+                                    .then(() => {
+                                        getRef('orders_list').querySelector(`data-id="${id}"`).remove()
+                                    })
+                            })
+                        )
                         notify('All selected orders cancelled', 'success')
                     }
                     catch (err) {
@@ -1410,47 +1471,128 @@
             })
         }
 
-        function renderAllOrders(buyOrders, sellOrders) {
-            getRef('my_order_list').innerHTML = '';
+        function renderUserOrders() {
+            const { buyOrders, sellOrders, transactions } = accountDetails
+            getRef('orders_list').innerHTML = '';
             const frag = document.createDocumentFragment()
-            const allOpenOrders = [...(buyOrders || myBuyOrders), ...(sellOrders || mySellOrders)].sort((a, b) => b.time_placed - a.time_placed)
-            console.log(allOpenOrders)
-            allOpenOrders.forEach(order => {
-                const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
-                const orderDetails = {
-                    id,
-                    quantity,
-                    type: minPrice ? 'sell' : 'buy',
-                    price: minPrice || maxPrice,
-                    time: time_placed
-                }
-                frag.append(render.orderCard(orderDetails))
-            })
-            getRef('my_order_list').append(frag)
-        }
-        function renderOpenOrders(buyOrders, sellOrders) {
-            getRef('my_order_list').innerHTML = '';
-            const frag = document.createDocumentFragment()
-            const allOpenOrders = [...(buyOrders || myBuyOrders), ...(sellOrders || mySellOrders)].sort((a, b) => b.time_placed - a.time_placed)
-            allOpenOrders.forEach(order => {
-                const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
-                const orderDetails = {
-                    id,
-                    quantity,
-                    type: minPrice ? 'sell' : 'buy',
-                    price: minPrice || maxPrice,
-                    time: time_placed
-                }
-                frag.append(render.orderCard(orderDetails))
-            })
-            getRef('my_order_list').append(frag)
-        }
-        renderOpenOrders()
-        getRef('orders_scope_selector').addEventListener('change', e => {
-            if (e.target.value === 'open') {
-                renderOpenOrders()
+            const ordersType = getRef('my_orders_category_selector').value
+            if (ordersType === 'open') {
+                const allOpenOrders = [...(buyOrders || myBuyOrders), ...(sellOrders || mySellOrders)].sort((a, b) => b.time_placed - a.time_placed)
+                allOpenOrders.forEach(order => {
+                    const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                    const orderDetails = {
+                        id,
+                        quantity,
+                        type: minPrice ? 'sell' : 'buy',
+                        price: minPrice || maxPrice,
+                        time: time_placed
+                    }
+                    frag.append(render.orderCard(orderDetails))
+                })
             } else {
-                renderCompletedOrders()
+                (transactions || myTransactions).forEach(transaction => {
+                    const { floID, quantity, unitValue, tx_time, buyer, seller } = transaction
+                    let type, other;
+                    if (seller === floID) {
+                        type = 'Sold';
+                        other = buyer === floID ? 'MySelf' : buyer;
+                    } else if (buyer === floID) {
+                        type = 'Bought';
+                        other = seller;
+                    } else
+                        return;
+                    const transactionDetails = {
+                        buyer,
+                        seller,
+                        type,
+                        other,
+                        quantity,
+                        unitValue,
+                        time: tx_time
+                    }
+                    frag.append(render.transactionCard(transactionDetails))
+                });
+            }
+            getRef('orders_list').append(frag)
+        }
+        window.addEventListener('load', () => {
+            renderUserOrders()
+            renderMarketOrders()
+        })
+        getRef('my_orders_category_selector').addEventListener('change', renderUserOrders)
+
+        getRef('market_orders_category_selector').addEventListener('change', renderMarketOrders)
+        async function renderMarketOrders() {
+            getRef('market_orders_list').innerHTML = '';
+            const ordersType = getRef('market_orders_category_selector').value
+            getRef('market_orders_list').className = ordersType
+            if (ordersType === 'open') {
+                try {
+                    const buyersFrag = document.createDocumentFragment()
+                    const sellersFrag = document.createDocumentFragment()
+                    // const [buyOrders, sellOrders] = await Promise.all([getBuyList(), getSellList()])
+                    const { buyOrders, sellOrders } = market
+                    buyOrders.forEach(order => {
+                        const { id, quantity, maxPrice, time_placed } = order
+                        const orderDetails = {
+                            id,
+                            quantity,
+                            price: maxPrice,
+                            time: time_placed,
+                            type: 'buy'
+                        }
+                        buyersFrag.append(render.marketOrderCard(orderDetails))
+                    });
+                    sellOrders.forEach(order => {
+                        const { id, quantity, minPrice, time_placed } = order
+                        const orderDetails = {
+                            id,
+                            quantity,
+                            price: minPrice,
+                            time: time_placed,
+                            type: 'sell'
+                        }
+                        sellersFrag.append(render.marketOrderCard(orderDetails))
+                    });
+                    const marketOrders = getRef('market_order_list_template').content.cloneNode(true)
+                    marketOrders.querySelector('#buyers_list').append(buyersFrag)
+                    marketOrders.querySelector('#sellers_list').append(sellersFrag)
+                    getRef('market_orders_list').append(marketOrders)
+                }
+                catch (err) {
+                    notify(err, 'error')
+                }
+            } else {
+                const frag = document.createDocumentFragment()
+                try {
+                    // const marketTransactions = await getTransactionList()
+                    const marketTransactions = myTransactions
+                    marketTransactions.forEach(transaction => {
+                        const { seller, buyer, quantity, unitValue, tx_time } = transaction
+                        const transactionDetails = {
+                            buyer,
+                            seller,
+                            quantity,
+                            unitValue,
+                            time: tx_time
+                        }
+                        frag.append(render.marketTransactionCard(transactionDetails))
+                    })
+                    const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
+                    getRef('market_orders_list').append(marketTransactionList, frag)
+                }
+                catch (err) {
+                    notify(err, 'error')
+                }
+            }
+        }
+        getRef('market_orders_list').addEventListener('click', e => {
+            if (e.target.closest('.more-info')) {
+                const target = e.target.closest('.more-info')
+                showPopup('transaction_info_popup')
+                getRef('transaction__buyer').value = target.dataset.buyer
+                getRef('transaction__seller').value = target.dataset.seller
+                getRef('transaction_time').textContent = getFormattedTime(target.dataset.time)
             }
         })
 

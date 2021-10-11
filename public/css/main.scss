@@ -42,11 +42,14 @@ body[data-theme="dark"] {
     --text-color: 230, 230, 230;
     --text-color-light: 170, 170, 170;
     --background-color: 10, 10, 10;
-    --foreground-color: rgb(20, 20, 20);
+    --foreground-color: rgb(24, 24, 24);
     --danger-color: rgb(255, 106, 106);
     --green: #00e676;
     --yellow: #ffd13a;
     --loan-color: rgb(255, 232, 170);
+  }
+  sm-popup::part(popup) {
+    background-color: var(--foreground-color);
   }
 }
 
@@ -113,7 +116,7 @@ a:any-link:focus-visible {
 }
 
 sm-input {
-  --border-radius: 0.5rem;
+  --border-radius: 0.3rem;
   --background: var(--accent-color--light);
 }
 sm-button {
@@ -128,6 +131,9 @@ sm-button {
     .icon {
       fill: rgba(var(--text-color), 0.6);
     }
+  }
+  &.uppercase {
+    letter-spacing: 0.05em;
   }
 }
 ul {
@@ -355,6 +361,9 @@ ul {
     }
   }
 }
+#prompt_message {
+  margin-bottom: 1.5rem;
+}
 
 button:active,
 .button:active,
@@ -548,15 +557,16 @@ sm-option {
   font-weight: 500;
   min-width: 8ch;
 }
-#orders_section {
-  padding: 1.5rem 0;
+#my_orders_section,
+#market_orders_section {
+  padding-top: 1rem;
   .icon {
     height: 1.2rem;
     width: 1.2rem;
   }
 }
-#orders_section__header {
-  min-height: 2.8rem;
+.orders_section__header {
+  height: 2.4rem;
   padding: 0 1.5rem;
 }
 #orders_section__header--primary {
@@ -571,17 +581,9 @@ sm-option {
   }
 }
 
-.table {
+.list__item {
+  padding: 0.5rem 1.5rem;
   display: grid;
-  &__header {
-    color: rgba(var(--text-color), 0.8);
-    font-size: 0.8rem;
-  }
-  &__row {
-    padding: 0.5rem 1.5rem;
-    display: grid;
-    grid-template-columns: min-content repeat(3, 1fr) min-content;
-  }
 }
 .order-card {
   position: relative;
@@ -590,8 +592,8 @@ sm-option {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1.5rem 0.5rem 0.5rem;
-  &[data-type="buy"] &__type,
-  &[data-type="sell"] &__type {
+  grid-template-columns: min-content repeat(3, 1fr) min-content;
+  &__type {
     font-size: 0.9rem;
     font-weight: 500;
     margin-bottom: 0.3rem;
@@ -634,6 +636,94 @@ sm-option {
   padding: 0.4rem 0.6rem;
   span {
     margin-left: 0.3rem;
+  }
+}
+
+.transaction-card {
+  grid-template-columns: repeat(3, 1fr) 2rem;
+  &__type {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+  }
+  &[data-type="Bought"] &__type {
+    color: var(--green);
+  }
+  &[data-type="Sold"] &__type {
+    color: var(--danger-color);
+  }
+  &__total {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: rgba(var(--text-color), 0.8);
+  }
+  &__quantity,
+  &__price {
+    font-size: 0.9rem;
+    color: rgba(var(--text-color), 0.9);
+  }
+}
+
+#market_orders_list {
+  .list__header {
+    font-size: 0.8rem;
+    font-weight: 500;
+    div {
+      padding: 0.5rem 0;
+    }
+  }
+  &.open {
+    display: grid;
+    gap: 0.5rem 0;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    padding: 0 1rem;
+    .list__header {
+      grid-template-columns: repeat(4, 1fr);
+      grid-column: span 2;
+      div {
+        &:nth-of-type(even) {
+          text-align: right;
+        }
+        padding: 0.5rem;
+      }
+    }
+  }
+  &:not(.open) {
+    .list__header {
+      margin-bottom: 0.5rem;
+      padding: 0 1.5rem;
+      grid-template-columns: repeat(3, 1fr) 2rem;
+    }
+  }
+}
+.market-order-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  div {
+    padding: 0.5rem;
+  }
+  &--buy {
+    div {
+      color: var(--green);
+      &:last-of-type {
+        text-align: right;
+      }
+    }
+  }
+  &--sell {
+    div {
+      color: var(--danger-color);
+      grid-row: 1/2;
+      &:first-of-type {
+        text-align: right;
+        grid-column: 2/3;
+      }
+      &:last-of-type {
+        grid-column: 1/2;
+      }
+    }
   }
 }
 
@@ -696,7 +786,7 @@ sm-option {
     }
   }
 }
-.loader-button-wrapper {
+.stateful-button-wrapper {
   display: flex;
   position: relative;
   justify-content: center;
@@ -714,6 +804,65 @@ sm-option {
   }
   sm-spinner {
     position: absolute;
+  }
+}
+.stateful-result {
+  overflow: hidden;
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  left: 0;
+  & > * {
+    position: absolute;
+  }
+  &--success {
+    .result__background {
+      background-color: var(--green);
+    }
+  }
+  &--failure {
+    .result__background {
+      background-color: var(--danger-color);
+    }
+  }
+  .icon-wrapper {
+    animation: pop 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .icon {
+    height: 1.5rem;
+    width: 1.5rem;
+    fill: rgba(var(--background-color), 1);
+  }
+  span {
+    font-weight: 500;
+    color: rgba(var(--background-color), 1);
+  }
+  .result__background {
+    animation: ripple-reveal 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+}
+.result__background {
+  border-radius: 0.3rem;
+  height: 100%;
+  width: 100%;
+  clip-path: circle(10%);
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ripple-reveal {
+  to {
+    clip-path: circle(100%);
   }
 }
 @media screen and (max-width: 40rem) {
@@ -753,14 +902,14 @@ sm-option {
     align-items: flex-start;
     padding: 1.5vmax;
     gap: 1rem;
-    & > * {
-      border-radius: 0.5rem;
-      background-color: var(--foreground-color);
-      border: solid thin rgba(var(--text-color), 0.1);
-    }
   }
   .hide-on-desktop {
     display: none;
+  }
+  .card {
+    border-radius: 0.5rem;
+    background-color: var(--foreground-color);
+    border: solid thin rgba(var(--text-color), 0.1);
   }
 }
 @media screen and (min-width: 48rem) {
@@ -770,6 +919,11 @@ sm-option {
   }
   #orders_section {
     grid-row: span 2;
+  }
+  #orders_list,
+  #market_orders_list {
+    height: 36vmin;
+    overflow-y: auto;
   }
 }
 @media screen and (max-width: 64rem) {
@@ -838,6 +992,15 @@ sm-option {
         opacity: 1;
         transform: translateX(0);
       }
+    }
+  }
+  .transaction-card {
+    button {
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    &:hover button {
+      opacity: 1;
     }
   }
 }

@@ -41,11 +41,14 @@ body[data-theme=dark] * {
   --text-color: 230, 230, 230;
   --text-color-light: 170, 170, 170;
   --background-color: 10, 10, 10;
-  --foreground-color: rgb(20, 20, 20);
+  --foreground-color: rgb(24, 24, 24);
   --danger-color: rgb(255, 106, 106);
   --green: #00e676;
   --yellow: #ffd13a;
   --loan-color: rgb(255, 232, 170);
+}
+body[data-theme=dark] sm-popup::part(popup) {
+  background-color: var(--foreground-color);
 }
 
 p,
@@ -132,7 +135,7 @@ a:any-link:focus-visible {
 }
 
 sm-input {
-  --border-radius: 0.5rem;
+  --border-radius: 0.3rem;
   --background: var(--accent-color--light);
 }
 
@@ -144,6 +147,9 @@ sm-button[variant=primary] .icon {
 }
 sm-button[disabled] .icon {
   fill: rgba(var(--text-color), 0.6);
+}
+sm-button.uppercase {
+  letter-spacing: 0.05em;
 }
 
 ul {
@@ -400,6 +406,10 @@ ul {
   margin-left: auto;
 }
 
+#prompt_message {
+  margin-bottom: 1.5rem;
+}
+
 button:active,
 .button:active,
 .interact:active {
@@ -622,16 +632,18 @@ sm-option {
   min-width: 8ch;
 }
 
-#orders_section {
-  padding: 1.5rem 0;
+#my_orders_section,
+#market_orders_section {
+  padding-top: 1rem;
 }
-#orders_section .icon {
+#my_orders_section .icon,
+#market_orders_section .icon {
   height: 1.2rem;
   width: 1.2rem;
 }
 
-#orders_section__header {
-  min-height: 2.8rem;
+.orders_section__header {
+  height: 2.4rem;
   padding: 0 1.5rem;
 }
 
@@ -648,18 +660,9 @@ sm-option {
   --padding: 0.8rem 0;
 }
 
-.table {
-  display: grid;
-}
-.table__header {
-  color: rgba(var(--text-color), 0.8);
-  font-size: 0.8rem;
-}
-.table__row {
+.list__item {
   padding: 0.5rem 1.5rem;
   display: grid;
-  grid-template-columns: -webkit-min-content repeat(3, 1fr) -webkit-min-content;
-  grid-template-columns: min-content repeat(3, 1fr) min-content;
 }
 
 .order-card {
@@ -674,8 +677,10 @@ sm-option {
           align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1.5rem 0.5rem 0.5rem;
+  grid-template-columns: -webkit-min-content repeat(3, 1fr) -webkit-min-content;
+  grid-template-columns: min-content repeat(3, 1fr) min-content;
 }
-.order-card[data-type=buy] .order-card__type, .order-card[data-type=sell] .order-card__type {
+.order-card__type {
   font-size: 0.9rem;
   font-weight: 500;
   margin-bottom: 0.3rem;
@@ -717,6 +722,86 @@ sm-option {
 }
 .cancel-order span {
   margin-left: 0.3rem;
+}
+
+.transaction-card {
+  grid-template-columns: repeat(3, 1fr) 2rem;
+}
+.transaction-card__type {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+}
+.transaction-card[data-type=Bought] .transaction-card__type {
+  color: var(--green);
+}
+.transaction-card[data-type=Sold] .transaction-card__type {
+  color: var(--danger-color);
+}
+.transaction-card__total {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: rgba(var(--text-color), 0.8);
+}
+.transaction-card__quantity, .transaction-card__price {
+  font-size: 0.9rem;
+  color: rgba(var(--text-color), 0.9);
+}
+
+#market_orders_list .list__header {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+#market_orders_list .list__header div {
+  padding: 0.5rem 0;
+}
+#market_orders_list.open {
+  display: grid;
+  gap: 0.5rem 0;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  padding: 0 1rem;
+}
+#market_orders_list.open .list__header {
+  grid-template-columns: repeat(4, 1fr);
+  grid-column: span 2;
+}
+#market_orders_list.open .list__header div {
+  padding: 0.5rem;
+}
+#market_orders_list.open .list__header div:nth-of-type(even) {
+  text-align: right;
+}
+#market_orders_list:not(.open) .list__header {
+  margin-bottom: 0.5rem;
+  padding: 0 1.5rem;
+  grid-template-columns: repeat(3, 1fr) 2rem;
+}
+
+.market-order-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.market-order-card div {
+  padding: 0.5rem;
+}
+.market-order-card--buy div {
+  color: var(--green);
+}
+.market-order-card--buy div:last-of-type {
+  text-align: right;
+}
+.market-order-card--sell div {
+  color: var(--danger-color);
+  grid-row: 1/2;
+}
+.market-order-card--sell div:first-of-type {
+  text-align: right;
+  grid-column: 2/3;
+}
+.market-order-card--sell div:last-of-type {
+  grid-column: 1/2;
 }
 
 #user_section {
@@ -790,7 +875,7 @@ sm-option {
   text-align: right;
 }
 
-.loader-button-wrapper {
+.stateful-button-wrapper {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -802,8 +887,8 @@ sm-option {
       -ms-flex-align: center;
           align-items: center;
 }
-.loader-button-wrapper sm-button,
-.loader-button-wrapper slide-button {
+.stateful-button-wrapper sm-button,
+.stateful-button-wrapper slide-button {
   width: 100%;
   z-index: 1;
   -webkit-transition: -webkit-clip-path 0.3s;
@@ -813,16 +898,104 @@ sm-option {
   -webkit-clip-path: circle(100%);
           clip-path: circle(100%);
 }
-.loader-button-wrapper sm-button.clip,
-.loader-button-wrapper slide-button.clip {
+.stateful-button-wrapper sm-button.clip,
+.stateful-button-wrapper slide-button.clip {
   pointer-events: none;
   -webkit-clip-path: circle(0);
           clip-path: circle(0);
 }
-.loader-button-wrapper sm-spinner {
+.stateful-button-wrapper sm-spinner {
   position: absolute;
 }
 
+.stateful-result {
+  overflow: hidden;
+  position: absolute;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+  height: 100%;
+  width: 100%;
+  left: 0;
+}
+.stateful-result > * {
+  position: absolute;
+}
+.stateful-result--success .result__background {
+  background-color: var(--green);
+}
+.stateful-result--failure .result__background {
+  background-color: var(--danger-color);
+}
+.stateful-result .icon-wrapper {
+  -webkit-animation: pop 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          animation: pop 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.stateful-result .icon {
+  height: 1.5rem;
+  width: 1.5rem;
+  fill: rgba(var(--background-color), 1);
+}
+.stateful-result span {
+  font-weight: 500;
+  color: rgba(var(--background-color), 1);
+}
+.stateful-result .result__background {
+  -webkit-animation: ripple-reveal 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          animation: ripple-reveal 1s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.result__background {
+  border-radius: 0.3rem;
+  height: 100%;
+  width: 100%;
+  -webkit-clip-path: circle(10%);
+          clip-path: circle(10%);
+}
+
+@-webkit-keyframes pop {
+  from {
+    opacity: 0;
+    -webkit-transform: translateY(2rem);
+            transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    -webkit-transform: translateY(0);
+            transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    -webkit-transform: translateY(2rem);
+            transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    -webkit-transform: translateY(0);
+            transform: translateY(0);
+  }
+}
+@-webkit-keyframes ripple-reveal {
+  to {
+    -webkit-clip-path: circle(100%);
+            clip-path: circle(100%);
+  }
+}
+@keyframes ripple-reveal {
+  to {
+    -webkit-clip-path: circle(100%);
+            clip-path: circle(100%);
+  }
+}
 @media screen and (max-width: 40rem) {
   sm-button {
     --padding: 0.9rem 1.6rem;
@@ -868,14 +1041,15 @@ sm-option {
     padding: 1.5vmax;
     gap: 1rem;
   }
-  #home > * {
-    border-radius: 0.5rem;
-    background-color: var(--foreground-color);
-    border: solid thin rgba(var(--text-color), 0.1);
-  }
 
   .hide-on-desktop {
     display: none;
+  }
+
+  .card {
+    border-radius: 0.5rem;
+    background-color: var(--foreground-color);
+    border: solid thin rgba(var(--text-color), 0.1);
   }
 }
 @media screen and (min-width: 48rem) {
@@ -887,6 +1061,12 @@ sm-option {
 
   #orders_section {
     grid-row: span 2;
+  }
+
+  #orders_list,
+#market_orders_list {
+    height: 36vmin;
+    overflow-y: auto;
   }
 }
 @media screen and (min-width: 72rem) {
@@ -956,5 +1136,14 @@ sm-option {
     opacity: 1;
     -webkit-transform: translateX(0);
             transform: translateX(0);
+  }
+
+  .transaction-card button {
+    opacity: 0;
+    -webkit-transition: opacity 0.3s;
+    transition: opacity 0.3s;
+  }
+  .transaction-card:hover button {
+    opacity: 1;
   }
 }
