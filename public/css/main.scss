@@ -116,6 +116,7 @@ a:any-link:focus-visible {
 }
 
 sm-input {
+  font-size: 0.9rem;
   --border-radius: 0.3rem;
   --background: var(--accent-color--light);
 }
@@ -450,6 +451,11 @@ sm-select,
 sm-option {
   font-size: 0.9rem;
 }
+sm-checkbox {
+  --height: 1rem;
+  --width: 1rem;
+  -webkit-tap-highlight-color: transparent;
+}
 .warning {
   background-color: khaki;
   color: rgba(0, 0, 0, 0.7);
@@ -526,6 +532,9 @@ sm-option {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
 }
+#login_form__priv_key {
+  margin-top: 1rem;
+}
 
 #main_header {
   padding: 1.8rem 1.5rem;
@@ -535,10 +544,10 @@ sm-option {
   grid-template-columns: 1fr auto;
 }
 
-#trade_form {
-  --width: min(24rem, 100%);
+#trade_form,
+#login_form {
   align-self: flex-start;
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
 }
 #quantity_selector {
   .button {
@@ -614,11 +623,8 @@ sm-option {
     }
   }
   sm-checkbox {
-    --height: 1rem;
-    --width: 1rem;
     padding: 1rem;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
   }
   &__quantity,
   &__price {

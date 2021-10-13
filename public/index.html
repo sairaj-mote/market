@@ -162,7 +162,27 @@
                 </div>
                 <theme-toggle></theme-toggle>
             </header>
-            <sm-form id="trade_form">
+            <sm-form id="login_form" class="hide-">
+                <div class="grid gap-0-5">
+                    <h4>Login</h4>
+                    <p>Please login for trading and accessing your account.</p>
+                </div>
+                <sm-input type="password" id="login_form__priv_key" placeholder="Private key" variant="outlined" animate
+                    required hiderequired></sm-input>
+                <sm-checkbox id="remember_me" checked>
+                    <span class="button__icon--right">
+                        Remember me
+                    </span>
+                </sm-checkbox>
+                <input type="text" id="sign_in_id" style="display: none;" hidden />
+                <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
+                <sm-button onclick="UI_evt.signup();">Not registered? click here!</sm-button>
+            </sm-form>
+            <sm-form id="trade_form" class="user-content hide-completely">
+                <div class="flex align-center space-between">
+                    <p>FLO/INR rate</p>
+                    <span id="flo_rate"></span>
+                </div>
                 <div class="flex space-between align-center">
                     <h4>Trade FLO</h4>
                     <strip-select id="trade_type_selector" class="tab">
@@ -192,7 +212,7 @@
             </sm-form>
         </section>
         <section id="orders_section" class="grid gap-1">
-            <section id="my_orders_section" class="grid gap-1 card">
+            <section id="my_orders_section" class="grid gap-1 card user-content hide-completely">
                 <div id="my_orders_section__header" class="orders_section__header flex">
                     <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
                         <h4>
@@ -216,7 +236,7 @@
                         </button>
                         <div class="options">
                             <button class="button" title="Cancel selected orders" onclick="cancelAll()">
-                                Cancel selected
+                                Cancel orders
                             </button>
                         </div>
                     </div>
@@ -236,7 +256,7 @@
                 <ul id="market_orders_list"></ul>
             </section>
         </section>
-        <section id="user_section" class="grid card">
+        <section id="user_section" class="grid card user-content hide-completely">
             <h4 class="flex align-center user_section__header">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
                     viewBox="0 0 24 24" width="24px">
@@ -336,16 +356,6 @@
             </div>
         </div>
     </sm-popup>
-    <form id="login-form">
-        <fieldset>
-            <legend>Login</legend>
-            <input type="password" name="priv-key" placeholder="Enter Private Key" />
-            <input type="text" name="sid" style="display: none;" />
-            <input type="button" name="login" value="login" onclick="UI_evt.login();" /><br />
-            <input type="checkbox" name="remember-me" checked />RememberMe <br />
-            <button type="button" onclick="UI_evt.signup();">Not registered? click here!</button>
-        </fieldset>
-    </form>
     <div id="user-container">
         <fieldset>
             <legend>Profile</legend>
@@ -943,11 +953,19 @@
             }
         }
 
+        function updateRate() {
+            getRate().then(rate => {
+                pe.flo = rate
+                getRef('flo_rate').textContent = formatAmount(parseFloat(rate))
+            }).catch(error => console.error(error))
+        }
+
         function refresh(init = false) {
             if (init)
                 console.info("init");
             else
                 console.info("refresh");
+            updateRate()
             account();
         }
 
@@ -1082,9 +1100,9 @@
                 accountDetails = acc
                 console.debug(acc);
                 //Element display
-                document.getElementById("login-form").style.display = "none";
-                document.getElementById('user-container').style.display = "block";
-                document.getElementById("user_id").textContent = acc.floID;
+                document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide-completely'))
+                getRef('trade_form').classList.remove('hide-completely')
+                getRef("user_id").textContent = acc.floID;
                 user_id = acc.floID;
                 //FLO Balance
                 let flo_total = acc.coins.reduce((a, x) => a + x.quantity, 0);
@@ -1111,9 +1129,9 @@
                     let response = JSON.parse(error.data)
                     console.log(error);
                     console.log(response);
-                    document.getElementById('user-container').style.display = "none";
-                    document.getElementById("login-form").style.display = "block";
-                    document.forms['login-form']["sid"].value = response.sid;
+                    getRef("login_form").classList.remove('hide-completely')
+                    document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
+                    getRef('sign_in_id').value = response.sid;
                     proxy.clear();
                 } else
                     console.error(error);
@@ -1123,8 +1141,13 @@
         const UI_evt = {};
 
         UI_evt.signup = async function () {
-            let sid = document.forms['login-form']['sid'].value;
-            let privKey = await getPromptInput("Register private key", "Enter the private key of floID you want to register", { isPassword: true });
+            let sid = getRef('sign_in_id').value;
+            let privKey = await getPromptInput("Register private key", "Enter the private key of floID you want to register",
+                {
+                    isPassword: true,
+                    confirmText: 'Register'
+                }
+            );
             if (privKey) {
                 signUp(privKey, sid).then(result => {
                     console.info(result);
@@ -1144,10 +1167,9 @@
         };
 
         UI_evt.login = function () {
-            let formInputs = document.forms['login-form'];
-            let privKey = formInputs['priv-key'].value;
-            let sid = formInputs['sid'].value;
-            let rememberMe = formInputs['remember-me'].checked;
+            let privKey = getRef('login_form__priv_key').value;
+            let sid = getRef('sign_in_id').value;
+            let rememberMe = getRef('remember_me').checked;
             let tmpKey = floCrypto.generateNewID();
             login(privKey, tmpKey.pubKey, sid, rememberMe).then(result => {
                 console.log(result);
@@ -1261,10 +1283,12 @@
             }
             finally {
                 getRef('trade_form').reset()
-                hideProcess('trade_button_wrapper')
                 setTimeout(() => {
-                    getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
-                }, 100);
+                    hideProcess('trade_button_wrapper')
+                    setTimeout(() => {
+                        getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
+                    }, 100);
+                }, 4000);
             }
         }
         const balance = {
@@ -1357,7 +1381,7 @@
         const slideInLeft = [
             {
                 opacity: 0,
-                transform: 'translateX(1.5rem)'
+                transform: 'translateX(1rem)'
             },
             {
                 opacity: 1,
@@ -1371,13 +1395,13 @@
             },
             {
                 opacity: 0,
-                transform: 'translateX(-1.5rem)'
+                transform: 'translateX(-1rem)'
             },
         ]
         const slideInRight = [
             {
                 opacity: 0,
-                transform: 'translateX(-1.5rem)'
+                transform: 'translateX(-1rem)'
             },
             {
                 opacity: 1,
@@ -1391,7 +1415,7 @@
             },
             {
                 opacity: 0,
-                transform: 'translateX(1.5rem)'
+                transform: 'translateX(1rem)'
             },
         ]
         getRef('orders_list').addEventListener('change', e => {
@@ -1455,14 +1479,13 @@
                 if (res) {
                     try {
                         await Promise.all(
-                            selectedOrders.map((type, id) => {
-                                cancelOrder(type, id, proxy.secret)
-                                    .then(() => {
-                                        getRef('orders_list').querySelector(`data-id="${id}"`).remove()
-                                    })
-                            })
+                            selectedOrders.map((type, id) => cancelOrder(type, id, proxy.secret))
                         )
+                        selectedOrders.forEach((type, id) => {
+                            getRef('orders_list').querySelector(`[data-id="${id}"]`).remove()
+                        })
                         notify('All selected orders cancelled', 'success')
+                        selectedOrders.clear()
                     }
                     catch (err) {
                         notify(err, 'error')
