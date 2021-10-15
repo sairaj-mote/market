@@ -1,5 +1,3 @@
-const floGlobals = require("./floGlobals");
-
 var net_FLO_price; //container for FLO price (from API or by model)
 var DB; //container for database
 
@@ -127,7 +125,7 @@ function addBuyOrder(floID, quantity, max_price) {
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof max_price !== "number" || max_price <= 0)
             return reject(INVALID(`Invalid max_price (${max_price})`));
-        DB.query("SELECT rupeeBalance FROM Users WHERE floID=?", [floID]).then(result => {
+        DB.query("SELECT rupeeBalance FROM Cash WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID("FLO ID not registered"));
             let total = result.pop()["rupeeBalance"];
@@ -205,7 +203,7 @@ function getBestBuyer(cur_price, n = 0) {
             let buyOrder = result.shift();
             if (!buyOrder)
                 return reject("No valid buyers available");
-            DB.query("SELECT rupeeBalance AS bal FROM Users WHERE floID=?", [buyOrder.floID]).then(result => {
+            DB.query("SELECT rupeeBalance AS bal FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
                 if (result[0].bal < cur_price * buyOrder.quantity) {
                     //This should not happen unless a buy order is placed when user doesnt have enough rupee balance
                     console.warn(`Buy order ${buyOrder.id} is active, but rupee# is insufficient`);
@@ -293,8 +291,8 @@ function processBuyAndSellOrder(seller_best, buyer_best, txQueries) {
 function updateBalance(seller_best, buyer_best, txQueries, cur_price, quantity) {
     //Update rupee balance for seller and buyer
     let totalAmount = cur_price * quantity;
-    txQueries.push(["UPDATE Users SET rupeeBalance=rupeeBalance+? WHERE floID=?", [totalAmount, seller_best.floID]]);
-    txQueries.push(["UPDATE Users SET rupeeBalance=rupeeBalance-? WHERE floID=?", [totalAmount, buyer_best.floID]]);
+    txQueries.push(["UPDATE Cash SET rupeeBalance=rupeeBalance+? WHERE floID=?", [totalAmount, seller_best.floID]]);
+    txQueries.push(["UPDATE Cash SET rupeeBalance=rupeeBalance-? WHERE floID=?", [totalAmount, buyer_best.floID]]);
     //Add coins to Buyer
     txQueries.push(["INSERT INTO Vault(floID, base, quantity) VALUES (?, ?, ?)", [buyer_best.floID, cur_price, quantity]])
     //Record transaction
@@ -305,7 +303,7 @@ function updateBalance(seller_best, buyer_best, txQueries, cur_price, quantity) 
 function getAccountDetails(floID) {
     return new Promise((resolve, reject) => {
         let select = [];
-        select.push(["rupeeBalance", "Users"]);
+        select.push(["rupeeBalance", "Cash"]);
         select.push(["base, quantity", "Vault"]);
         select.push(["id, quantity, minPrice, time_placed", "SellOrder"]);
         select.push(["id, quantity, maxPrice, time_placed", "BuyOrder"]);
@@ -517,7 +515,7 @@ function confirmDepositRupee() {
                         txQueries.push(["INSERT INTO inputFLO(txid, floID, amount, status) VALUES (?, ?, ?)", [req.txid, req.floID, amount_flo, "SUCCESS"]]);
                     }
                     txQueries.push(["UPDATE inputRupee SET status=? WHERE id=?", ["SUCCESS", req.id]]);
-                    txQueries.push(["UPDATE Users SET rupeeBalance=rupeeBalance+? WHERE floID=?", [amount_rupee, req.floID]]);
+                    txQueries.push(["UPDATE Cash SET rupeeBalance=rupeeBalance+? WHERE floID=?", [amount_rupee, req.floID]]);
                     DB.transaction(txQueries)
                         .then(result => console.debug("Rupee deposited for ", req.floID))
                         .catch(error => console.error(error));
@@ -571,7 +569,7 @@ function withdrawRupee(floID, amount) {
                 let available = total - locked;
                 if (available < required_flo)
                     return reject(INVALID(`Insufficient FLO (Some FLO are locked in sell orders)! Required ${required_flo} FLO to withdraw tokens`));
-                DB.query("SELECT rupeeBalance FROM Users WHERE floID=?", [floID]).then(result => {
+                DB.query("SELECT rupeeBalance FROM Cash WHERE floID=?", [floID]).then(result => {
                     if (result.length < 1)
                         return reject(INVALID(`FLO_ID: ${floID} not registered`));
                     if (result[0].rupeeBalance < amount)
@@ -590,7 +588,7 @@ function withdrawRupee(floID, amount) {
                         }
                         if (rem > 0) //should not happen AS the total and net is checked already
                             return reject(INVALID("Insufficient FLO"));
-                        txQueries.push(["UPDATE Users SET rupeeBalance=rupeeBalance-? WHERE floID=?", [amount, floID]]);
+                        txQueries.push(["UPDATE Cash SET rupeeBalance=rupeeBalance-? WHERE floID=?", [amount, floID]]);
 
                         DB.transaction(txQueries).then(result => {
                             //Send FLO to user via blockchain API

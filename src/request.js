@@ -64,7 +64,10 @@ function SignUp(req, res) {
     }, data.sign, data.pubKey);
     if (req_str instanceof INVALID)
         return res.status(INVALID.e_code).send(req_str.message);
-    DB.query("INSERT INTO Users(floID, pubKey) VALUES (?, ?)", [data.floID, data.pubKey]).then(result => {
+    let txQueries = [];
+    txQueries.push(["INSERT INTO Users(floID, pubKey) VALUES (?, ?)", [data.floID, data.pubKey]]);
+    txQueries.push(["INSERT INTO Cash (floID) Values (?)", data.floID]);
+    DB.transaction(txQueries).then(_ => {
         storeRequest(data.floID, req_str, data.sign);
         res.send("Account Created");
     }).catch(error => {
