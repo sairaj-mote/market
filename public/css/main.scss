@@ -136,6 +136,10 @@ sm-button {
   &.uppercase {
     letter-spacing: 0.05em;
   }
+  &.danger {
+    --background: var(--danger-color);
+    color: rgba(var(--background-color), 1);
+  }
 }
 ul {
   list-style: none;
@@ -386,6 +390,22 @@ button:active,
   cursor: pointer;
 }
 
+.dropdown-wrapper {
+  position: relative;
+  z-index: 1;
+}
+.dropdown {
+  top: 100%;
+  right: 0;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  width: min(24rem, calc(100vw - 3rem));
+  position: absolute;
+  background-color: var(--foreground-color);
+  border: solid thin rgba(var(--text-color), 0.1);
+  box-shadow: 0 0.5rem 1.5rem -0.5rem rgba(0, 0, 0, 0.1);
+}
+
 #main_page {
   padding: 1.5rem;
 
@@ -530,6 +550,8 @@ sm-checkbox {
 #home {
   height: 100%;
   display: grid;
+  align-items: flex-start;
+  align-content: flex-start;
   grid-template-columns: minmax(0, 1fr);
 }
 #login_form__priv_key {
@@ -537,11 +559,13 @@ sm-checkbox {
 }
 
 #main_header {
-  padding: 1.8rem 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
   display: grid;
   gap: 1rem;
   align-items: center;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
+  grid-column: 1/-1;
 }
 
 #trade_form,
@@ -575,12 +599,10 @@ sm-checkbox {
   }
 }
 .orders_section__header {
-  height: 2.4rem;
   padding: 0 1.5rem;
 }
 #orders_section__header--primary {
-  flex-wrap: wrap;
-  z-index: 1;
+  height: 2.4rem;
   sm-tab-header {
     --gap: 1.5rem;
   }
@@ -652,10 +674,12 @@ sm-checkbox {
     font-weight: 500;
     margin-bottom: 0.3rem;
   }
-  &[data-type="Bought"] &__type {
+  &[data-type="Bought"] &__type,
+  &--buy &__type {
     color: var(--green);
   }
-  &[data-type="Sold"] &__type {
+  &[data-type="Sold"] &__type,
+  &--sell &__type {
     color: var(--danger-color);
   }
   &__total {
@@ -678,67 +702,16 @@ sm-checkbox {
       padding: 0.5rem 0;
     }
   }
-  &.open {
-    display: grid;
-    gap: 0.5rem 0;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
-    padding: 0 1rem;
-    .list__header {
-      grid-template-columns: repeat(4, 1fr);
-      grid-column: span 2;
-      div {
-        &:nth-of-type(even) {
-          text-align: right;
-        }
-        padding: 0.5rem;
-      }
-    }
-  }
-  &:not(.open) {
-    .list__header {
-      margin-bottom: 0.5rem;
-      padding: 0 1.5rem;
-      grid-template-columns: repeat(3, 1fr) 2rem;
-    }
+  .list__header {
+    margin-bottom: 0.5rem;
+    padding: 0 1.5rem;
+    grid-template-columns: repeat(3, 1fr) 2rem;
   }
 }
-.market-order-card {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  div {
-    padding: 0.5rem;
-  }
-  &--buy {
-    div {
-      color: var(--green);
-      &:last-of-type {
-        text-align: right;
-      }
-    }
-  }
-  &--sell {
-    div {
-      color: var(--danger-color);
-      grid-row: 1/2;
-      &:first-of-type {
-        text-align: right;
-        grid-column: 2/3;
-      }
-      &:last-of-type {
-        grid-column: 1/2;
-      }
-    }
-  }
-}
-
 #user_section {
   gap: 1.5rem;
   padding: 1.5rem;
   align-content: flex-start;
-}
-.user_section__header {
 }
 .wallet_actions__wrapper {
   grid-column: span 3;
@@ -872,6 +845,9 @@ sm-checkbox {
   }
 }
 @media screen and (max-width: 40rem) {
+  #main_header {
+    padding: 0 1.5rem;
+  }
   sm-button {
     --padding: 0.9rem 1.6rem;
   }
@@ -905,8 +881,7 @@ sm-checkbox {
     grid-template-columns: 1fr 90vw 1fr;
   }
   #home {
-    align-items: flex-start;
-    padding: 1.5vmax;
+    padding: 0 4vmax;
     gap: 1rem;
   }
   .hide-on-desktop {
@@ -961,7 +936,8 @@ sm-checkbox {
       background: rgba(var(--text-color), 0.5);
     }
   }
-  .interact {
+  .interact,
+  button {
     transition: background-color 0.3s, transform 0.3s;
     &:hover {
       background-color: var(--accent-color--light);
