@@ -147,7 +147,7 @@
             key.setCompressed(true);
 
             var privateKeyArr = key.getBitcoinPrivateKeyByteArray();
-            privateKey = BigInteger.fromByteArrayUnsigned(privateKeyArr);
+            var privateKey = BigInteger.fromByteArrayUnsigned(privateKeyArr);
             var messageHash = Crypto.SHA256(data);
 
             var messageHashBigInteger = new BigInteger(messageHash);
