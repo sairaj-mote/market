@@ -187,7 +187,7 @@
                 </div>
             </div>
         </header>
-        <section class="card">
+        <section id="dashboard" class="card mobile-page hide-on-mobile">
             <sm-form id="login_form" class="hide-">
                 <div class="grid gap-0-5">
                     <h4>Login</h4>
@@ -238,7 +238,8 @@
             </sm-form>
         </section>
         <section id="orders_section" class="grid gap-1">
-            <section id="my_orders_section" class="grid gap-1 card user-content hide-completely">
+            <section id="my_orders_section"
+                class="grid gap-1 card user-content hide-completely mobile-page hide-on-mobile">
                 <div id="my_orders_section__header" class="orders_section__header flex">
                     <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
                         <h4>
@@ -269,7 +270,7 @@
                 </div>
                 <ul id="orders_list"></ul>
             </section>
-            <section id="market_orders_section" class="grid gap-1 card">
+            <section id="market_orders_section" class="grid gap-1 card mobile-page hide-on-mobile">
                 <div class="orders_section__header flex align-center space-between">
                     <h4 class="flex align-center">
                         Market orders
@@ -291,7 +292,7 @@
                 <ul id="market_orders_list"></ul>
             </section>
         </section>
-        <section id="user_section" class="grid card user-content hide-completely">
+        <section id="user_section" class="grid card user-content mobile-page hide-completely hide-on-mobile">
             <h4 class="flex align-center user_section__header">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
                     viewBox="0 0 24 24" width="24px">
@@ -342,6 +343,43 @@
             </div>
         </section>
     </article>
+    <footer id="bottom_nav" class="flex align-center hide-on-desktop">
+        <a href="#/dashboard" class="bottom_nav__item bottom_nav__item--active">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
+                viewBox="0 0 24 24" width="24px" fill="#000000">
+                <rect fill="none" height="24" width="24" />
+                <path
+                    d="M19,3H5C3.9,3,3,3.9,3,5v14c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V5C21,3.9,20.1,3,19,3z M5,19V5h6v14H5z M19,19h-6v-7h6V19z M19,10h-6V5h6V10z" />
+            </svg>
+            <div class="item__title">Dashboard</div>
+        </a>
+        <a href="#/market" class="bottom_nav__item">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
+                viewBox="0 0 24 24" width="24px" fill="#000000">
+                <g>
+                    <rect fill="none" height="24" width="24" />
+                </g>
+                <g>
+                    <g />
+                    <g>
+                        <path
+                            d="M21.9,8.89l-1.05-4.37c-0.22-0.9-1-1.52-1.91-1.52H5.05C4.15,3,3.36,3.63,3.15,4.52L2.1,8.89 c-0.24,1.02-0.02,2.06,0.62,2.88C2.8,11.88,2.91,11.96,3,12.06V19c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2v-6.94 c0.09-0.09,0.2-0.18,0.28-0.28C21.92,10.96,22.15,9.91,21.9,8.89z M18.91,4.99l1.05,4.37c0.1,0.42,0.01,0.84-0.25,1.17 C19.57,10.71,19.27,11,18.77,11c-0.61,0-1.14-0.49-1.21-1.14L16.98,5L18.91,4.99z M13,5h1.96l0.54,4.52 c0.05,0.39-0.07,0.78-0.33,1.07C14.95,10.85,14.63,11,14.22,11C13.55,11,13,10.41,13,9.69V5z M8.49,9.52L9.04,5H11v4.69 C11,10.41,10.45,11,9.71,11c-0.34,0-0.65-0.15-0.89-0.41C8.57,10.3,8.45,9.91,8.49,9.52z M4.04,9.36L5.05,5h1.97L6.44,9.86 C6.36,10.51,5.84,11,5.23,11c-0.49,0-0.8-0.29-0.93-0.47C4.03,10.21,3.94,9.78,4.04,9.36z M5,19v-6.03C5.08,12.98,5.15,13,5.23,13 c0.87,0,1.66-0.36,2.24-0.95c0.6,0.6,1.4,0.95,2.31,0.95c0.87,0,1.65-0.36,2.23-0.93c0.59,0.57,1.39,0.93,2.29,0.93 c0.84,0,1.64-0.35,2.24-0.95c0.58,0.59,1.37,0.95,2.24,0.95c0.08,0,0.15-0.02,0.23-0.03V19H5z" />
+                    </g>
+                </g>
+            </svg>
+            <div class="item__title">Market</div>
+        </a>
+        <a href="#/wallet" class="bottom_nav__item user-content">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
+                fill="#000000">
+                <path d="M0 0h24v24H0V0z" fill="none" />
+                <path
+                    d="M21 7.28V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.98 1-1.72V9c0-.74-.41-1.37-1-1.72zM20 9v6h-7V9h7zM5 19V5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5z" />
+                <circle cx="16" cy="12" r="1.5" />
+            </svg>
+            <div class="item__title">Wallet</div>
+        </a>
+    </footer>
     <sm-popup id="wallet_popup">
         <header slot="header" class="popup__header">
             <button class="popup__header__close" onclick="hidePopup()">
@@ -776,6 +814,7 @@
 
         window.addEventListener('hashchange', e => showPage(window.location.hash))
         window.addEventListener("load", () => {
+            showPage(window.location.hash)
             document.body.classList.remove('hide-completely')
             document.querySelectorAll('sm-input[data-private-key]').forEach(input => input.customValidation = floCrypto.getPubKeyHex)
             document.addEventListener('keyup', (e) => {
@@ -796,8 +835,6 @@
         async function showPage(targetPage, options = {}) {
             const { firstLoad, hashChange } = options
             let pageId
-            let subPageId
-            let searchParams
             let params
             if (targetPage === '') {
                 if (typeof myFloID === "undefined") {
@@ -807,47 +844,36 @@
                 }
             } else {
                 if (targetPage.includes('/')) {
-                    if (targetPage.includes('?')) {
-                        const splitAddress = targetPage.split('?')
-                        searchParams = splitAddress.pop()
-                        const pages = splitAddress.pop().split('/')
-                        pageId = pages[1]
-                        subPageId = pages[2]
-                    } else {
-                        const pages = targetPage.split('/')
-                        pageId = pages[1]
-                        subPageId = pages[2]
-                    }
+                    const pages = targetPage.split('/')
+                    pageId = pages[1]
                 } else {
                     pageId = targetPage
                 }
             }
-            if (typeof myFloID === "undefined" && !(['sign_up', 'sign_in', 'loading', 'landing'].includes(pageId))) return
-            if (searchParams) {
-                const urlSearchParams = new URLSearchParams('?' + searchParams);
-                params = Object.fromEntries(urlSearchParams.entries());
-                pagesData.params = params
-            }
             if (pagesData.lastPage !== pageId) {
+                let target
                 switch (pageId) {
-                    case 'sign_in':
-                        setTimeout(() => {
-                            getRef('private_key_field').focusIn()
-                        }, 0);
+                    case 'dashboard':
+                        target = 'dashboard'
                         break;
-                    case 'sign_up':
-                        const { floID, privKey } = floCrypto.generateNewID()
-                        getRef('generated_flo_id').value = floID
-                        getRef('generated_private_key').value = privKey
+                    case 'market':
+                        target = 'market_orders_section'
+                        break;
+                    case 'wallet':
+                        target = 'user_section'
                         break;
                 }
-                document.querySelector('.page:not(.hide-completely)')?.classList.add('hide-completely')
-                getRef(pageId)?.classList.remove('hide-completely')
-                getRef(pageId)?.animate([
+                document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hide-on-mobile'))
+                getRef(target).classList.remove('hide-on-mobile')
+                document.querySelectorAll('.bottom_nav__item').forEach(elem => elem.classList.remove('bottom_nav__item--active'))
+                document.querySelector(`.bottom_nav__item[href="#/${pageId}"]`).classList.add('bottom_nav__item--active')
+                getRef(target)?.animate([
                     {
+                        transform: 'translateY(1rem)',
                         opacity: 0,
                     },
                     {
+                        transform: 'none',
                         opacity: 1,
                     },
                 ],
@@ -855,10 +881,10 @@
                         duration: 300,
                         easing: 'ease'
                     })
-            }
-            pagesData.lastPage = pageId
-            if (!pagesData.openedPages.includes(pageId)) {
-                pagesData.openedPages.push(pageId)
+                pagesData.lastPage = target
+                if (!pagesData.openedPages.includes(target)) {
+                    pagesData.openedPages.push(target)
+                }
             }
         }
         // class based lazy loading
@@ -1115,6 +1141,7 @@
             }
             finally {
                 hideProcess('wallet_popup__cta_wrapper')
+                getRef('wallet_form').reset()
             }
         })
         const selectedOrders = new Map()

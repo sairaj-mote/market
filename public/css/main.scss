@@ -851,6 +851,51 @@ sm-checkbox {
   sm-button {
     --padding: 0.9rem 1.6rem;
   }
+  #home {
+    & > :last-child {
+      padding-bottom: 5rem;
+    }
+  }
+  #bottom_nav {
+    position: fixed;
+    bottom: 0;
+    background-color: var(--foreground-color);
+    width: 100%;
+  }
+  .bottom_nav__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    padding: 0.5rem 0;
+    .item__title,
+    .icon {
+      transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .item__title {
+      color: rgba(var(--text-color), 0.8);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .icon {
+      height: 1.2rem;
+      margin-bottom: 0.3rem;
+    }
+    &--active {
+      .item__title {
+        color: var(--accent-color);
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      .icon {
+        transform: translateY(50%) scale(1.2);
+        fill: var(--accent-color);
+      }
+    }
+  }
+  .hide-on-mobile {
+    display: none;
+  }
 }
 @media screen and (min-width: 40rem) {
   sm-popup {
