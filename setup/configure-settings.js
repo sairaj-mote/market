@@ -50,7 +50,7 @@ function getBackupIDs(ids) {
 function configureBackup() {
     return new Promise(resolve => {
         getInput.Text('Enter backup port (N = No backup)', config["backup-port"]).then(backup_port => {
-            config["backup-port"] = backup_port === N ? null : backup_port;
+            config["backup-port"] = (backup_port === 'N' || backup_port === 'n') ? null : backup_port;
             if (!config["backup-port"])
                 return resolve(true);
             getInput.YesOrNo('Do you want to add/remove backup floIDs?').then(value => {
