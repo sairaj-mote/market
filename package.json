@@ -1,0 +1,43 @@
+{
+  "name": "flo-exchange-market",
+  "version": "1.0.0",
+  "description": "Central Exchange market for FLO",
+  "main": "src/main.js",
+  "dependencies": {
+    "cookie-parser": "^1.4.5",
+    "express": "^4.17.1",
+    "express-session": "^1.17.2",
+    "mysql": "^2.18.1",
+    "node-fetch": "^2.6.1",
+    "ws": "^8.2.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "postinstall": "node setup/post-install.js",
+    "help": "node setup/help.js",
+    "setup": "node setup/post-install.js",
+    "configure": "node setup/configure-settings.js",
+    "reset-password": "node setup/reset-password.js",
+    "create-schema": "node setup/create-schema.js",
+    "configure-backup": "node setup/configure-backup.js",
+    "create-backup-schema":"node setup/create-backup-schema.js",
+    "backup":"node src/backup/storage.js",
+    "start": "node start.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ranchimall/exchange-market.git"
+  },
+  "keywords": [
+    "exchange-market",
+    "FLO",
+    "blockchain",
+    "Ranchimall"
+  ],
+  "author": "Sai Raj",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ranchimall/exchange-market/issues"
+  },
+  "homepage": "https://github.com/ranchimall/exchange-market#readme"
+}

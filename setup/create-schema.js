@@ -1,8 +1,8 @@
 const fs = require('fs');
-const config = require('./args/config.json');
-let Database = require('./src/database');
+let Database = require('../src/database');
 
-function createSchema() {
+function createSchema(app = true) {
+    const config = require('../args/' + (app ? 'app' : 'backup') + "-config.json");
     return new Promise((resolve, reject) => {
         fs.readFile(__dirname + '/../args/schema.sql', 'utf8', (err, data) => {
             if (err) {
