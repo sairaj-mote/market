@@ -1203,7 +1203,7 @@
                 }
             }
             catch (err) {
-                showWalletResult('error', `Failed`, err)
+                showWalletResult('error', `Failed`, err.data || err)
             }
             finally {
                 hideProcess('wallet_popup__cta_wrapper')
