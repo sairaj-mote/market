@@ -310,12 +310,18 @@ ul {
   transition: transform 0.3s;
   -webkit-tap-highlight-color: transparent;
 }
+.empty-state {
+  display: grid;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+}
 
 .observe-empty-state:empty {
   display: none;
 }
 
-.observe-empty-state:not(:empty) ~ .empty-state {
+.observe-empty-state:not(:empty) + .empty-state {
   display: none;
 }
 
@@ -392,7 +398,7 @@ button:active,
 
 .dropdown-wrapper {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 .dropdown {
   top: 100%;
@@ -601,8 +607,10 @@ sm-checkbox {
 .orders_section__header {
   padding: 0 1.5rem;
 }
-#orders_section__header--primary {
+#my_orders_section__header {
   height: 2.4rem;
+}
+#orders_section__header--primary {
   sm-tab-header {
     --gap: 1.5rem;
   }
@@ -765,6 +773,40 @@ sm-checkbox {
     }
   }
 }
+#wallet_result {
+  justify-content: center;
+  text-align: center;
+  &__icon {
+    display: flex;
+    padding: 1rem;
+    border-radius: 50%;
+    background-color: rgba(var(--text-color), 0.06);
+    justify-self: center;
+    animation: pop-up 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    .icon {
+      height: 2rem;
+      width: 2rem;
+    }
+  }
+}
+.icon--success {
+  fill: var(--green);
+}
+.icon--failure,
+.icon--error {
+  fill: var(--danger-color);
+}
+@keyframes pop-up {
+  from {
+    transform: translateY(3rem) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 .stateful-button-wrapper {
   display: flex;
   position: relative;
@@ -842,6 +884,13 @@ sm-checkbox {
 @keyframes ripple-reveal {
   to {
     clip-path: circle(100%);
+  }
+}
+@media screen and (max-width: 40rem) and (any-hover: none) {
+  .cancel-order {
+    span {
+      display: none;
+    }
   }
 }
 @media screen and (max-width: 40rem) {
@@ -942,14 +991,16 @@ sm-checkbox {
   #home {
     grid-template-rows: min-content 1fr;
     grid-template-columns: 24rem minmax(0, 1fr);
+    &.signed-in {
+      #orders_list,
+      #market_orders_list {
+        height: 32vmin;
+        overflow-y: auto;
+      }
+    }
   }
   #orders_section {
     grid-row: span 2;
-  }
-  #orders_list,
-  #market_orders_list {
-    height: 36vmin;
-    overflow-y: auto;
   }
 }
 @media screen and (max-width: 64rem) {
@@ -958,7 +1009,7 @@ sm-checkbox {
   .page-layout {
     grid-template-columns: 1fr 80vw 1fr;
   }
-  #home {
+  #home.signed-in {
     grid-template-columns: 24rem minmax(0, 1fr) 20rem;
   }
 }

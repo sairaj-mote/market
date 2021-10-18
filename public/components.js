@@ -824,6 +824,13 @@ smNotifications.innerHTML = `
         width: 100%;
         fill: rgba(var(--text-color), 0.7);
     }
+    .icon--success {
+        fill: var(--green);
+      }
+      .icon--failure,
+      .icon--error {
+        fill: var(--danger-color);
+      }
     .close{
         height: 2rem;
         width: 2rem;
@@ -897,8 +904,8 @@ customElements.define('sm-notifications', class extends HTMLElement {
         return result;
     }
 
-    createNotification(message, options) {
-        const { pinned = false, icon = '' } = options
+    createNotification(message, options = {}) {
+        const { pinned = false, icon = '' } = options;
         const notification = document.createElement('div')
         notification.id = this.randString(8)
         notification.classList.add('notification');
