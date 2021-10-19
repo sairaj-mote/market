@@ -353,6 +353,7 @@ ul {
       -ms-flex-pack: center;
           justify-content: center;
   text-align: center;
+  width: 100%;
   padding: 1.5rem;
 }
 
@@ -580,37 +581,26 @@ sm-checkbox {
   gap: 1rem;
 }
 
-#sign_in,
 #sign_up {
   grid-template-rows: auto 1fr;
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
 }
-#sign_in section,
 #sign_up section {
   margin-top: -6rem;
   justify-self: center;
   width: min(24rem, 100%);
 }
-#sign_in sm-form,
-#sign_up sm-form {
-  margin: 2rem 0;
-}
-#sign_in header,
 #sign_up header {
   padding: 1.5rem 0;
 }
-
 #sign_up sm-copy {
   font-size: 0.9rem;
   --button-border-radius: 0.5rem;
 }
 #sign_up .h2 {
   margin-bottom: 0.5rem;
-}
-#sign_up .card {
-  margin: 1.5rem 0;
 }
 #sign_up h5 {
   font-weight: 500;

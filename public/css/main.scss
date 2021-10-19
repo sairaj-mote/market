@@ -314,6 +314,7 @@ ul {
   display: grid;
   justify-content: center;
   text-align: center;
+  width: 100%;
   padding: 1.5rem;
 }
 
@@ -511,7 +512,6 @@ sm-checkbox {
   }
 }
 
-#sign_in,
 #sign_up {
   grid-template-rows: auto 1fr;
   align-items: center;
@@ -520,23 +520,15 @@ sm-checkbox {
     justify-self: center;
     width: min(24rem, 100%);
   }
-  sm-form {
-    margin: 2rem 0;
-  }
   header {
     padding: 1.5rem 0;
   }
-}
-#sign_up {
   sm-copy {
     font-size: 0.9rem;
     --button-border-radius: 0.5rem;
   }
   .h2 {
     margin-bottom: 0.5rem;
-  }
-  .card {
-    margin: 1.5rem 0;
   }
   h5 {
     font-weight: 500;
