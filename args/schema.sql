@@ -1,4 +1,4 @@
--- Main Tables
+/* Main Tables */
 
 CREATE TABLE Users (
 floID CHAR(34) NOT NULL,
@@ -100,7 +100,7 @@ status VARCHAR(50) NOT NULL,
 PRIMARY KEY(id)
 );
 
--- Backup feature (Table and Triggers)
+/* Backup feature (Table and Triggers) */
 
 CREATE TABLE _backup (
 t_name VARCHAR(20),

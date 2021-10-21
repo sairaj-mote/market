@@ -5,8 +5,8 @@ require('../lib');
 require('../floCrypto');
 const WebSocket = require('ws');
 
-const WAIT_TIME = 5 * 60 * 1000,
-    BACKUP_INTERVAL = 5 * 60 * 1000;
+const WAIT_TIME = 1 * 60 * 1000,
+    BACKUP_INTERVAL = 1 * 60 * 1000;
 
 const myPrivKey = config.private_key,
     myPubKey = floCrypto.getPubKeyHex(config.private_key),

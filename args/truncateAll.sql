@@ -1,0 +1,13 @@
+TRUNCATE _backup;
+TRUNCATE buyorder;
+TRUNCATE cash;
+TRUNCATE inputflo;
+TRUNCATE inputrupee;
+TRUNCATE outputflo;
+TRUNCATE outputrupee;
+TRUNCATE request_log;
+TRUNCATE sellorder;
+TRUNCATE sessions;
+TRUNCATE transactions;
+TRUNCATE users;
+TRUNCATE vault;

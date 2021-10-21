@@ -512,7 +512,7 @@ function confirmDepositRupee() {
                     if (!result.length) {
                         let amount_flo = amounts[1];
                         txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [req.floID, amount_flo]]);
-                        txQueries.push(["INSERT INTO inputFLO(txid, floID, amount, status) VALUES (?, ?, ?)", [req.txid, req.floID, amount_flo, "SUCCESS"]]);
+                        txQueries.push(["INSERT INTO inputFLO(txid, floID, amount, status) VALUES (?, ?, ?, ?)", [req.txid, req.floID, amount_flo, "SUCCESS"]]);
                     }
                     txQueries.push(["UPDATE inputRupee SET status=? WHERE id=?", ["SUCCESS", req.id]]);
                     txQueries.push(["UPDATE Cash SET rupeeBalance=rupeeBalance+? WHERE floID=?", [amount_rupee, req.floID]]);
