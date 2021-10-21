@@ -2,177 +2,571 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RanchiMall market</title>
+
+    <script src="components.js" defer></script>
+    <link rel="stylesheet" href="css/main.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-    <script src="floGlobals.js"></script>
+    <script id="floGlobals">
+        /* Constants for FLO blockchain operations !!Make sure to add this at beginning!! */
+        const floGlobals = {
+
+            //Required for all
+            blockchain: "FLO",
+
+            //Required for blockchain API operators
+            apiURL: {
+                FLO: ['https://livenet.flocha.in/', 'https://flosight.duckdns.org/'],
+                FLO_TEST: ['https://testnet-flosight.duckdns.org/', 'https://testnet.flocha.in/']
+            },
+            tokenURL: "https://ranchimallflo.duckdns.org/",
+            token: "rupee",
+            adminID: "FKAEdnPfjXLHSYwrXQu377ugN4tXU7VGdf",
+            sendAmt: 0.001,
+            fee: 0.0005,
+        }
+    </script>
     <script src="https://sairajzero.github.io/Standard_Operations/cdn/floCrypto.js"></script>
     <script src="https://github.com/sairajzero/Standard_Operations/releases/download/test/floBlockchainAPI.js"></script>
     <script src="fn.js"></script>
 </head>
 
-<body>
-    <div>Current FLO Rate: <span id="cur-rate"></span></div>
-    <form id="login-form">
-        <fieldset>
-            <legend>Login</legend>
-            <input type="password" name="priv-key" placeholder="Enter Private Key" />
-            <input type="text" name="sid" style="display: none;" />
-            <input type="button" name="login" value="login" onclick="UI_evt.login();" /><br />
-            <input type="checkbox" name="remember-me" checked />RememberMe <br />
-            <button type="button" onclick="UI_evt.signup();">Not registered? click here!</button>
-        </fieldset>
-    </form>
-    <div id="user-container">
-        <fieldset>
-            <legend>Profile</legend>
-            <span id="user_id"></span><br />
-            FLO: <span id="flo_bal"></span><br />
-            Rupee: <span id="rupee_bal"></span><br />
-            <button onclick="proxy.lock();">Add password lock</button><br />
-            <button onclick="UI_evt.logout();">logout</button>
-            <form id="buy-form">
-                <fieldset>
-                    <legend>Buy</legend>
-                    <input type="number" name="quantity" placeholder="Enter Quantity" />
-                    <input type="number" name="max-price" placeholder="Enter Max Price" />
-                    <input type="button" name="buy" value="buy" onclick="UI_evt.buy();" />
-                </fieldset>
-            </form>
-            <form id="sell-form">
-                <fieldset>
-                    <legend>Sell</legend>
-                    <input type="number" name="quantity" placeholder="Enter Quantity" />
-                    <input type="number" name="min-price" placeholder="Enter Min Price" />
-                    <input type="button" name="sell" value="sell" onclick="UI_evt.sell();" />
-                </fieldset>
-            </form>
-            <form id="deposit-withdraw-form">
-                <fieldset>
-                    <legend>Deposit/Withdraw</legend><br />
-                    <input type="number" name="quantity" placeholder="Enter Quantity" />
-                    <input type="button" name="deposit-flo" value="Deposit FLO" onclick="UI_evt.depositFLO();" />
-                    <input type="button" name="withdraw-flo" value="Withdraw FLO" onclick="UI_evt.withdrawFLO();" />
-                    <input type="button" name="deposit-rupee" value="Deposit Rupee" onclick="UI_evt.depositRupee();" />
-                    <input type="button" name="withdraw-rupee" value="Withdraw Rupee"
-                        onclick="UI_evt.withdrawRupee();" />
-                </fieldset>
-            </form>
-            <button onclick="toggle_view('my-profile');">Toggle</button>
-            <div id="my-profile">
-                <div id="my-orders">
-                    <fieldset>
-                        <legend>My Orders</legend>
-                        <fieldset id="my-buy-orders">
-                            <legend>Buying</legend>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Select</th>
-                                        <th>Quantity</th>
-                                        <th>Max Price</th>
-                                        <th>Order Placed</th>
-                                    </tr>
-                                </thead>
-                                <tbody data-type="buy"></tbody>
-                            </table>
-                        </fieldset>
-                        <fieldset id="my-sell-orders">
-                            <legend>Selling</legend>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Select</th>
-                                        <th>Quantity</th>
-                                        <th>Min Price</th>
-                                        <th>Order Placed</th>
-                                    </tr>
-                                </thead>
-                                <tbody data-type="sell"></tbody>
-                            </table>
-                        </fieldset>
-                        <button name="cancel-orders" onclick="UI_evt.cancelOrders();">Cancel Orders</button>
-                    </fieldset>
-
-                </div>
-                <div id="my-transactions">
-                    <fieldset>
-                        <legend>My Transactions</legend>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Sold/Brought</th>
-                                    <th>To/From</th>
-                                    <th>Quantity</th>
-                                    <th>Unit Value</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </fieldset>
+<body class="hide-completely">
+    <sm-notifications id="notification_drawer"></sm-notifications>
+    <audio id="notification_sound">
+        <source src="https://rmservices.duckdns.org/files/notification-sound.mp3" type="audio/mpeg">
+        <source src="https://rmservices.duckdns.org/files/notification-sound.ogg" type="audio/ogg">
+    </audio>
+    <sm-popup id="confirmation_popup">
+        <h4 id="confirm_title"></h4>
+        <p id="confirm_message"></p>
+        <div class="flex align-center">
+            <sm-button variant="no-outline" class="cancel-btn">Cancel</sm-button>
+            <sm-button variant="no-outline" class="submit-btn">OK</sm-button>
+        </div>
+    </sm-popup>
+    <sm-popup id="prompt_popup">
+        <h4 id="prompt_title"></h4>
+        <p id="prompt_message"></p>
+        <sm-form>
+            <sm-input id="prompt_input"></sm-input>
+            <div class="flex align-center">
+                <sm-button variant="no-outline" class="cancel-btn">Cancel</sm-button>
+                <sm-button variant="no-outline" class="submit-btn" type="submit">OK</sm-button>
+            </div>
+        </sm-form>
+    </sm-popup>
+    <article id="loading" class="page page-layout hide-completely">
+        <sm-spinner></sm-spinner>
+        <h4>Loading RanchiMall Market</h4>
+    </article>
+    <article id="home" class="page">
+        <header id="main_header">
+            <div class="logo">
+                <svg class="main-logo" viewBox="0 0 27.25 32">
+                    <title>RanchiMall</title>
+                    <path
+                        d="M27.14,30.86c-.74-2.48-3-4.36-8.25-6.94a20,20,0,0,1-4.2-2.49,6,6,0,0,1-1.25-1.67,4,4,0,0,1,0-2.26c.37-1.08.79-1.57,3.89-4.55a11.66,11.66,0,0,0,3.34-4.67,6.54,6.54,0,0,0,.05-2.82C20,3.6,18.58,2,16.16.49c-.89-.56-1.29-.64-1.3-.24a3,3,0,0,1-.3.72l-.3.55L13.42.94C13,.62,12.4.26,12.19.15c-.4-.2-.73-.18-.72.05a9.39,9.39,0,0,1-.61,1.33s-.14,0-.27-.13C8.76.09,8-.27,8,.23A11.73,11.73,0,0,1,6.76,2.6C4.81,5.87,2.83,7.49.77,7.49c-.89,0-.88,0-.61,1,.22.85.33.92,1.09.69A5.29,5.29,0,0,0,3,8.33c.23-.17.45-.29.49-.26a2,2,0,0,1,.22.63A1.31,1.31,0,0,0,4,9.34a5.62,5.62,0,0,0,2.27-.87L7,8l.13.55c.19.74.32.82,1,.65a7.06,7.06,0,0,0,3.46-2.47l.6-.71-.06.64c-.17,1.63-1.3,3.42-3.39,5.42L6.73,14c-3.21,3.06-3,5.59.6,8a46.77,46.77,0,0,0,4.6,2.41c.28.13,1,.52,1.59.87,3.31,2,4.95,3.92,4.95,5.93a2.49,2.49,0,0,0,.07.77h0c.09.09,0,.1.9-.14a2.61,2.61,0,0,0,.83-.32,3.69,3.69,0,0,0-.55-1.83A11.14,11.14,0,0,0,17,26.81a35.7,35.7,0,0,0-5.1-2.91C9.37,22.64,8.38,22,7.52,21.17a3.53,3.53,0,0,1-1.18-2.48c0-1.38.71-2.58,2.5-4.23,2.84-2.6,3.92-3.91,4.67-5.65a3.64,3.64,0,0,0,.42-2A3.37,3.37,0,0,0,13.61,5l-.32-.74.29-.48c.17-.27.37-.63.46-.8l.15-.3.44.64a5.92,5.92,0,0,1,1,2.81,5.86,5.86,0,0,1-.42,1.94c0,.12-.12.3-.15.4a9.49,9.49,0,0,1-.67,1.1,28,28,0,0,1-4,4.29C8.62,15.49,8.05,16.44,8,17.78a3.28,3.28,0,0,0,1.11,2.76c.95,1,2.07,1.74,5.25,3.32,3.64,1.82,5.22,2.9,6.41,4.38A4.78,4.78,0,0,1,21.94,31a3.21,3.21,0,0,0,.14.92,1.06,1.06,0,0,0,.43-.05l.83-.22.46-.12-.06-.46c-.21-1.53-1.62-3.25-3.94-4.8a37.57,37.57,0,0,0-5.22-2.82A13.36,13.36,0,0,1,11,21.19a3.36,3.36,0,0,1-.8-4.19c.41-.85.83-1.31,3.77-4.15,2.39-2.31,3.43-4.13,3.43-6a5.85,5.85,0,0,0-2.08-4.29c-.23-.21-.44-.43-.65-.65A2.5,2.5,0,0,1,15.27.69a10.6,10.6,0,0,1,2.91,2.78A4.16,4.16,0,0,1,19,6.16a4.91,4.91,0,0,1-.87,3c-.71,1.22-1.26,1.82-4.27,4.67a9.47,9.47,0,0,0-2.07,2.6,2.76,2.76,0,0,0-.33,1.54,2.76,2.76,0,0,0,.29,1.47c.57,1.21,2.23,2.55,4.65,3.73a32.41,32.41,0,0,1,5.82,3.24c2.16,1.6,3.2,3.16,3.2,4.8a1.94,1.94,0,0,0,.09.76,4.54,4.54,0,0,0,1.66-.4C27.29,31.42,27.29,31.37,27.14,30.86ZM6.1,7h0a3.77,3.77,0,0,1-1.46.45L4,7.51l.68-.83a25.09,25.09,0,0,0,3-4.82A12,12,0,0,1,8.28.76c.11-.12.77.32,1.53,1l.63.58-.57.84A10.34,10.34,0,0,1,6.1,7Zm5.71-1.78A9.77,9.77,0,0,1,9.24,7.18h0a5.25,5.25,0,0,1-1.17.28l-.58,0,.65-.78a21.29,21.29,0,0,0,2.1-3.12c.22-.41.42-.76.44-.79s.5.43.9,1.24L12,5ZM13.41,3a2.84,2.84,0,0,1-.45.64,11,11,0,0,1-.9-.91l-.84-.9.19-.45c.34-.79.39-.8,1-.31A9.4,9.4,0,0,1,13.8,2.33q-.18.34-.39.69Z" />
+                </svg>
+                <div class="grid">
+                    <h4>RanchiMall Market</h4>
                 </div>
             </div>
-        </fieldset>
-    </div>
-    <button onclick="toggle_view('all-container');">Toggle All</button>
-    <button onclick="refresh();">Refresh</button>
-    <div id="all-container">
-        <div id="buy-orders">
-            <fieldset>
-                <legend>BuyOrders</legend>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Buyer</th>
-                            <th>Quantity</th>
-                            <th>Max Price</th>
-                            <th>Order Placed</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </fieldset>
+            <theme-toggle></theme-toggle>
+            <div id="user_dropdown" class="dropdown-wrapper grid user-content hide-completely">
+                <button onclick="toggleDropdown('user_dropdown')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px"
+                        fill="#000000">
+                        <path d="M0 0h24v24H0V0z" fill="none" />
+                        <path
+                            d="M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                </button>
+                <div class="dropdown grid gap-2 hide-completely">
+                    <h3>Profile</h3>
+                    <div class="grid">
+                        <div class="label">My FLO ID</div>
+                        <sm-copy id="user_id"></sm-copy>
+                    </div>
+                    <div class="grid gap-0-5">
+                        <h4>Add password lock</h4>
+                        <p>
+                            Adding password lock allows to authenticate transactions with custom password instead of
+                            private key.
+                        </p>
+                        <sm-button onclick="proxy.lock();">Add password</sm-button>
+                    </div>
+                    <sm-button class="danger" onclick="UI_evt.logout();">Log out</sm-button>
+                </div>
+            </div>
+        </header>
+        <section id="dashboard" class="card mobile-page hide-on-mobile">
+            <sm-form id="login_form" class="hide-">
+                <div class="grid gap-0-5">
+                    <h4>Login</h4>
+                    <p>Please login for trading and accessing your account.</p>
+                </div>
+                <sm-input type="password" id="login_form__priv_key" placeholder="Private key" variant="outlined" animate
+                    required hiderequired></sm-input>
+                <sm-checkbox id="remember_me" checked>
+                    <span class="button__icon--right">
+                        Remember me
+                    </span>
+                </sm-checkbox>
+                <input type="text" id="sign_in_id" style="display: none;" hidden />
+                <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
+                <sm-button onclick="showPopup('registration_popup')">Not registered? click here!</sm-button>
+            </sm-form>
+            <sm-form id="trade_form" class="user-content hide-completely">
+                <div class="flex align-center space-between">
+                    <p>FLO/INR rate</p>
+                    <span id="flo_rate"></span>
+                </div>
+                <div class="flex space-between align-center">
+                    <h4>Trade FLO</h4>
+                    <strip-select id="trade_type_selector" class="tab">
+                        <strip-option value="buy" selected>Buy</strip-option>
+                        <strip-option value="sell">Sell</strip-option>
+                    </strip-select>
+                </div>
+                <sm-input id="get_price" variant="outlined" placeholder="Max price (₹)" type="number" step="0.00001"
+                    required hiderequired animate>
+                </sm-input>
+                <sm-input id="get_quantity" variant="outlined" placeholder="Quantity (FLO)" type="number"
+                    step="0.00000001" required hiderequired animate></sm-input>
+                <sm-input id="get_total" variant="outlined" placeholder="Total (₹)" type="number" min="1" step="0.01"
+                    required hiderequired animate>
+                </sm-input>
+                <div id="quantity_selector" class="flex align-center">
+                    <span id="quantity_type">Rupee</span>
+                    <button class="button" value="25">25%</button>
+                    <button class="button" value="50">50%</button>
+                    <button class="button" value="75">75%</button>
+                    <button class="button" value="100">100%</button>
+                </div>
+                <div id="trade_button_wrapper" class="stateful-button-wrapper flex align-center justify-center">
+                    <sm-button id="trade_button" class="uppercase w-100" variant="primary" onclick="tradeFlo()">BUY FLO
+                    </sm-button>
+                </div>
+            </sm-form>
+        </section>
+        <section id="orders_section" class="grid gap-1">
+            <section id="my_orders_section" class="grid gap-1 card user-content mobile-page hide-on-mobile">
+                <div id="my_orders_section__header" class="orders_section__header flex">
+                    <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
+                        <h4>
+                            My orders
+                        </h4>
+                        <strip-select id="my_orders_category_selector" class="tab">
+                            <strip-option value="open" selected>Open</strip-option>
+                            <strip-option value="completed">History</strip-option>
+                        </strip-select>
+                    </div>
+                    <div id="orders_section__header--secondary"
+                        class="flex w-100 align-center space-between hide-completely">
+                        <button class="" onclick="clearSelection()" title="Clear all selection">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                                viewBox="0 0 24 24" width="24px">
+                                <path d="M0 0h24v24H0V0z" fill="none" />
+                                <path
+                                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
+                            </svg>
+                            <span id="selected_orders"></span>
+                        </button>
+                        <div class="options">
+                            <button class="button" title="Cancel selected orders" onclick="cancelAll()">
+                                Cancel orders
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <ul id="orders_list" class="observe-empty-state"></ul>
+                <p class="empty-state">
+                    No orders placed
+                </p>
+            </section>
+            <section id="market_orders_section" class="grid gap-1 card mobile-page hide-on-mobile">
+                <div class="orders_section__header flex align-center space-between">
+                    <h4 class="flex align-center">
+                        Market orders
+                        <button onclick="refresh();" title="Refresh" style="margin-left: 1rem;">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
+                                width="24px" fill="#000000">
+                                <path d="M0 0h24v24H0V0z" fill="none" />
+                                <path
+                                    d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                            </svg>
+                        </button>
+                    </h4>
+                    <strip-select id="market_orders_category_selector" class="tab">
+                        <strip-option value="open" selected>Open</strip-option>
+                        <strip-option value="completed">History</strip-option>
+                    </strip-select>
+                </div>
+                <ul id="market_orders_list" class="observe-empty-state"></ul>
+                <p class="empty-state">
+                    No orders placed
+                </p>
+            </section>
+        </section>
+        <section id="user_section" class="grid card user-content mobile-page hide-completely hide-on-mobile">
+            <h4 class="flex align-center user_section__header">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                    viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M21 7.28V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.98 1-1.72V9c0-.74-.41-1.37-1-1.72zM20 9v6h-7V9h7zM5 19V5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5z" />
+                    <circle cx="16" cy="12" r="1.5" />
+                </svg>
+                My wallet
+            </h4>
+            <div id="wallet_actions">
+                <p class="label">Select asset</p>
+                <sm-select id="wallet_asset_selector">
+                    <sm-option value="FLO">FLO</sm-option>
+                    <sm-option value="Rupee">Rupee</sm-option>
+                </sm-select>
+                <div class="flex wallet_actions__wrapper">
+                    <button class="button" value="deposit">
+                        Deposit
+                    </button>
+                    <button class="button" value="withdraw">
+                        Withdraw
+                    </button>
+                </div>
+            </div>
+            <div class="grid gap-0-5">
+                <h4>Balance</h4>
+                <div class="balance-card">
+                    <div class="balance-card__icon">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M16.36,15.39c1.83,0,4.26-2.49,4.36-4.74-5.65-.19-4.91.47-7.28,2.39,2.19-2.4,1.42-7.79-1.43-10V6.17c2.33,1.49,2.21,5.14,0,7.15-2.23-2-2.27-5.69,0-7.15V3c-2.83,2.26-3.62,7.66-1.44,10-2.36-1.93-1.63-2.58-7.28-2.39.1,2.26,2.55,4.73,4.36,4.74,0,0-1.93.22-2.74-2.62,2.38-.37,4.29-.14,6.28,2-.79-.11-4.89,1.13-4.38,3.26.53.06,3,.3,3.58-.83-.17.18-1.25.5-1.53.05.38-1.39,2.32-2,2.32-2-1,1.82-.48,4.63.82,5.72,1.31-1.08,1.8-3.95.82-5.72,0,0,1.95.6,2.32,2-.29.46-1.36.12-1.53-.05.58,1.14,3.06.88,3.58.83.49-2.17-3.58-3.36-4.38-3.26,2-2.17,3.92-2.39,6.28-2C18.3,15.62,16.36,15.39,16.36,15.39ZM12,19.46c-.91-.79-.5-3,0-3.59C12.5,16.45,12.91,18.66,12,19.46Z" />
+                        </svg>
+                    </div>
+                    <div class="balance-card__token">FLO</div>
+                    <div id="flo_balance"></div>
+                </div>
+                <div class="balance-card">
+                    <div class="balance-card__icon">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M15.3,4.91a4.78,4.78,0,0,0-.39-.5l3.14,0L18.75,2H6L5.25,4.6H9a4.22,4.22,0,0,1,3.06,1,3.16,3.16,0,0,1,.75,1.24H5.93L5.25,9.22h7.62a3.15,3.15,0,0,1-.34.82,3,3,0,0,1-1.37,1.17,5.34,5.34,0,0,1-2.2.4H5.5l0,1.9,7,8.49h3.56v-.17L9.68,14l.09,0a8.07,8.07,0,0,0,3.65-1,5,5,0,0,0,2-2.09A6.29,6.29,0,0,0,16,9.22h2.1l.69-2.42H15.93A5.93,5.93,0,0,0,15.3,4.91Z" />
+                        </svg>
+                    </div>
+                    <div class="balance-card__token">Rupee</div>
+                    <div id="rupee_balance"></div>
+                </div>
+            </div>
+        </section>
+    </article>
+    <footer id="bottom_nav" class="flex align-center hide-on-desktop">
+        <a href="#/dashboard" class="bottom_nav__item bottom_nav__item--active">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
+                viewBox="0 0 24 24" width="24px" fill="#000000">
+                <rect fill="none" height="24" width="24" />
+                <path
+                    d="M19,3H5C3.9,3,3,3.9,3,5v14c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V5C21,3.9,20.1,3,19,3z M5,19V5h6v14H5z M19,19h-6v-7h6V19z M19,10h-6V5h6V10z" />
+            </svg>
+            <div class="item__title">Dashboard</div>
+        </a>
+        <a href="#/my_orders" class="bottom_nav__item">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
+                viewBox="0 0 24 24" width="24px" fill="#000000">
+                <path d="M0,0h24v24H0V0z" fill="none" />
+                <g>
+                    <path
+                        d="M19.5,3.5L18,2l-1.5,1.5L15,2l-1.5,1.5L12,2l-1.5,1.5L9,2L7.5,3.5L6,2v14H3v3c0,1.66,1.34,3,3,3h12c1.66,0,3-1.34,3-3V2 L19.5,3.5z M15,20H6c-0.55,0-1-0.45-1-1v-1h10V20z M19,19c0,0.55-0.45,1-1,1s-1-0.45-1-1v-3H8V5h11V19z" />
+                    <rect height="2" width="6" x="9" y="7" />
+                    <rect height="2" width="2" x="16" y="7" />
+                    <rect height="2" width="6" x="9" y="10" />
+                    <rect height="2" width="2" x="16" y="10" />
+                </g>
+            </svg>
+            <div class="item__title">My orders</div>
+        </a>
+        <a href="#/market" class="bottom_nav__item">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
+                viewBox="0 0 24 24" width="24px" fill="#000000">
+                <g>
+                    <rect fill="none" height="24" width="24" />
+                </g>
+                <g>
+                    <g />
+                    <g>
+                        <path
+                            d="M21.9,8.89l-1.05-4.37c-0.22-0.9-1-1.52-1.91-1.52H5.05C4.15,3,3.36,3.63,3.15,4.52L2.1,8.89 c-0.24,1.02-0.02,2.06,0.62,2.88C2.8,11.88,2.91,11.96,3,12.06V19c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2v-6.94 c0.09-0.09,0.2-0.18,0.28-0.28C21.92,10.96,22.15,9.91,21.9,8.89z M18.91,4.99l1.05,4.37c0.1,0.42,0.01,0.84-0.25,1.17 C19.57,10.71,19.27,11,18.77,11c-0.61,0-1.14-0.49-1.21-1.14L16.98,5L18.91,4.99z M13,5h1.96l0.54,4.52 c0.05,0.39-0.07,0.78-0.33,1.07C14.95,10.85,14.63,11,14.22,11C13.55,11,13,10.41,13,9.69V5z M8.49,9.52L9.04,5H11v4.69 C11,10.41,10.45,11,9.71,11c-0.34,0-0.65-0.15-0.89-0.41C8.57,10.3,8.45,9.91,8.49,9.52z M4.04,9.36L5.05,5h1.97L6.44,9.86 C6.36,10.51,5.84,11,5.23,11c-0.49,0-0.8-0.29-0.93-0.47C4.03,10.21,3.94,9.78,4.04,9.36z M5,19v-6.03C5.08,12.98,5.15,13,5.23,13 c0.87,0,1.66-0.36,2.24-0.95c0.6,0.6,1.4,0.95,2.31,0.95c0.87,0,1.65-0.36,2.23-0.93c0.59,0.57,1.39,0.93,2.29,0.93 c0.84,0,1.64-0.35,2.24-0.95c0.58,0.59,1.37,0.95,2.24,0.95c0.08,0,0.15-0.02,0.23-0.03V19H5z" />
+                    </g>
+                </g>
+            </svg>
+            <div class="item__title">Market</div>
+        </a>
+        <a href="#/wallet" class="bottom_nav__item user-content">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
+                fill="#000000">
+                <path d="M0 0h24v24H0V0z" fill="none" />
+                <path
+                    d="M21 7.28V5c0-1.1-.9-2-2-2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-2.28c.59-.35 1-.98 1-1.72V9c0-.74-.41-1.37-1-1.72zM20 9v6h-7V9h7zM5 19V5h14v2h-6c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h6v2H5z" />
+                <circle cx="16" cy="12" r="1.5" />
+            </svg>
+            <div class="item__title">Wallet</div>
+        </a>
+    </footer>
+    <sm-popup id="registration_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h4>Register</h4>
+        </header>
+        <div class="grid gap-1-5">
+            <sm-form id="register_section">
+                <p>Enter the private key of FLO ID you want to register.</p>
+                <sm-input id="get_registration_key" variant="outlined" placeholder="Private key" type="password"
+                    required hiderequired></sm-input>
+                <sm-button variant="primary" onclick="UI_evt.signup()">Register</sm-button>
+            </sm-form>
+            <div class="grid gap-0-5">
+                <p>Don't have FLO credentials?</p>
+                <sm-button onclick="showPopup('sign_up_popup')">Generate FLO credentials</sm-button>
+            </div>
         </div>
-        <div id="sell-orders">
-            <fieldset>
-                <legend>SellOrders</legend>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Seller</th>
-                            <th>Quantity</th>
-                            <th>Min Price</th>
-                            <th>Order Placed</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </fieldset>
+    </sm-popup>
+    <sm-popup id="sign_up_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h4>Get credentials</h4>
+        </header>
+        <section id="sign_up_section" class="grid gap-1-5">
+            <div class="grid gap-1-5">
+                <div class="grid gap-0-5">
+                    <h5>FLO ID</h5>
+                    <sm-copy id="generated_flo_id"></sm-copy>
+                </div>
+                <div class="grid gap-0-5">
+                    <h5>Private key</h5>
+                    <sm-copy id="generated_private_key"></sm-copy>
+                </div>
+            </div>
+            <sm-button id="sign_up_button" variant="primary" onclick="registerID()">Register these credentials
+            </sm-button>
+            <strong class="warning">
+                Keep your private key secure and don't share with anyone.
+                Once lost there is no way to recover private key.
+            </strong>
+        </section>
+    </sm-popup>
+    <sm-popup id="wallet_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h4 id="wallet_popup__title" class="capitalize"></h4>
+        </header>
+        <sm-form id="wallet_form">
+            <sm-input id="get_user_amount" variant="outlined" placeholder="Quantity" type="number" min="1"
+                step="0.00001" required hiderequired animate>
+            </sm-input>
+            <sm-input id="get_private_key" variant="outlined" placeholder="FLO private key" type="password" required
+                error-text="Invalid private key" hiderequired animate>
+            </sm-input>
+            <div id="wallet_popup__cta_wrapper" class="stateful-button-wrapper">
+                <sm-button id="wallet_popup__cta" class="uppercase" variant="primary"></sm-button>
+            </div>
+        </sm-form>
+        <div id="wallet_result" class="grid gap-2 hide-completely">
+            <div id="wallet_result__icon"></div>
+            <div class="grid gap-0-5">
+                <h4 id="wallet_result__title"></h4>
+                <p id="wallet_result__description"></p>
+            </div>
+            <button class="button" onclick="hideWalletResult()">Go back</button>
         </div>
-        <div id="transactions">
-            <fieldset>
-                <legend>Transactions</legend>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Seller</th>
-                            <th>Buyer</th>
-                            <th>Quantity</th>
-                            <th>Unit Value</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </fieldset>
+    </sm-popup>
+    <sm-popup id="transaction_info_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h4>Transaction details</h4>
+        </header>
+        <div class="grid gap-1-5">
+            <div id="transaction__buyer_wrapper" class="grid">
+                <h5 class="label capitalize">Buyer</h5>
+                <sm-copy id="transaction__buyer"></sm-copy>
+            </div>
+            <div id="transaction__seller_wrapper" class="grid">
+                <h5 class="label capitalize">Seller</h5>
+                <sm-copy id="transaction__seller"></sm-copy>
+            </div>
+            <div class="grid">
+                <h5 id="transaction_time__label" class="label">Completed</h5>
+                <h4 id="transaction_time"></h4>
+            </div>
         </div>
-    </div>
+    </sm-popup>
+    <template id="net_balance_template">
+        <span class="available-balance"></span>
+    </template>
+    <template id="locked_balance_template">
+        <div>
+            <span class="label">Locked</span>
+            <span class="locked-balance"></span>
+        </div>
+        <div>
+            <span class="label">Available</span>
+            <span class="available-balance"></span>
+        </div>
+    </template>
+    <template id="order_template">
+        <li class="list__item order-card">
+            <sm-checkbox></sm-checkbox>
+            <div class="grid">
+                <div class="order-card__type capitalize"></div>
+                <div class="order-card__quantity"></div>
+            </div>
+            <div class="grid">
+                <span class="label order-card__price-type">Unit price</span>
+                <div class="order-card__price"></div>
+            </div>
+            <time class="order-card__time"></time>
+            <button class="cancel-order" title="Cancel this order">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z" />
+                </svg>
+                <span>Cancel</span>
+            </button>
+        </li>
+    </template>
+    <template id="market_order_template">
+        <li class="list__item transaction-card align-center">
+            <div class="grid">
+                <div class="transaction-card__type capitalize"></div>
+                <div class="transaction-card__quantity"></div>
+            </div>
+            <div class="grid">
+                <span class="label transaction-card__price-type">Unit price</span>
+                <div class="transaction-card__price"></div>
+            </div>
+            <div class="grid">
+                <span class="label transaction-card__price-type">Total</span>
+                <div class="transaction-card__total"></div>
+            </div>
+            <button class="more-info" title="View order details">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+            </button>
+        </li>
+    </template>
+    <template id="transaction_template">
+        <li class="list__item transaction-card align-center">
+            <div class="grid">
+                <div class="transaction-card__type capitalize"></div>
+                <div class="transaction-card__quantity"></div>
+            </div>
+            <div class="grid">
+                <span class="label transaction-card__price-type">Unit price</span>
+                <div class="transaction-card__price"></div>
+            </div>
+            <div class="grid">
+                <span class="label transaction-card__price-type">Total</span>
+                <div class="transaction-card__total"></div>
+            </div>
+            <button class="more-info" title="View transaction details">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+            </button>
+        </li>
+    </template>
+    <template id="market_transaction_template">
+        <li class="list__item transaction-card align-center">
+            <div class="transaction-card__quantity"></div>
+            <div class="transaction-card__price"></div>
+            <div class="transaction-card__total"></div>
+            <button class="more-info" title="View transaction details">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                </svg>
+            </button>
+        </li>
+    </template>
+    <template id="market_order_list_template">
+        <h4 class="grid list__header">
+            <div>Quantity</div>
+            <div>Buy price</div>
+            <div>Sell price</div>
+            <div>Quantity</div>
+        </h4>
+        <section id="buyers_list"></section>
+        <section id="sellers_list"></section>
+    </template>
+    <template id="market_transaction_list_template">
+        <h4 class="grid list__header">
+            <div>Quantity</div>
+            <div>Unit price</div>
+            <div>Total</div>
+            <div></div>
+        </h4>
+    </template>
+    <template id="success_template">
+        <div class="stateful-result stateful-result--success">
+            <div class="result__background result__background--success"></div>
+            <div class="icon-wrapper flex align-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                    viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
+                </svg>
+                <span>Success</span>
+            </div>
+        </div>
+    </template>
+    <template id="failure_template">
+        <div class="stateful-result stateful-result--failure">
+            <div class="result__background"></div>
+            <div class="icon-wrapper flex align-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon button__icon--left" height="24px"
+                    viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <path
+                        d="M11 15h2v2h-2v-2zm0-8h2v6h-2V7zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+                </svg>
+                <span>Failed</span>
+            </div>
+        </div>
+    </template>
     <script id="ui_utils">
         // Global variables
         const domRefs = {};
@@ -219,7 +613,7 @@
         }
 
         // returns dom with specified element
-        function createElement(tagName, options) {
+        function createElement(tagName, options = {}) {
             const { className, textContent, innerHTML, attributes = {} } = options
             const elem = document.createElement(tagName)
             for (let attribute in attributes) {
@@ -296,8 +690,9 @@
         }
 
         // displays a popup for asking permission. Use this instead of JS confirm
-        const getConfirmation = (title, message, cancelText = 'Cancel', confirmText = 'OK') => {
+        const getConfirmation = (title, options = {}) => {
             return new Promise(resolve => {
+                const { message, cancelText = 'Cancel', confirmText = 'OK' } = options
                 showPopup('confirmation_popup', true)
                 getRef('confirm_title').textContent = title;
                 getRef('confirm_message').textContent = message;
@@ -316,16 +711,41 @@
             })
         }
 
+        // displays a popup for asking user input. Use this instead of JS prompt
+        async function getPromptInput(title, message = '', options = {}) {
+            const { isPassword = true, cancelText = 'Cancel', confirmText = 'OK' } = options
+            showPopup('prompt_popup', true)
+            getRef('prompt_title').textContent = title;
+            getRef('prompt_message').textContent = message;
+            let buttons = getRef('prompt_popup').querySelectorAll("sm-button");
+            if (isPassword)
+                getRef('prompt_input').setAttribute("type", "password")
+            getRef('prompt_input').focusIn()
+            buttons[0].textContent = cancelText;
+            buttons[1].textContent = confirmText;
+            return new Promise((resolve, reject) => {
+                buttons[0].onclick = () => {
+                    hidePopup()
+                    return;
+                }
+                buttons[1].onclick = () => {
+                    const value = getRef('prompt_input').value;
+                    hidePopup()
+                    resolve(value)
+                }
+            })
+        }
+
         //Function for displaying toast notifications. pass in error for mode param if you want to show an error.
         function notify(message, mode, options = {}) {
             const { pinned = false, sound = false } = options
             let icon
             switch (mode) {
                 case 'success':
-                    icon = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z"/></svg>`
+                    icon = `<svg class="icon icon--success" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z"/></svg>`
                     break;
                 case 'error':
-                    icon = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>`
+                    icon = `<svg class="icon icon--error" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>`
                     break;
             }
             getRef("notification_drawer").push(message, { pinned, icon });
@@ -384,7 +804,7 @@
                         return `${month} ${year}`;
                 }
                 else
-                    return `${month} ${date} ${year}, ${finalHours}`;
+                    return `${finalHours}, ${month} ${date} ${year}`;
             } catch (e) {
                 console.error(e);
                 return time;
@@ -393,6 +813,7 @@
 
         window.addEventListener('hashchange', e => showPage(window.location.hash))
         window.addEventListener("load", () => {
+            showPage(window.location.hash)
             document.body.classList.remove('hide-completely')
             document.querySelectorAll('sm-input[data-private-key]').forEach(input => input.customValidation = floCrypto.getPubKeyHex)
             document.addEventListener('keyup', (e) => {
@@ -413,8 +834,6 @@
         async function showPage(targetPage, options = {}) {
             const { firstLoad, hashChange } = options
             let pageId
-            let subPageId
-            let searchParams
             let params
             if (targetPage === '') {
                 if (typeof myFloID === "undefined") {
@@ -424,58 +843,52 @@
                 }
             } else {
                 if (targetPage.includes('/')) {
-                    if (targetPage.includes('?')) {
-                        const splitAddress = targetPage.split('?')
-                        searchParams = splitAddress.pop()
-                        const pages = splitAddress.pop().split('/')
-                        pageId = pages[1]
-                        subPageId = pages[2]
-                    } else {
-                        const pages = targetPage.split('/')
-                        pageId = pages[1]
-                        subPageId = pages[2]
-                    }
+                    const pages = targetPage.split('/')
+                    pageId = pages[1]
                 } else {
                     pageId = targetPage
                 }
             }
-            if (typeof myFloID === "undefined" && !(['sign_up', 'sign_in', 'loading', 'landing'].includes(pageId))) return
-            if (searchParams) {
-                const urlSearchParams = new URLSearchParams('?' + searchParams);
-                params = Object.fromEntries(urlSearchParams.entries());
-                pagesData.params = params
-            }
             if (pagesData.lastPage !== pageId) {
+                let target
                 switch (pageId) {
-                    case 'sign_in':
-                        setTimeout(() => {
-                            getRef('private_key_field').focusIn()
-                        }, 0);
+                    case 'dashboard':
+                        target = 'dashboard'
                         break;
-                    case 'sign_up':
-                        const { floID, privKey } = floCrypto.generateNewID()
-                        getRef('generated_flo_id').value = floID
-                        getRef('generated_private_key').value = privKey
+                    case 'my_orders':
+                        target = 'my_orders_section'
+                        break;
+                    case 'market':
+                        target = 'market_orders_section'
+                        break;
+                    case 'wallet':
+                        target = 'user_section'
                         break;
                 }
-                document.querySelector('.page:not(.hide-completely)')?.classList.add('hide-completely')
-                getRef(pageId)?.classList.remove('hide-completely')
-                getRef(pageId)?.animate([
-                    {
-                        opacity: 0,
-                    },
-                    {
-                        opacity: 1,
-                    },
-                ],
-                    {
-                        duration: 300,
-                        easing: 'ease'
-                    })
-            }
-            pagesData.lastPage = pageId
-            if (!pagesData.openedPages.includes(pageId)) {
-                pagesData.openedPages.push(pageId)
+                if (target) {
+                    document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hide-on-mobile'))
+                    getRef(target).classList.remove('hide-on-mobile')
+                    document.querySelectorAll('.bottom_nav__item').forEach(elem => elem.classList.remove('bottom_nav__item--active'))
+                    document.querySelector(`.bottom_nav__item[href="#/${pageId}"]`).classList.add('bottom_nav__item--active')
+                    getRef(target)?.animate([
+                        {
+                            transform: 'translateY(1rem)',
+                            opacity: 0,
+                        },
+                        {
+                            transform: 'none',
+                            opacity: 1,
+                        },
+                    ],
+                        {
+                            duration: 300,
+                            easing: 'ease'
+                        })
+                    pagesData.lastPage = target
+                    if (!pagesData.openedPages.includes(target)) {
+                        pagesData.openedPages.push(target)
+                    }
+                }
             }
         }
         // class based lazy loading
@@ -555,23 +968,590 @@
         }
     </script>
     <script>
-        var user_id; //container for user ID and proxy private-key
+        function formatAmount(amount) {
+            return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR' })
+        }
+        const render = {
+            orderCard(orderDetails = {}) {
+                const { id, quantity, price, time, type } = orderDetails
+                const card = getRef('order_template').content.cloneNode(true).firstElementChild
+                card.dataset.id = id
+                card.dataset.type = type
+                card.querySelector('.order-card__type').textContent = type
+                card.querySelector('.order-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Max price' : 'Min price'
+                card.querySelector('.order-card__price').textContent = formatAmount(price)
+                card.querySelector('.order-card__time').textContent = getFormattedTime(time, true)
+                return card
+            },
+            transactionCard(transactionDetails = {}) {
+                const { buyer, seller, type, other, quantity, unitValue, time } = transactionDetails
+                const card = getRef('transaction_template').content.cloneNode(true).firstElementChild
+                card.dataset.type = type
+                card.querySelector('.transaction-card__type').textContent = type
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.more-info').dataset.buyer = buyer
+                card.querySelector('.more-info').dataset.seller = seller
+                card.querySelector('.more-info').dataset.other = other
+                card.querySelector('.more-info').dataset.time = time
+                return card
+            },
+            marketOrderCard(orderDetails = {}) {
+                const { floID, quantity, unitValue, time, type } = orderDetails
+                const card = getRef('market_order_template').content.cloneNode(true).firstElementChild
+                card.dataset.type = type
+                card.classList.add(`transaction-card--${type}`)
+                card.querySelector('.transaction-card__type').textContent = type
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.more-info').dataset.time = time
+                card.querySelector('.more-info').dataset.buyer = type === 'buy' ? floID : undefined
+                card.querySelector('.more-info').dataset.seller = type === 'sell' ? floID : undefined
+                card.querySelector('.more-info').dataset.pending = true
+                return card
+            },
+            marketTransactionCard(transactionDetails = {}) {
+                const { buyer, seller, quantity, unitValue, time } = transactionDetails
+                const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.more-info').dataset.time = time
+                card.querySelector('.more-info').dataset.buyer = buyer
+                card.querySelector('.more-info').dataset.seller = seller
+                return card
+            },
+        }
+
+        function showProcess(id) {
+            getRef(id).children[0].classList.add('clip')
+            getRef(id).append(document.createElement('sm-spinner'))
+        }
+        function hideProcess(id) {
+            getRef(id).children[0].classList.remove('clip')
+            getRef(id).querySelector('sm-spinner')?.remove()
+        }
+        let tradeType = 'buy'
+        getRef('trade_type_selector').addEventListener('change', e => {
+            tradeType = e.detail.value
+            getRef('get_price').setAttribute('placeholder', tradeType === 'buy' ? 'Max price' : 'Min price')
+            getRef('trade_button').textContent = `${tradeType} FLO`
+            getRef('quantity_type').textContent = tradeType === 'buy' ? `Rupee` : `FLO`
+        })
+        async function tradeFlo() {
+            const quantity = parseFloat(getRef('get_quantity').value)
+            const price = parseFloat(getRef('get_price').value)
+            showProcess('trade_button_wrapper')
+            try {
+                if (tradeType === 'buy') {
+                    await buy(quantity, price, proxy.secret)
+                } else {
+                    await sell(quantity, price, proxy.secret)
+                }
+                getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
+                notify(`Placed ${tradeType} order`, 'success')
+            }
+            catch (err) {
+                getRef('trade_button_wrapper').append(getRef('failure_template').content.cloneNode(true))
+                notify(err.data, 'error')
+            }
+            finally {
+                updateRate()
+                getRef('get_quantity').value = 0
+                getRef('get_total').value = 0
+                setTimeout(() => {
+                    hideProcess('trade_button_wrapper')
+                    setTimeout(() => {
+                        getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
+                    }, 100);
+                }, 4000);
+            }
+        }
+        getRef('quantity_selector').addEventListener('click', e => {
+            // Get latest balance and exchange rate
+            if (e.target.closest('button')) {
+                const target = e.target.closest('button')
+                const unitValue = parseFloat(getRef('get_price').value)
+                const fraction = parseInt(target.value) / 100
+                if (tradeType === 'buy') {
+                    getRef('get_total').value = parseFloat((fraction * balance.rupee).toFixed(2))
+                    getRef('get_quantity').value = parseFloat(((balance.rupee * fraction) / unitValue).toFixed(5))
+                } else {
+                    getRef('get_total').value = parseFloat(((fraction * balance.flo) * rate.flo).toFixed(2))
+                    getRef('get_quantity').value = parseFloat((balance.flo * fraction).toFixed(5))
+                }
+            }
+        })
+        getRef('get_price').addEventListener('keyup', e => {
+            const unitValue = parseFloat(getRef('get_price').value) || rate.flo
+            const quantity = parseFloat(getRef('get_quantity').value) || 0
+            getRef('get_total').value = parseFloat((quantity * unitValue).toFixed(2)) || 0
+        })
+        getRef('get_quantity').addEventListener('keyup', e => {
+            const unitValue = parseFloat(getRef('get_price').value)
+            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(2)) || 0
+        })
+        getRef('get_total').addEventListener('keyup', e => {
+            const unitValue = parseFloat(getRef('get_price').value)
+            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(5)) || 0
+        })
+        getRef('wallet_actions').addEventListener('click', e => {
+            if (e.target.closest('.button')) {
+                const target = e.target.closest('.button')
+                showPopup('wallet_popup')
+                const type = target.value
+                const asset = getRef('wallet_asset_selector').value
+                getRef('wallet_popup__cta').textContent = `${type} ${asset}`
+                getRef('wallet_popup__cta').setAttribute('value', type)
+                getRef('wallet_popup__title').textContent = `${type} ${asset}`
+                if (type === 'withdraw') {
+                    getRef('get_private_key').classList.add('hide-completely')
+                    getRef('get_private_key').removeAttribute('required')
+                    getRef('get_private_key').removeAttribute('hiderequired')
+                } else {
+                    getRef('get_private_key').setAttribute('required', '')
+                    getRef('get_private_key').setAttribute('hiderequired', '')
+                    getRef('get_private_key').classList.remove('hide-completely')
+                }
+                getRef('wallet_form').elementsChanged()
+            }
+        })
+        function showWalletResult(status, title, description) {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            let icon
+            if (status === 'success') {
+                icon = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon--success" height="24px" viewBox="0 0 24 24" width="24px"
+                    fill="#000000">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" />
+                </svg>`
+            } else {
+                icon = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon--failure" height="24px"
+                    viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <path
+                        d="M11 15h2v2h-2v-2zm0-8h2v6h-2V7zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+                </svg>`
+            }
+            getRef('wallet_result__icon').innerHTML = icon
+            getRef('wallet_result__title').textContent = title
+            getRef('wallet_result__description').textContent = description
+            getRef('wallet_form').animate(slideOutLeft, animOptions)
+                .onfinish = () => {
+                    getRef('wallet_form').classList.add('hide-completely')
+                    getRef('wallet_result').classList.remove('hide-completely')
+                    getRef('wallet_result').animate(slideInLeft, animOptions)
+                }
+        }
+        function hideWalletResult() {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            getRef('wallet_result').animate(slideOutRight, animOptions)
+                .onfinish = () => {
+                    getRef('wallet_result').classList.add('hide-completely')
+                    getRef('wallet_form').classList.remove('hide-completely')
+                    getRef('wallet_form').animate(slideInRight, animOptions)
+                }
+        }
+        getRef('wallet_popup__cta').addEventListener('click', async e => {
+            const asset = getRef('wallet_asset_selector').value
+            const type = e.target.getAttribute('value')
+            const quantity = parseFloat(getRef('get_user_amount').value)
+            try {
+                showProcess('wallet_popup__cta_wrapper')
+                if (type === 'deposit') {
+                    const privKey = getRef('get_private_key').value;
+                    if (asset === 'FLO') {
+                        await depositFLO(quantity, userID, privKey, proxy.secret)
+                    } else {
+                        await depositRupee(quantity, userID, privKey, proxy.secret)
+                    }
+                    showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
+                } else {
+                    if (asset === 'FLO') {
+                        await withdrawFLO(quantity, proxy.secret)
+                    } else {
+                        await withdrawRupee(quantity, proxy.secret)
+                    }
+                    showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
+                }
+            }
+            catch (err) {
+                showWalletResult('error', `Failed`, err.data || err)
+            }
+            finally {
+                hideProcess('wallet_popup__cta_wrapper')
+            }
+        })
+
+        const selectedOrders = new Map()
+        const slideInLeft = [
+            {
+                opacity: 0,
+                transform: 'translateX(1rem)'
+            },
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            }
+        ]
+        const slideOutLeft = [
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            },
+            {
+                opacity: 0,
+                transform: 'translateX(-1rem)'
+            },
+        ]
+        const slideInRight = [
+            {
+                opacity: 0,
+                transform: 'translateX(-1rem)'
+            },
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            }
+        ]
+        const slideOutRight = [
+            {
+                opacity: 1,
+                transform: 'translateX(0)'
+            },
+            {
+                opacity: 0,
+                transform: 'translateX(1rem)'
+            },
+        ]
+        const slideInDown = [
+            {
+                opacity: 0,
+                transform: 'translateY(-1rem)'
+            },
+            {
+                opacity: 1,
+                transform: 'translateY(0)'
+            },
+        ]
+        const slideOutUp = [
+            {
+                opacity: 1,
+                transform: 'translateY(0)'
+            },
+            {
+                opacity: 0,
+                transform: 'translateY(-1rem)'
+            },
+        ]
+        getRef('orders_list').addEventListener('change', e => {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            const target = e.target.parentNode;
+            target.classList.toggle('order-card--selected')
+            if (e.target.checked) {
+                selectedOrders.set(target.dataset.id, target.dataset.type)
+            } else {
+                selectedOrders.delete(target.dataset.id)
+            }
+            getRef('selected_orders').textContent = `${selectedOrders.size} selected`
+            if (selectedOrders.size === 1 && !getRef('my_orders_section__header').children[0].classList.contains('hide-completely')) {
+                getRef('my_orders_section__header').children[0].animate(slideOutLeft, animOptions)
+                    .onfinish = () => {
+                        getRef('my_orders_section__header').children[0].classList.add('hide-completely')
+                        getRef('my_orders_section__header').children[1].classList.remove('hide-completely')
+                        getRef('my_orders_section__header').children[1].animate(slideInLeft, animOptions)
+                    }
+            } else if (selectedOrders.size === 0 && getRef('my_orders_section__header').children[0].classList.contains('hide-completely')) {
+                getRef('my_orders_section__header').children[1].animate(slideOutRight, animOptions)
+                    .onfinish = () => {
+                        getRef('my_orders_section__header').children[1].classList.add('hide-completely')
+                        getRef('my_orders_section__header').children[0].classList.remove('hide-completely')
+                        getRef('my_orders_section__header').children[0].animate(slideInRight, animOptions)
+                    }
+            }
+        })
+        function clearSelection() {
+            getRef('orders_list').querySelectorAll('sm-checkbox[checked]').forEach(elem => elem.checked = false)
+        }
+
+        function showMoreDetails(e) {
+            const target = e.target.closest('.more-info')
+            showPopup('transaction_info_popup')
+            if (target.dataset.buyer !== 'undefined') {
+                getRef('transaction__buyer_wrapper').classList.remove('hide-completely')
+                getRef('transaction__buyer').value = target.dataset.buyer
+            } else {
+                getRef('transaction__buyer_wrapper').classList.add('hide-completely')
+            }
+            if (target.dataset.seller !== 'undefined') {
+                getRef('transaction__seller_wrapper').classList.remove('hide-completely')
+                getRef('transaction__seller').value = target.dataset.seller
+            } else {
+                getRef('transaction__seller_wrapper').classList.add('hide-completely')
+            }
+            getRef('transaction_time__label').textContent = target.dataset.pending === 'true' ? 'Placed on' : 'Completed on'
+            getRef('transaction_time').textContent = getFormattedTime(target.dataset.time)
+        }
+
+        getRef('orders_list').addEventListener('click', e => {
+            if (e.target.closest('.cancel-order')) {
+                getConfirmation('Cancel this order?').then(res => {
+                    if (res) {
+                        const target = e.target.closest('.order-card')
+                        const id = target.dataset.id
+                        const type = target.dataset.type
+                        cancelOrder(type, id, proxy.secret)
+                            .then(() => {
+                                notify('Order cancelled', 'success')
+                                target.animate([
+                                    {
+                                        opacity: 1
+                                    },
+                                    {
+                                        opacity: 0
+                                    },
+                                ], {
+                                    duration: 100,
+                                    fill: 'forwards'
+                                })
+                                    .onfinish = () => {
+                                        const height = target.getBoundingClientRect().height
+                                        const siblings = Array.from(target.parentNode.children)
+                                        const nextSiblings = siblings.slice(siblings.indexOf(target) + 1)
+                                        nextSiblings.forEach(elem => {
+                                            elem.animate([
+                                                {
+                                                    transform: 'translateY(0)'
+                                                },
+                                                {
+                                                    transform: `translateY(-${height}px)`
+                                                },
+                                            ], {
+                                                duration: 200,
+                                                fill: 'forwards'
+                                            })
+                                                .onfinish = (e) => {
+                                                    e.target.cancel()
+                                                }
+                                        })
+                                        setTimeout(() => {
+                                            target.remove()
+                                        }, 200);
+                                    }
+                            })
+                            .catch(err => notify(err.data, 'error'))
+                    }
+                })
+            } else if (e.target.closest('.more-info')) {
+                showMoreDetails(e)
+            }
+        })
+        function cancelAll() {
+            getConfirmation('Cancel all selected orders?').then(async res => {
+                if (res) {
+                    try {
+                        await Promise.all(
+                            selectedOrders.map((type, id) => cancelOrder(type, id, proxy.secret))
+                        )
+                        selectedOrders.forEach((type, id) => {
+                            getRef('orders_list').querySelector(`[data-id="${id}"]`).remove()
+                        })
+                        notify('All selected orders cancelled', 'success')
+                        selectedOrders.clear()
+                    }
+                    catch (err) {
+                        notify(err, 'error')
+                    }
+                }
+            })
+        }
+
+        function renderUserOrders() {
+            const { buyOrders, sellOrders, transactions } = accountDetails
+            getRef('orders_list').innerHTML = '';
+            const frag = document.createDocumentFragment()
+            const ordersType = getRef('my_orders_category_selector').value
+            if (ordersType === 'open') {
+                const allOpenOrders = [...(buyOrders || myBuyOrders), ...(sellOrders || mySellOrders)].sort((a, b) => b.time_placed - a.time_placed)
+                allOpenOrders.forEach(order => {
+                    const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                    const orderDetails = {
+                        id,
+                        quantity,
+                        type: minPrice ? 'sell' : 'buy',
+                        price: minPrice || maxPrice,
+                        time: time_placed
+                    }
+                    frag.append(render.orderCard(orderDetails))
+                })
+            } else {
+                (transactions || myTransactions).forEach(transaction => {
+                    const { floID, quantity, unitValue, tx_time, buyer, seller } = transaction
+                    let type, other;
+                    if (seller === floID) {
+                        type = 'Sold';
+                        other = buyer === floID ? 'MySelf' : buyer;
+                    } else if (buyer === floID) {
+                        type = 'Bought';
+                        other = seller;
+                    } else
+                        return;
+                    const transactionDetails = {
+                        buyer,
+                        seller,
+                        type,
+                        other,
+                        quantity,
+                        unitValue,
+                        time: tx_time
+                    }
+                    frag.append(render.transactionCard(transactionDetails))
+                });
+            }
+            getRef('orders_list').append(frag)
+        }
+        getRef('my_orders_category_selector').addEventListener('change', renderUserOrders)
+
+        getRef('market_orders_category_selector').addEventListener('change', renderMarketOrders)
+        async function renderMarketOrders() {
+            const frag = document.createDocumentFragment()
+            getRef('market_orders_list').innerHTML = '';
+            const ordersType = getRef('market_orders_category_selector').value
+            if (ordersType === 'open') {
+                try {
+                    const [buyOrders, sellOrders] = await Promise.all([getBuyList(), getSellList()])
+                    const allOpenOrders = [...(buyOrders), ...(sellOrders)].sort((a, b) => b.time_placed - a.time_placed)
+                    allOpenOrders.forEach(order => {
+                        const { floID, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                        const orderDetails = {
+                            floID,
+                            quantity,
+                            type: minPrice ? 'sell' : 'buy',
+                            unitValue: minPrice || maxPrice,
+                            time: time_placed
+                        }
+                        frag.append(render.marketOrderCard(orderDetails))
+                    })
+                }
+                catch (err) {
+                    notify(err, 'error')
+                }
+            } else {
+                try {
+                    // const marketTransactions = await getTransactionList()
+                    const marketTransactions = myTransactions
+                    marketTransactions.forEach(transaction => {
+                        const { seller, buyer, quantity, unitValue, tx_time } = transaction
+                        const transactionDetails = {
+                            buyer,
+                            seller,
+                            quantity,
+                            unitValue,
+                            time: tx_time
+                        }
+                        frag.append(render.marketTransactionCard(transactionDetails))
+                    })
+                    const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
+                }
+                catch (err) {
+                    notify(err, 'error')
+                }
+            }
+            getRef('market_orders_list').append(frag)
+        }
+        getRef('market_orders_list').addEventListener('click', e => {
+            if (e.target.closest('.more-info')) {
+                showMoreDetails(e)
+            }
+        })
+
+        const openDropdowns = new Set()
+        function toggleDropdown(id) {
+            const animOptions = {
+                duration: 300,
+                fill: 'forwards',
+                easing: 'ease'
+            }
+            if (!openDropdowns.has(id)) {
+                getRef(id).querySelector('.dropdown').classList.remove('hide-completely')
+                getRef(id).querySelector('.dropdown').animate(slideInDown, animOptions)
+                    .onfinish = () => {
+                        getRef(id).classList.toggle('open')
+                        openDropdowns.add(id)
+                        document.addEventListener('click', handleFocusOut)
+                    }
+            } else {
+                getRef(id).querySelector('.dropdown').animate(slideOutUp, animOptions)
+                    .onfinish = () => {
+                        getRef(id).querySelector('.dropdown').classList.add('hide-completely')
+                        getRef(id).classList.toggle('open')
+                        openDropdowns.delete(id)
+                    }
+            }
+        }
+
+        function handleFocusOut(e) {
+            if (!e.target.closest('.dropdown-wrapper')) {
+                openDropdowns.forEach(id => toggleDropdown(id))
+                openDropdowns.clear()
+            } else {
+                document.addEventListener('click', handleFocusOut)
+            }
+        }
+
+        document.addEventListener('popupopened', e => {
+            switch (e.target.id) {
+                case 'registration_popup':
+                    getRef('get_registration_key').focusIn()
+                    break;
+                case 'sign_up_popup':
+                    const { floID, privKey } = floCrypto.generateNewID()
+                    getRef('generated_flo_id').value = floID
+                    getRef('generated_private_key').value = privKey
+                    break;
+            }
+        })
+        document.addEventListener('popupclosed', e => {
+            switch (e.target.id) {
+                case 'wallet_popup':
+                    hideWalletResult()
+                    break;
+            }
+        })
+
+    </script>
+    <script>
+        let userID; //container for user ID and proxy private-key
 
         const proxy = {
             private: null,
             public: null,
-            lock() {
+            async lock() {
                 if (!this.private)
                     throw "No proxy key found!";
-                let pwd = prompt("Enter password: ");
+                let pwd = await getPromptInput("Add password", 'This password applies to this browser only!', { isPassword: true, confirmText: "Add password" });
                 if (!pwd)
-                    alert("Password cannot be empty");
+                    notify("Password cannot be empty", 'error');
                 else if (pwd.length < 4)
-                    alert("Password minimum length is 4");
+                    notify("Password minimum length is 4", 'error');
                 else {
                     let tmp = Crypto.AES.encrypt(this.private, pwd);
                     localStorage.setItem("proxy_secret", "?" + tmp);
-                    alert("Successfully locked with Password");
+                    notify("Successfully locked with Password", 'success');
                 }
             },
             clear() {
@@ -590,17 +1570,18 @@
                 try {
                     let tmp = localStorage.getItem("proxy_secret");
                     if (typeof tmp === "string" && tmp.startsWith("?")) {
-                        let pwd = prompt("Enter password: ");
-                        if (!pwd)
-                            throw "Password Required for making transactions";
-                        else {
-                            try {
-                                tmp = Crypto.AES.decrypt(tmp.substring(1), pwd);
-                            } catch (error) {
-                                throw "Incorrect Password! Password Required for making transactions";
-                            }
+                        getPromptInput("Enter password", '', { isPassword: true }).then(pwd => {
+                            if (!pwd)
+                                throw "Password Required for making transactions";
+                            else {
+                                try {
+                                    tmp = Crypto.AES.decrypt(tmp.substring(1), pwd);
+                                } catch (error) {
+                                    throw "Incorrect Password! Password Required for making transactions";
+                                }
 
-                        }
+                            }
+                        });
                     }
                     this.private = tmp;
                     this.public = floCrypto.getPubKeyHex(tmp);
@@ -613,64 +1594,11 @@
             }
         }
 
-        function toggle_view(id) {
-            let element = document.getElementById(id);
-            if (element.style.display === "none")
-                element.style.display = "block";
-            else
-                element.style.display = "none";
-        }
-
-        function list_buy() {
-            getBuyList().then(list => {
-                let container = document.getElementById("buy-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                list.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().textContent = o.floID;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.maxPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-            }).catch(error => console.error(error))
-        }
-
-        function list_sell() {
-            getSellList().then(list => {
-                let container = document.getElementById("sell-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                list.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().textContent = o.floID;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.minPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-            }).catch(error => console.error(error))
-        }
-
-        function list_txns() {
-            getTransactionList().then(list => {
-                let container = document.getElementById("transactions").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                list.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().textContent = o.seller;
-                    row.insertCell().textContent = o.buyer;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.unitValue;
-                    row.insertCell().textContent = new Date(o.tx_time);
-                });
-            }).catch(error => console.error(error))
-        }
-
-        function get_rate() {
+        function updateRate() {
             getRate().then(rate => {
-                console.log("Rate: ", rate);
-                let container = document.getElementById("cur-rate");
-                container.textContent = "Rs " + parseFloat(rate).toFixed(2);
+                rate.flo = rate
+                getRef('flo_rate').textContent = formatAmount(parseFloat(rate))
+                getRef('get_price').value = parseFloat(parseFloat(rate).toFixed(2))
             }).catch(error => console.error(error))
         }
 
@@ -679,223 +1607,237 @@
                 console.info("init");
             else
                 console.info("refresh");
-            list_buy();
-            list_sell();
-            list_txns();
-            get_rate();
-            if (init || document.getElementById('user-container').style.display === "block")
-                account();
+            updateRate()
+            renderMarketOrders()
+            account();
         }
 
+        function showBalance(containerId, availableBalance = 0, lockedBalance = 0) {
+            getRef(containerId).innerHTML = ''
+            const templateToClone = lockedBalance ? 'locked_balance_template' : 'net_balance_template';
+            const card = getRef(templateToClone).content.cloneNode(true)
+            card.querySelector('.available-balance').textContent = availableBalance
+            if (lockedBalance) {
+                card.querySelector('.locked-balance').textContent = lockedBalance
+            }
+            getRef(containerId).className = lockedBalance ? 'grid balance-card__amount-wrapper' : ''
+            getRef(containerId).parentNode.className = `balance-card ${lockedBalance ? 'is-locked' : ''}`
+            getRef(containerId).append(card)
+        }
+
+        const myBuyOrders = [
+            {
+                id: 'dfs5g16sdg1',
+                time_placed: generateRandomDate(),
+                quantity: 14.5,
+                maxPrice: 1.36,
+            },
+            {
+                id: 'f4gd1d56fg1',
+                time_placed: generateRandomDate(),
+                quantity: 78.3,
+                maxPrice: 1.26,
+            },
+            {
+                id: 's4dg5s4d1g98',
+                time_placed: generateRandomDate(),
+                quantity: 14.5,
+                maxPrice: 1.28,
+            },
+        ]
+        const mySellOrders = [
+            {
+                id: 'sd8g45g419s6',
+                time_placed: generateRandomDate(),
+                quantity: 15,
+                minPrice: 1.16,
+            },
+            {
+                id: 's59d1g9ws18d',
+                time_placed: generateRandomDate(),
+                quantity: 8.3,
+                minPrice: 1.86,
+            },
+            {
+                id: 'w899e1g4d1g98',
+                time_placed: generateRandomDate(),
+                quantity: 18.5,
+                minPrice: 1.64,
+            },
+        ]
+
+        const myTransactions = [
+            {
+                id: 'sd8g45g419s6',
+                tx_time: generateRandomDate(),
+                quantity: 15,
+                unitValue: 1.16,
+                buyer: 'w8eg4w8eg4w98werg9'
+            },
+            {
+                id: 's59d1g9ws18d',
+                tx_time: generateRandomDate(),
+                quantity: 8.3,
+                unitValue: 1.86,
+                buyer: 'w8eg4w8eg4w98werg9'
+            },
+            {
+                id: 'w899e1g4d1g98',
+                tx_time: generateRandomDate(),
+                quantity: 18.5,
+                unitValue: 1.64,
+                buyer: 'w8eg4w8eg4w98werg9'
+            },
+        ]
+
+        const market = {
+            buyOrders: [
+                {
+                    floID: 'dfs5g16sdg1',
+                    time_placed: generateRandomDate(),
+                    quantity: 14.5,
+                    maxPrice: 1.36,
+                },
+                {
+                    floID: 'f4gd1d56fg1',
+                    time_placed: generateRandomDate(),
+                    quantity: 78.3,
+                    maxPrice: 1.26,
+                },
+                {
+                    floID: 's4dg5s4d1g98',
+                    time_placed: generateRandomDate(),
+                    quantity: 14.5,
+                    maxPrice: 1.28,
+                },
+            ],
+            sellOrders: [
+                {
+                    floID: 'sd8g45g419s6',
+                    time_placed: generateRandomDate(),
+                    quantity: 15,
+                    minPrice: 1.16,
+                },
+                {
+                    floID: 's59d1g9ws18d',
+                    time_placed: generateRandomDate(),
+                    quantity: 8.3,
+                    minPrice: 1.86,
+                },
+                {
+                    floID: 'w899e1g4d1g98',
+                    time_placed: generateRandomDate(),
+                    quantity: 18.5,
+                    minPrice: 1.64,
+                },
+            ]
+        }
+
+        function generateRandomDate() {
+            return new Date() - Math.floor(Math.random() * 10000000000);
+        }
+
+        const balance = {}
+
+        let accountDetails = {}
         function account() {
             getAccount().then(acc => {
+                getRef("login_form").classList.add('hide-completely')
+                getRef('home').classList.add('signed-in')
+                accountDetails = acc
                 console.debug(acc);
                 //Element display
-                document.getElementById("login-form").style.display = "none";
-                document.getElementById('user-container').style.display = "block";
-                document.getElementById("user_id").textContent = acc.floID;
-                user_id = acc.floID;
+                document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide-completely'))
+                getRef('trade_form').classList.remove('hide-completely')
+                getRef("user_id").value = acc.floID;
+                userID = acc.floID;
                 //FLO Balance
                 let flo_total = acc.coins.reduce((a, x) => a + x.quantity, 0);
                 let flo_locked = acc.sellOrders.reduce((a, x) => a + x.quantity, 0);
                 let flo_net = flo_total - flo_locked;
                 console.debug("FLO", flo_total, flo_locked, flo_net);
-                document.getElementById("flo_bal").textContent = flo_net + "(+" + flo_locked + ")";
+                balance.flo = flo_net
+
+                showBalance("flo_balance", flo_net, flo_locked)
                 //Rupee Balance
                 let rupee_total = acc.rupee_total;
                 let rupee_locked = acc.buyOrders.reduce((a, x) => a + x.quantity * x.maxPrice, 0);
                 let rupee_net = rupee_total - rupee_locked;
                 console.debug("RUPEE", rupee_total, rupee_locked, rupee_net);
-                document.getElementById("rupee_bal").textContent = rupee_net + "(+" + rupee_locked + ")";
-                //My buy orders
-                let container = document.getElementById("my-buy-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                acc.buyOrders.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().innerHTML = `<input type="checkbox">`;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.maxPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-                //My sell orders
-                container = document.getElementById("my-sell-orders").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                acc.sellOrders.forEach(o => {
-                    let row = container.insertRow();
-                    row.insertCell().innerHTML = `<input type="checkbox">`;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.minPrice;
-                    row.insertCell().textContent = new Date(o.time_placed);
-                    row.dataset["id"] = o.id;
-                });
-                //My Transactions
-                container = document.getElementById("my-transactions").getElementsByTagName("tbody")[0];
-                container.innerHTML = '';
-                acc.transactions.forEach(o => {
-                    let type, other;
-                    if (o.seller === acc.floID) {
-                        type = 'Sold To';
-                        other = o.buyer === acc.floID ? 'MySelf' : o.buyer;
-                    } else if (o.buyer === acc.floID) {
-                        type = 'Brought From';
-                        other = o.seller;
-                    } else
-                        return;
-                    let row = container.insertRow();
-                    row.insertCell().textContent = type;
-                    row.insertCell().textContent = other;
-                    row.insertCell().textContent = o.quantity;
-                    row.insertCell().textContent = o.unitValue;
-                    row.insertCell().textContent = new Date(o.tx_time);
-                });
+                balance.rupee = rupee_net
+                showBalance("rupee_balance", rupee_net, rupee_locked)
+                //My orders
+                renderUserOrders()
                 try {
                     proxy.secret;
                 } catch (error) {
                     console.warn(error);
                 }
             }).catch(error => {
+                getRef('home').classList.remove('signed-in')
                 if (error instanceof ResponseError) {
                     let response = JSON.parse(error.data)
                     console.log(error);
                     console.log(response);
-                    document.getElementById('user-container').style.display = "none";
-                    document.getElementById("login-form").style.display = "block";
-                    document.forms['login-form']["sid"].value = response.sid;
+                    getRef("login_form").classList.remove('hide-completely')
+                    document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
+                    getRef('sign_in_id').value = response.sid;
                     proxy.clear();
                 } else
                     console.error(error);
             })
         };
 
-        const UI_evt = {};
-
-        UI_evt.signup = function () {
-            let sid = document.forms['login-form']['sid'].value;
-            let privKey = prompt("Enter Private Key of floID to register: ");
-            signUp(privKey, sid).then(result => {
-                console.info(result);
-                alert("Account registered!")
-            }).catch(error => {
-                console.error(error)
-                alert(error);
-            });
-        };
-
-        UI_evt.logout = function () {
-            logout().then(result => {
-                console.warn(result);
-                proxy.clear();
-                location.reload();
-            }).catch(error => console.error(error));
-        };
-
-        UI_evt.login = function () {
-            let formInputs = document.forms['login-form'];
-            let privKey = formInputs['priv-key'].value;
-            let sid = formInputs['sid'].value;
-            let rememberMe = formInputs['remember-me'].checked;
-            let tmpKey = floCrypto.generateNewID();
-            login(privKey, tmpKey.pubKey, sid, rememberMe).then(result => {
-                console.log(result);
-                proxy.secret = tmpKey.privKey;
-                account();
-            }).catch(error => console.error(error));
-        };
-
-        UI_evt.sell = function () {
-            let formInputs = document.forms['sell-form'];
-            sell(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["min-price"].value), proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(error))
-                .finally(_ => formInputs.reset());
-        };
-
-        UI_evt.buy = function () {
-            let formInputs = document.forms['buy-form'];
-            buy(parseFloat(formInputs["quantity"].value), parseFloat(formInputs["max-price"].value), proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(error))
-                .finally(_ => formInputs.reset());
-        };
-
-        UI_evt.cancelOrders = function () {
-            let container = document.getElementById('my-orders');
-            let cancel = [];
-            let inputs = container.getElementsByTagName('input')
-            for (let i = 0; i < inputs.length; i++) {
-                if (inputs[i].type === "checkbox" && inputs[i].checked) {
-                    let row = inputs[i].parentElement.parentElement
-                    let id = row.dataset['id'];
-                    let type = row.parentElement.dataset['type'];
-                    cancel.push([type, id]);
+        const UI_evt = {
+            signup(privKey) {
+                let sid = getRef('sign_in_id').value;
+                if (!privKey)
+                    privKey = getRef('get_registration_key').value.trim()
+                if (privKey !== '') {
+                    signUp(privKey, sid).then(result => {
+                        console.info(result);
+                        notify("Account registered!", 'success')
+                        hidePopup()
+                    }).catch(error => {
+                        notify(error, 'error');
+                    });
                 }
+            },
+
+            logout() {
+                getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(res => {
+                    if (res) {
+                        logout().then(result => {
+                            console.warn(result);
+                            proxy.clear();
+                            location.reload();
+                        }).catch(error => console.error(error));
+                    }
+                })
+            },
+
+            login() {
+                let privKey = getRef('login_form__priv_key').value;
+                let sid = getRef('sign_in_id').value;
+                let rememberMe = getRef('remember_me').checked;
+                let tmpKey = floCrypto.generateNewID();
+                login(privKey, tmpKey.pubKey, sid, rememberMe).then(result => {
+                    console.log(result);
+                    proxy.secret = tmpKey.privKey;
+                    account();
+                }).catch(error => console.error(error));
             }
-            cancel.forEach(o => cancelOrder(o[0], o[1], proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(o, error)))
+
         };
 
-        UI_evt.depositFLO = function () {
-            let formInputs = document.forms['deposit-withdraw-form'];
-            let privKey = prompt("Enter private key");
-            depositFLO(parseFloat(formInputs["quantity"].value), user_id, privKey, proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(error))
-                .finally(_ => formInputs.reset());
+        function registerID() {
+            UI_evt.signup(getRef('generated_private_key').value)
+            hidePopup()
         }
 
-        UI_evt.depositRupee = function () {
-            let formInputs = document.forms['deposit-withdraw-form'];
-            let privKey = prompt("Enter private key");
-            depositRupee(parseFloat(formInputs["quantity"].value), user_id, privKey, proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(error))
-                .finally(_ => formInputs.reset());
-        }
-
-        UI_evt.withdrawFLO = function () {
-            let formInputs = document.forms['deposit-withdraw-form'];
-            withdrawFLO(parseFloat(formInputs["quantity"].value), proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(error))
-                .finally(_ => formInputs.reset());
-        }
-
-        UI_evt.withdrawRupee = function () {
-            let formInputs = document.forms['deposit-withdraw-form'];
-            withdrawRupee(parseFloat(formInputs["quantity"].value), proxy.secret)
-                .then(result => console.log(result))
-                .catch(error => console.error(error))
-                .finally(_ => formInputs.reset());
-        }
-
-        refresh(true);
-    </script>
-    <script>
-        getRef('trade_type_selector').addEventListener('change', e => {
-            getRef('get_price').setAttribute('placeholder', e.detail.value === 'buy' ? 'Max price' : 'Min price')
-            getRef('trade_button').textContent = e.detail.value
+        window.addEventListener('load', e => {
+            refresh(true);
         })
-        async function tradeFlo() {
-            const tradeType = getRef('trade_type_selector').value
-            const quantity = parseFloat(getRef('get_quantity').value)
-            const price = parseFloat(getRef('get_price').value)
-            try {
-                if (tradeType === 'buy') {
-                    await buy(quantity, price, proxy.secret)
-                } else {
-                    await sell(quantity, price, proxy.secret)
-                }
-                notify(`Placed ${tradeType} order`, 'success')
-            }
-            catch (err) {
-                notify(err, 'error')
-            }
-            finally {
-                getRef('trade_form').reset()
-            }
-        }
     </script>
 </body>
 

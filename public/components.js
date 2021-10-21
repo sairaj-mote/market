@@ -295,7 +295,6 @@ border: none;
     --success-color: #00C853;
     --danger-color: red;
     --width: 100%;
-    --font-size: 1rem;
     --icon-gap: 0.5rem;
     --border-radius: 0.3rem;
     --padding: 0.7rem 1rem;
@@ -357,9 +356,9 @@ border: none;
     opacity: 0.6;
 }
 .label {
+    font-size: inherit;
     opacity: .7;
     font-weight: 400;
-    font-size: var(--font-size);
     position: absolute;
     top: 0;
     -webkit-transition: -webkit-transform 0.3s;
@@ -397,7 +396,7 @@ border: none;
             flex: 1;
 }    
 input{
-    font-size: var(--font-size);
+    font-size: inherit;
     border: none;
     background: transparent;
     outline: none;
@@ -825,6 +824,13 @@ smNotifications.innerHTML = `
         width: 100%;
         fill: rgba(var(--text-color), 0.7);
     }
+    .icon--success {
+        fill: var(--green);
+      }
+      .icon--failure,
+      .icon--error {
+        fill: var(--danger-color);
+      }
     .close{
         height: 2rem;
         width: 2rem;
@@ -898,8 +904,8 @@ customElements.define('sm-notifications', class extends HTMLElement {
         return result;
     }
 
-    createNotification(message, options) {
-        const { pinned = false, icon = '' } = options
+    createNotification(message, options = {}) {
+        const { pinned = false, icon = '' } = options;
         const notification = document.createElement('div')
         notification.id = this.randString(8)
         notification.classList.add('notification');
@@ -1470,14 +1476,10 @@ themeToggle.innerHTML = `
     </style>
     <label class="theme-toggle" title="Change theme" tabindex="0">
         <slot name="light-mode-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon moon-icon" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-            </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon moon-icon" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><rect fill="none" height="24" width="24"/><path d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg>
         </slot>
         <slot name="dark-mode-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon sun-icon" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
-            </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon sun-icon" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><rect fill="none" height="24" width="24"/><path d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg>
         </slot>
     </label>
 `;
@@ -2230,9 +2232,6 @@ smSelect.innerHTML = `
     opacity: 0.6;
     cursor: not-allowed;
 }
-.hide{
-    display: none !important;
-}
 .select{
     position: relative;
     display: -webkit-box;
@@ -2247,8 +2246,9 @@ smSelect.innerHTML = `
     -webkit-tap-highlight-color: transparent;
 }
 .icon {
-    height: 1.5rem;
-    width: 1.5rem;
+    height: 1.2rem;
+    width: 1.2rem;
+    margin-left: 0.5rem;
     fill: rgba(var(--text-color), 0.7);
 }      
 .selected-option-text{
@@ -2265,7 +2265,7 @@ smSelect.innerHTML = `
     -ms-grid-columns: 1fr auto;
     grid-template-columns: 1fr auto;
         grid-template-areas: 'heading heading' '. .';
-    padding: 0.4rem 1rem;
+    padding: 0.4rem 0.8rem;
     background: rgba(var(--text-color), 0.06);
     border: solid 1px rgba(var(--text-color), 0.2);
     -webkit-box-align: center;
@@ -2276,9 +2276,6 @@ smSelect.innerHTML = `
 .selection:focus{
     -webkit-box-shadow: 0 0 0 0.1rem var(--accent-color);
             box-shadow: 0 0 0 0.1rem var(--accent-color) 
-}
-.icon{
-    margin-left: 1rem;
 }
 :host([align-select="left"]) .options{
     left: 0;
@@ -2312,6 +2309,9 @@ smSelect.innerHTML = `
     -webkit-transform: rotate(180deg);
         -ms-transform: rotate(180deg);
             transform: rotate(180deg)
+}
+.hide{
+    display: none;
 }
 @media (any-hover: hover){
     ::-webkit-scrollbar{
@@ -2558,12 +2558,13 @@ smOption.innerHTML = `
     -webkit-box-align: center;
         -ms-flex-align: center;
             align-items: center;
-    min-width: 100%;
+    min-width: max-content;
+    width: 100%;
     gap: 0.5rem;
     grid-template-columns: max-content minmax(0, 1fr);
     padding: 0.8rem 1.2rem;
     cursor: pointer;
-    overflow-wrap: break-word;
+    white-space: nowrap;
     outline: none;
     user-select: none;
 }
@@ -2607,5 +2608,586 @@ customElements.define('sm-option', class extends HTMLElement {
     connectedCallback() {
         this.setAttribute('role', 'option')
         this.setAttribute('tabindex', '0')
+    }
+})
+
+const smCheckbox = document.createElement('template')
+smCheckbox.innerHTML = `
+<style>
+    *{
+        padding: 0;
+        margin: 0;
+        -webkit-box-sizing: border-box;
+                box-sizing: border-box;
+    } 
+    :host{
+        display: -webkit-inline-box;
+        display: -ms-inline-flexbox;
+        display: inline-flex;
+        --accent-color: #4d2588;
+        --text-color: 17, 17, 17;
+        --background-color: 255, 255, 255;
+        --height: 1.2rem;
+        --width: 1.2rem;
+        --border-radius: 0.2rem;
+        --border-color: rgba(var(--text-color), 0.7);
+    }
+    :host([disabled]) {
+        opacity: 0.6;
+        user-select: none;
+        pointer-events: none;
+    }
+    .checkbox {
+        position: relative;
+        display:-webkit-box;
+        display:-ms-flexbox;
+        display:flex;
+        -webkit-box-align: center;
+            -ms-flex-align: center;
+                align-items: center;
+        cursor: pointer;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .checkbox:focus-visible{
+        outline: auto;
+    }
+    .checkbox:active .icon,
+    .checkbox:focus-within .icon{
+        box-shadow: 0 0 0 0.1rem var(--accent-color) inset;
+    }
+    
+    input {
+        display: none;
+    }
+    
+    .checkmark {
+        stroke-dashoffset: -65;
+        stroke-dasharray: 65;
+        -webkit-transition: stroke-dashoffset 0.3s; 
+        -o-transition: stroke-dashoffset 0.3s; 
+        transition: stroke-dashoffset 0.3s;
+    }
+    
+    :host([checked]) .checkmark {
+        stroke-dashoffset: 0;
+        stroke: rgba(var(--background-color), 1);
+    }
+    :host([checked]) .icon {
+        background: var(--accent-color);
+        box-shadow: 0 0 0 0.1rem var(--accent-color) inset;
+    }    
+    .icon {
+        fill: none;
+        height: var(--height);
+        width: var(--width);
+        padding: 0.1rem;
+        stroke-width: 8; 
+        stroke: var(--border-color);
+        overflow: visible;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        -webkit-transition: background 0.3s;
+        -o-transition: background 0.3s;
+        transition: background 0.3s;
+        border-radius: var(--border-radius);
+        box-shadow: 0 0 0 0.1rem var(--border-color) inset;
+    }
+</style>
+<label class="checkbox">
+    <svg class="icon" viewBox="0 0 64 64">
+        <path class="checkmark" d="M50.52,19.56,26,44.08,13.48,31.56" />
+    </svg>
+    <slot></slot>
+</label>`
+customElements.define('sm-checkbox', class extends HTMLElement {
+    constructor() {
+        super()
+        this.attachShadow({
+            mode: 'open'
+        }).append(smCheckbox.content.cloneNode(true))
+
+        this.checkbox = this.shadowRoot.querySelector('.checkbox');
+
+        this.reset = this.reset.bind(this)
+        this.dispatch = this.dispatch.bind(this)
+        this.handleKeyDown = this.handleKeyDown.bind(this)
+        this.handleClick = this.handleClick.bind(this)
+    }
+
+    static get observedAttributes() {
+        return ['value', 'disabled', 'checked']
+    }
+
+    get disabled() {
+        return this.hasAttribute('disabled')
+    }
+
+    set disabled(val) {
+        if (val) {
+            this.setAttribute('disabled', '')
+        } else {
+            this.removeAttribute('disabled')
+        }
+    }
+
+    get checked() {
+        return this.hasAttribute('checked')
+    }
+
+    set checked(value) {
+        if (value) {
+            this.setAttribute('checked', '')
+        }
+        else {
+            this.removeAttribute('checked')
+        }
+    }
+
+    set value(val) {
+        this.setAttribute('value', val)
+    }
+
+    get value() {
+        return this.getAttribute('value')
+    }
+
+    reset() {
+        this.removeAttribute('checked')
+    }
+
+    dispatch() {
+        this.dispatchEvent(new CustomEvent('change', {
+            bubbles: true,
+            composed: true
+        }))
+    }
+    handleKeyDown(e) {
+        if (e.code === "Space") {
+            e.preventDefault()
+            this.click()
+        }
+    }
+    handleClick(e) {
+        this.toggleAttribute('checked')
+    }
+
+    connectedCallback() {
+        if (!this.hasAttribute('disabled')) {
+            this.setAttribute('tabindex', '0')
+        }
+        this.setAttribute('role', 'checkbox')
+        if (!this.hasAttribute('checked')) {
+            this.setAttribute('aria-checked', 'false')
+        }
+        this.addEventListener('keydown', this.handleKeyDown)
+        this.addEventListener('click', this.handleClick)
+    }
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            if (name === 'checked') {
+                this.setAttribute('aria-checked', this.hasAttribute('checked'))
+                this.dispatch()
+            }
+            else if (name === 'disabled') {
+                if (this.hasAttribute('disabled')) {
+                    this.removeAttribute('tabindex')
+                }
+                else {
+                    this.setAttribute('tabindex', '0')
+                }
+            }
+        }
+    }
+    disconnectedCallback() {
+        this.removeEventListener('keydown', this.handleKeyDown)
+        this.removeEventListener('change', this.handleClick)
+    }
+})
+const smTabHeader = document.createElement('template')
+smTabHeader.innerHTML = `
+<style>
+    *{
+        padding: 0;
+        margin: 0;
+        -webkit-box-sizing: border-box;
+                box-sizing: border-box;
+    } 
+    :host{
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        --accent-color: #4d2588;
+        --text-color: 17, 17, 17;
+        --background-color: 255, 255, 255;
+        --gap: 1rem;
+        --justify-content: flex-start;
+        --tab-indicator-border-radius: 0.3rem;
+    }
+    .tabs{
+        position: relative;
+        display: -ms-grid;
+        display: grid;
+        width: 100%;
+    }
+    .tab-header{
+        display: -ms-grid;
+        display: grid;
+        grid-auto-flow: column;
+        justify-content: var(--justify-content);
+        gap: var(--gap);
+        position: relative;
+        overflow: auto hidden;
+        max-width: 100%;
+        scrollbar-width: 0;
+    }
+    .indicator{
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 0.15rem;
+        border-radius: 1rem 1rem 0 0;  
+        background: var(--accent-color);
+        -webkit-transition: width 0.3s, -webkit-transform 0.3s;
+        transition: width 0.3s, -webkit-transform 0.3s;
+        -o-transition: transform 0.3s, width 0.3s;
+        transition: transform 0.3s, width 0.3s;
+        transition: transform 0.3s, width 0.3s, -webkit-transform 0.3s;
+        pointer-events: none;
+    }
+    :host([variant="tab"]) .indicator{
+        height: 100%;
+        border-radius: var(--tab-indicator-border-radius);
+    }
+    :host([variant="tab"]) .tab-header{
+        border-bottom: none; 
+    }
+    .hide-completely{
+        display: none;
+    }
+    :host([variant="tab"]) .tab-header{
+        gap: 0.2rem;
+        display: -ms-inline-grid;
+        display: inline-grid;
+        justify-self: flex-start;
+        border-radius: 0.3rem;
+    }
+    :host([variant="tab"]) slot::slotted(.active){
+        color: rgba(var(--background-color), 1);
+    }
+    slot::slotted(.active){
+        color: var(--accent-color);
+        opacity: 1;
+    }
+    @media (any-hover: none){
+        .tab-header::-webkit-scrollbar-track {
+            -webkit-box-shadow: none !important;
+            background-color: transparent !important;
+        }
+        .tab-header::-webkit-scrollbar {
+            height: 0;
+            background-color: transparent;
+        }
+    }         
+    @media (any-hover: hover){
+        .tab-header{
+            overflow: hidden;
+        }
+    }         
+</style>
+<div part="tab-container" class="tabs">
+    <div part="tab-header" class="tab-header">
+        <slot></slot>
+        <div part="indicator" class="indicator"></div>
+    </div>
+</div>
+`;
+
+customElements.define('sm-tab-header', class extends HTMLElement {
+    constructor() {
+        super()
+        this.attachShadow({
+            mode: 'open'
+        }).append(smTabHeader.content.cloneNode(true))
+
+        this.prevTab
+        this.allTabs
+        this.activeTab
+
+        this.indicator = this.shadowRoot.querySelector('.indicator');
+        this.tabSlot = this.shadowRoot.querySelector('slot');
+        this.tabHeader = this.shadowRoot.querySelector('.tab-header');
+
+        this.changeTab = this.changeTab.bind(this)
+        this.handleClick = this.handleClick.bind(this)
+        this.handlePanelChange = this.handlePanelChange.bind(this)
+        this.moveIndiactor = this.moveIndiactor.bind(this)
+    }
+
+    fireEvent(index) {
+        this.dispatchEvent(
+            new CustomEvent(`switchedtab${this.target}`, {
+                bubbles: true,
+                detail: {
+                    index: parseInt(index)
+                }
+            })
+        )
+    }
+
+    moveIndiactor(tabDimensions) {
+        this.indicator.setAttribute('style', `width: ${tabDimensions.width}px; transform: translateX(${tabDimensions.left - this.tabHeader.getBoundingClientRect().left + this.tabHeader.scrollLeft}px)`)
+    }
+
+
+    changeTab(target) {
+        if (target === this.prevTab || !target.closest('sm-tab'))
+            return
+        if (this.prevTab)
+            this.prevTab.classList.remove('active')
+        target.classList.add('active')
+
+        this.tabHeader.scrollTo({
+            behavior: 'smooth',
+            left: target.getBoundingClientRect().left - this.tabHeader.getBoundingClientRect().left + this.tabHeader.scrollLeft
+        })
+        this.moveIndiactor(target.getBoundingClientRect())
+        this.prevTab = target;
+        this.activeTab = target;
+    }
+    handleClick(e) {
+        if (e.target.closest('sm-tab')) {
+            this.changeTab(e.target)
+            this.fireEvent(e.target.dataset.index)
+        }
+    }
+
+    handlePanelChange(e) {
+        this.changeTab(this.allTabs[e.detail.index])
+    }
+
+    connectedCallback() {
+        if (!this.hasAttribute('target') || this.getAttribute('target').value === '') return;
+        this.target = this.getAttribute('target')
+
+        this.tabSlot.addEventListener('slotchange', () => {
+            this.allTabs = this.tabSlot.assignedElements();
+            this.allTabs.forEach((tab, index) => {
+                tab.dataset.index = index
+            })
+        })
+
+        this.addEventListener('click', this.handleClick)
+        document.addEventListener(`switchedpanel${this.target}`, this.handlePanelChange)
+
+        let resizeObserver = new ResizeObserver(entries => {
+            entries.forEach((entry) => {
+                if (this.prevTab) {
+                    let tabDimensions = this.activeTab.getBoundingClientRect();
+                    this.moveIndiactor(tabDimensions)
+                }
+            })
+        })
+        resizeObserver.observe(this)
+        let observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    this.indicator.style.transition = 'none'
+                    if (this.activeTab) {
+                        let tabDimensions = this.activeTab.getBoundingClientRect();
+                        this.moveIndiactor(tabDimensions)
+                    } else {
+                        this.allTabs[0].classList.add('active')
+                        let tabDimensions = this.allTabs[0].getBoundingClientRect();
+                        this.moveIndiactor(tabDimensions)
+                        this.fireEvent(0)
+                        this.prevTab = this.tabSlot.assignedElements()[0];
+                        this.activeTab = this.prevTab;
+                    }
+                }
+            })
+        }, {
+            threshold: 1.0
+        })
+        observer.observe(this)
+    }
+    disconnectedCallback() {
+        this.removeEventListener('click', this.handleClick)
+        document.removeEventListener(`switchedpanel${this.target}`, this.handlePanelChange)
+    }
+})
+
+// tab
+const smTab = document.createElement('template')
+smTab.innerHTML = `
+<style>
+    *{
+        padding: 0;
+        margin: 0;
+        -webkit-box-sizing: border-box;
+                box-sizing: border-box;
+    } 
+    :host{
+        position: relative;
+        display: -webkit-inline-box;
+        display: -ms-inline-flexbox;
+        display: inline-flex;
+        z-index: 1;
+        --padding: 0.8rem 1rem;
+    }
+    .tab{
+        position: relative;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+            -ms-user-select: none;
+                user-select: none;
+        -webkit-box-pack: center;
+            -ms-flex-pack: center;
+                justify-content: center;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        white-space: nowrap;
+        padding: var(--padding);
+        font-weight: 500;
+        word-spacing: 0.1rem;
+        text-align: center;
+        -webkit-transition: color 0.3s;
+        -o-transition: color 0.3s;
+        transition: color 0.3s;
+        text-transform: capitalize;
+        height: 100%;
+    }
+    @media (hover: hover){
+        :host(.active) .tab{
+            opacity: 1;
+        }
+        .tab{
+            opacity: 0.7
+        }
+        .tab:hover{
+            opacity: 1
+        }
+    }
+</style>
+<div part="tab" class="tab">
+<slot></slot>
+</div>
+`;
+
+customElements.define('sm-tab', class extends HTMLElement {
+    constructor() {
+        super()
+        this.shadow = this.attachShadow({
+            mode: 'open'
+        }).append(smTab.content.cloneNode(true))
+    }
+})
+
+// tab-panels
+
+const smTabPanels = document.createElement('template')
+smTabPanels.innerHTML = `
+<style>
+*{
+    padding: 0;
+    margin: 0;
+    -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+} 
+:host{
+    width: 100%;
+}
+.panel-container{
+    position: relative;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    scroll-snap-type: x mandatory;
+    content-visibility: auto;
+}
+::slotted(*){
+    min-width: 100%;
+    scroll-snap-align: center;
+}
+@media (any-hover: none) {
+    .panel-container{
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .container {
+        overflow-y: scroll;
+    }
+    ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+}
+</style>
+<div part="panel-container" class="panel-container">
+    <slot>Nothing to see here.</slot>
+</div>
+`;
+
+customElements.define('sm-tab-panels', class extends HTMLElement {
+    constructor() {
+        super()
+        this.attachShadow({
+            mode: 'open'
+        }).append(smTabPanels.content.cloneNode(true))
+
+        this.isTransitioning = false
+
+        this.panelContainer = this.shadowRoot.querySelector('.panel-container');
+        this.handleTabChange = this.handleTabChange.bind(this)
+    }
+    handleTabChange(e) {
+        this.isTransitioning = true
+        this.panelContainer.scrollTo({
+            left: this.allPanels[e.detail.index].getBoundingClientRect().left - this.panelContainer.getBoundingClientRect().left + this.panelContainer.scrollLeft,
+            behavior: 'smooth'
+        })
+        setTimeout(() => {
+            this.isTransitioning = false
+        }, 300);
+    }
+    fireEvent(index) {
+        this.dispatchEvent(
+            new CustomEvent(`switchedpanel${this.id}`, {
+                bubbles: true,
+                detail: {
+                    index: parseInt(index)
+                }
+            })
+        )
+    }
+    connectedCallback() {
+        const slot = this.shadowRoot.querySelector('slot');
+        slot.addEventListener('slotchange', (e) => {
+            this.allPanels = e.target.assignedElements()
+            this.allPanels.forEach((panel, index) => {
+                panel.dataset.index = index
+                intersectionObserver.observe(panel)
+            })
+        })
+        document.addEventListener(`switchedtab${this.id}`, this.handleTabChange)
+
+        const intersectionObserver = new IntersectionObserver(entries => {
+
+            entries.forEach(entry => {
+                if (!this.isTransitioning && entry.isIntersecting) {
+                    this.fireEvent(entry.target.dataset.index)
+                }
+            })
+        }, {
+            threshold: 0.6
+        })
+    }
+    disconnectedCallback() {
+        intersectionObserver.disconnect()
+        document.removeEventListener(`switchedtab${this.id}`, this.handleTabChange)
     }
 })
