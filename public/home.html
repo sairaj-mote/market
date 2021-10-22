@@ -61,10 +61,6 @@
             </div>
         </sm-form>
     </sm-popup>
-    <article id="loading" class="page page-layout hide-completely">
-        <sm-spinner></sm-spinner>
-        <h4>Loading RanchiMall Market</h4>
-    </article>
     <article id="home" class="page">
         <header id="main_header">
             <div class="logo">
@@ -78,32 +74,14 @@
                 </div>
             </div>
             <theme-toggle></theme-toggle>
-            <div id="user_dropdown" class="dropdown-wrapper grid user-content hide-completely">
-                <button onclick="toggleDropdown('user_dropdown')">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px"
-                        fill="#000000">
-                        <path d="M0 0h24v24H0V0z" fill="none" />
-                        <path
-                            d="M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
-                    </svg>
-                </button>
-                <div class="dropdown grid gap-2 hide-completely">
-                    <h3>Profile</h3>
-                    <div class="grid">
-                        <div class="label">My FLO ID</div>
-                        <sm-copy id="user_id"></sm-copy>
-                    </div>
-                    <div class="grid gap-0-5">
-                        <h4>Add password lock</h4>
-                        <p>
-                            Adding password lock allows to authenticate transactions with custom password instead of
-                            private key.
-                        </p>
-                        <sm-button onclick="proxy.lock();">Add password</sm-button>
-                    </div>
-                    <sm-button class="danger" onclick="UI_evt.logout();">Log out</sm-button>
-                </div>
-            </div>
+            <button onclick="showPopup('user_popup')">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px"
+                    fill="#000000">
+                    <path d="M0 0h24v24H0V0z" fill="none" />
+                    <path
+                        d="M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
+                </svg>
+            </button>
         </header>
         <section id="dashboard" class="card mobile-page hide-on-mobile">
             <sm-form id="login_form" class="hide-">
@@ -123,8 +101,12 @@
                 <sm-button onclick="showPopup('registration_popup')">Not registered? click here!</sm-button>
             </sm-form>
             <sm-form id="trade_form" class="user-content hide-completely">
-                <div class="flex align-center space-between">
-                    <p>FLO/INR rate</p>
+                <div id="flo_exchange_rate" class="grid align-center">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path
+                            d="M16.36,15.39c1.83,0,4.26-2.49,4.36-4.74-5.65-.19-4.91.47-7.28,2.39,2.19-2.4,1.42-7.79-1.43-10V6.17c2.33,1.49,2.21,5.14,0,7.15-2.23-2-2.27-5.69,0-7.15V3c-2.83,2.26-3.62,7.66-1.44,10-2.36-1.93-1.63-2.58-7.28-2.39.1,2.26,2.55,4.73,4.36,4.74,0,0-1.93.22-2.74-2.62,2.38-.37,4.29-.14,6.28,2-.79-.11-4.89,1.13-4.38,3.26.53.06,3,.3,3.58-.83-.17.18-1.25.5-1.53.05.38-1.39,2.32-2,2.32-2-1,1.82-.48,4.63.82,5.72,1.31-1.08,1.8-3.95.82-5.72,0,0,1.95.6,2.32,2-.29.46-1.36.12-1.53-.05.58,1.14,3.06.88,3.58.83.49-2.17-3.58-3.36-4.38-3.26,2-2.17,3.92-2.39,6.28-2C18.3,15.62,16.36,15.39,16.36,15.39ZM12,19.46c-.91-.79-.5-3,0-3.59C12.5,16.45,12.91,18.66,12,19.46Z" />
+                    </svg>
+                    <p><b>FLO</b>/INR</p>
                     <span id="flo_rate"></span>
                 </div>
                 <div class="flex space-between align-center">
@@ -275,7 +257,7 @@
             </svg>
             <div class="item__title">Dashboard</div>
         </a>
-        <a href="#/my_orders" class="bottom_nav__item">
+        <a href="#/my_orders" class="bottom_nav__item user-content hide-completely">
             <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
                 viewBox="0 0 24 24" width="24px" fill="#000000">
                 <path d="M0,0h24v24H0V0z" fill="none" />
@@ -306,7 +288,7 @@
             </svg>
             <div class="item__title">Market</div>
         </a>
-        <a href="#/wallet" class="bottom_nav__item user-content">
+        <a href="#/wallet" class="bottom_nav__item user-content hide-completely">
             <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
                 fill="#000000">
                 <path d="M0 0h24v24H0V0z" fill="none" />
@@ -317,6 +299,35 @@
             <div class="item__title">Wallet</div>
         </a>
     </footer>
+    <sm-popup id="user_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h3>Profile</h3>
+        </header>
+        <section class="grid gap-2">
+            <div class="grid gap-0-5">
+                <div class="label">My FLO ID</div>
+                <sm-copy id="user_id"></sm-copy>
+            </div>
+            <div class="grid gap-1">
+                <div class="grid gap-0-5">
+                    <h4>Add password lock</h4>
+                    <p>
+                        Adding password lock allows to authenticate transactions with custom password instead of
+                        private key.
+                    </p>
+                </div>
+                <sm-button onclick="proxy.lock();">Add password</sm-button>
+            </div>
+            <sm-button class="danger" onclick="UI_evt.logout();">Log out</sm-button>
+        </section>
+    </sm-popup>
     <sm-popup id="registration_popup">
         <header slot="header" class="popup__header">
             <button class="popup__header__close" onclick="hidePopup()">
@@ -1452,8 +1463,7 @@
                 }
             } else {
                 try {
-                    // const marketTransactions = await getTransactionList()
-                    const marketTransactions = myTransactions
+                    const marketTransactions = await getTransactionList()
                     marketTransactions.forEach(transaction => {
                         const { seller, buyer, quantity, unitValue, tx_time } = transaction
                         const transactionDetails = {
@@ -1479,39 +1489,6 @@
             }
         })
 
-        const openDropdowns = new Set()
-        function toggleDropdown(id) {
-            const animOptions = {
-                duration: 300,
-                fill: 'forwards',
-                easing: 'ease'
-            }
-            if (!openDropdowns.has(id)) {
-                getRef(id).querySelector('.dropdown').classList.remove('hide-completely')
-                getRef(id).querySelector('.dropdown').animate(slideInDown, animOptions)
-                    .onfinish = () => {
-                        getRef(id).classList.toggle('open')
-                        openDropdowns.add(id)
-                        document.addEventListener('click', handleFocusOut)
-                    }
-            } else {
-                getRef(id).querySelector('.dropdown').animate(slideOutUp, animOptions)
-                    .onfinish = () => {
-                        getRef(id).querySelector('.dropdown').classList.add('hide-completely')
-                        getRef(id).classList.toggle('open')
-                        openDropdowns.delete(id)
-                    }
-            }
-        }
-
-        function handleFocusOut(e) {
-            if (!e.target.closest('.dropdown-wrapper')) {
-                openDropdowns.forEach(id => toggleDropdown(id))
-                openDropdowns.clear()
-            } else {
-                document.addEventListener('click', handleFocusOut)
-            }
-        }
 
         document.addEventListener('popupopened', e => {
             switch (e.target.id) {
@@ -1625,118 +1602,6 @@
             getRef(containerId).append(card)
         }
 
-        const myBuyOrders = [
-            {
-                id: 'dfs5g16sdg1',
-                time_placed: generateRandomDate(),
-                quantity: 14.5,
-                maxPrice: 1.36,
-            },
-            {
-                id: 'f4gd1d56fg1',
-                time_placed: generateRandomDate(),
-                quantity: 78.3,
-                maxPrice: 1.26,
-            },
-            {
-                id: 's4dg5s4d1g98',
-                time_placed: generateRandomDate(),
-                quantity: 14.5,
-                maxPrice: 1.28,
-            },
-        ]
-        const mySellOrders = [
-            {
-                id: 'sd8g45g419s6',
-                time_placed: generateRandomDate(),
-                quantity: 15,
-                minPrice: 1.16,
-            },
-            {
-                id: 's59d1g9ws18d',
-                time_placed: generateRandomDate(),
-                quantity: 8.3,
-                minPrice: 1.86,
-            },
-            {
-                id: 'w899e1g4d1g98',
-                time_placed: generateRandomDate(),
-                quantity: 18.5,
-                minPrice: 1.64,
-            },
-        ]
-
-        const myTransactions = [
-            {
-                id: 'sd8g45g419s6',
-                tx_time: generateRandomDate(),
-                quantity: 15,
-                unitValue: 1.16,
-                buyer: 'w8eg4w8eg4w98werg9'
-            },
-            {
-                id: 's59d1g9ws18d',
-                tx_time: generateRandomDate(),
-                quantity: 8.3,
-                unitValue: 1.86,
-                buyer: 'w8eg4w8eg4w98werg9'
-            },
-            {
-                id: 'w899e1g4d1g98',
-                tx_time: generateRandomDate(),
-                quantity: 18.5,
-                unitValue: 1.64,
-                buyer: 'w8eg4w8eg4w98werg9'
-            },
-        ]
-
-        const market = {
-            buyOrders: [
-                {
-                    floID: 'dfs5g16sdg1',
-                    time_placed: generateRandomDate(),
-                    quantity: 14.5,
-                    maxPrice: 1.36,
-                },
-                {
-                    floID: 'f4gd1d56fg1',
-                    time_placed: generateRandomDate(),
-                    quantity: 78.3,
-                    maxPrice: 1.26,
-                },
-                {
-                    floID: 's4dg5s4d1g98',
-                    time_placed: generateRandomDate(),
-                    quantity: 14.5,
-                    maxPrice: 1.28,
-                },
-            ],
-            sellOrders: [
-                {
-                    floID: 'sd8g45g419s6',
-                    time_placed: generateRandomDate(),
-                    quantity: 15,
-                    minPrice: 1.16,
-                },
-                {
-                    floID: 's59d1g9ws18d',
-                    time_placed: generateRandomDate(),
-                    quantity: 8.3,
-                    minPrice: 1.86,
-                },
-                {
-                    floID: 'w899e1g4d1g98',
-                    time_placed: generateRandomDate(),
-                    quantity: 18.5,
-                    minPrice: 1.64,
-                },
-            ]
-        }
-
-        function generateRandomDate() {
-            return new Date() - Math.floor(Math.random() * 10000000000);
-        }
-
         const balance = {}
 
         let accountDetails = {}
@@ -1825,7 +1690,7 @@
                     console.log(result);
                     proxy.secret = tmpKey.privKey;
                     account();
-                }).catch(error => console.error(error));
+                }).catch(error => notify(error.data, 'error'));
             }
 
         };
