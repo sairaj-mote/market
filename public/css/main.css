@@ -448,24 +448,6 @@ button:active,
   cursor: pointer;
 }
 
-.dropdown-wrapper {
-  position: relative;
-  z-index: 2;
-}
-
-.dropdown {
-  top: 100%;
-  right: 0;
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  width: min(24rem, calc(100vw - 3rem));
-  position: absolute;
-  background-color: var(--foreground-color);
-  border: solid thin rgba(var(--text-color), 0.1);
-  -webkit-box-shadow: 0 0.5rem 1.5rem -0.5rem rgba(0, 0, 0, 0.1);
-          box-shadow: 0 0.5rem 1.5rem -0.5rem rgba(0, 0, 0, 0.1);
-}
-
 #main_page {
   padding: 1.5rem;
 }
@@ -610,14 +592,6 @@ sm-checkbox {
   margin-top: 2rem;
 }
 
-#loading {
-  place-content: center;
-  text-align: center;
-}
-#loading sm-spinner {
-  margin-bottom: 1.5rem;
-}
-
 #home {
   height: 100%;
   display: grid;
@@ -643,6 +617,19 @@ sm-checkbox {
           align-items: center;
   grid-template-columns: 1fr auto auto;
   grid-column: 1/-1;
+}
+
+#flo_exchange_rate {
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: solid rgba(var(--text-color), 0.2) thin;
+  background-color: rgba(var(--background-color), 1);
+}
+
+#flo_rate {
+  font-weight: 700;
 }
 
 #trade_form,
