@@ -723,7 +723,7 @@
         }
 
         // displays a popup for asking user input. Use this instead of JS prompt
-        async function getPromptInput(title, message = '', options = {}) {
+        function getPromptInput(title, message = '', options = {}) {
             const { isPassword = true, cancelText = 'Cancel', confirmText = 'OK' } = options
             showPopup('prompt_popup', true)
             getRef('prompt_title').textContent = title;
@@ -737,7 +737,7 @@
             return new Promise((resolve, reject) => {
                 buttons[0].onclick = () => {
                     hidePopup()
-                    return;
+                    reject(null);
                 }
                 buttons[1].onclick = () => {
                     const value = getRef('prompt_input').value;
@@ -1058,9 +1058,9 @@
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
-                    await buy(quantity, price, proxy.secret)
+                    await buy(quantity, price, await proxy.secret)
                 } else {
-                    await sell(quantity, price, proxy.secret)
+                    await sell(quantity, price, await proxy.secret)
                 }
                 getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
@@ -1182,16 +1182,16 @@
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, userID, privKey, proxy.secret)
+                        await depositFLO(quantity, userID, privKey, await proxy.secret)
                     } else {
-                        await depositRupee(quantity, userID, privKey, proxy.secret)
+                        await depositRupee(quantity, userID, privKey, await proxy.secret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
-                        await withdrawFLO(quantity, proxy.secret)
+                        await withdrawFLO(quantity, await proxy.secret)
                     } else {
-                        await withdrawRupee(quantity, proxy.secret)
+                        await withdrawRupee(quantity, await proxy.secret)
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1320,12 +1320,12 @@
 
         getRef('orders_list').addEventListener('click', e => {
             if (e.target.closest('.cancel-order')) {
-                getConfirmation('Cancel this order?').then(res => {
+                getConfirmation('Cancel this order?').then(async res => {
                     if (res) {
                         const target = e.target.closest('.order-card')
                         const id = target.dataset.id
                         const type = target.dataset.type
-                        cancelOrder(type, id, proxy.secret)
+                        cancelOrder(type, id, await proxy.secret)
                             .then(() => {
                                 notify('Order cancelled', 'success')
                                 target.animate([
@@ -1375,8 +1375,9 @@
             getConfirmation('Cancel all selected orders?').then(async res => {
                 if (res) {
                     try {
+                        let proxy_secret = await proxy.secret;
                         await Promise.all(
-                            selectedOrders.map((type, id) => cancelOrder(type, id, proxy.secret))
+                            selectedOrders.map((type, id) => cancelOrder(type, id, proxy_secret))
                         )
                         selectedOrders.forEach((type, id) => {
                             getRef('orders_list').querySelector(`[data-id="${id}"]`).remove()
@@ -1519,17 +1520,21 @@
             public: null,
             async lock() {
                 if (!this.private)
-                    throw "No proxy key found!";
-                let pwd = await getPromptInput("Add password", 'This password applies to this browser only!', { isPassword: true, confirmText: "Add password" });
-                if (!pwd)
-                    notify("Password cannot be empty", 'error');
-                else if (pwd.length < 4)
-                    notify("Password minimum length is 4", 'error');
-                else {
-                    let tmp = Crypto.AES.encrypt(this.private, pwd);
-                    localStorage.setItem("proxy_secret", "?" + tmp);
-                    notify("Successfully locked with Password", 'success');
-                }
+                    return notify("No proxy key found!", 'error');
+                getPromptInput("Add password", 'This password applies to this browser only!', {
+                    isPassword: true,
+                    confirmText: "Add password"
+                }).then(pwd => {
+                    if (!pwd)
+                        notify("Password cannot be empty", 'error');
+                    else if (pwd.length < 4)
+                        notify("Password minimum length is 4", 'error');
+                    else {
+                        let tmp = Crypto.AES.encrypt(this.private, pwd);
+                        localStorage.setItem("proxy_secret", "?" + tmp);
+                        notify("Successfully locked with Password", 'success');
+                    }
+                }).catch(_ => null);
             },
             clear() {
                 localStorage.removeItem("proxy_secret");
@@ -1542,32 +1547,44 @@
                 this.public = floCrypto.getPubKeyHex(key);
             },
             get secret() {
-                if (this.private)
-                    return this.private;
-                try {
-                    let tmp = localStorage.getItem("proxy_secret");
-                    if (typeof tmp === "string" && tmp.startsWith("?")) {
-                        getPromptInput("Enter password", '', { isPassword: true }).then(pwd => {
-                            if (!pwd)
-                                throw "Password Required for making transactions";
-                            else {
-                                try {
-                                    tmp = Crypto.AES.decrypt(tmp.substring(1), pwd);
-                                } catch (error) {
-                                    throw "Incorrect Password! Password Required for making transactions";
-                                }
+                const self = this;
+                return new Promise((resolve, reject) => {
+                    if (self.private)
+                        return resolve(self.private);
 
-                            }
-                        });
+                    const Reject = reason => {
+                        notify(reason, 'error');
+                        reject(reason);
                     }
-                    this.private = tmp;
-                    this.public = floCrypto.getPubKeyHex(tmp);
-                    return this.private;
-                } catch (error) {
-                    alert(error);
-                    console.error(error);
-                    throw "Unable to fetch Proxy secret";
-                }
+                    const setValues = priv => {
+                        try {
+                            self.private = priv;
+                            self.public = floCrypto.getPubKeyHex(priv);
+                            resolve(self.private);
+                        } catch (error) {
+                            Reject("Unable to fetch Proxy secret");
+                        }
+                    };
+
+                    let tmp = localStorage.getItem("proxy_secret");
+                    if (typeof tmp !== "string")
+                        Reject("Unable to fetch Proxy secret");
+                    else if (tmp.startsWith("?")) {
+                        getPromptInput("Enter password", '', {
+                            isPassword: true
+                        }).then(pwd => {
+                            if (!pwd)
+                                return Reject("Password Required for making transactions");
+                            try {
+                                tmp = Crypto.AES.decrypt(tmp.substring(1), pwd);
+                                setValues(tmp);
+                            } catch (error) {
+                                Reject("Incorrect Password! Password Required for making transactions");
+                            }
+                        }).catch(_ => Reject("Password Required for making transactions"));
+                    } else
+                        setValues(tmp);
+                })
             }
         }
 
@@ -1605,6 +1622,7 @@
         const balance = {}
 
         let accountDetails = {}
+
         function account() {
             getAccount().then(acc => {
                 getRef("login_form").classList.add('hide-completely')
@@ -1632,12 +1650,8 @@
                 balance.rupee = rupee_net
                 showBalance("rupee_balance", rupee_net, rupee_locked)
                 //My orders
-                renderUserOrders()
-                try {
-                    proxy.secret;
-                } catch (error) {
-                    console.warn(error);
-                }
+                renderUserOrders();
+                proxy.secret.then(_ => null).catch(_ => null);
             }).catch(error => {
                 getRef('home').classList.remove('signed-in')
                 if (error instanceof ResponseError) {
@@ -1670,7 +1684,10 @@
             },
 
             logout() {
-                getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(res => {
+                getConfirmation('Log out?', {
+                    cancelText: 'Stay',
+                    confirmText: 'Log out'
+                }).then(res => {
                     if (res) {
                         logout().then(result => {
                             console.warn(result);
