@@ -1385,7 +1385,7 @@
                         selectedOrders.clear()
                     }
                     catch (err) {
-                        notify(err, 'error')
+                        notify(err.data, 'error')
                     }
                 }
             })
@@ -1459,7 +1459,7 @@
                     })
                 }
                 catch (err) {
-                    notify(err, 'error')
+                    notify(err.data, 'error')
                 }
             } else {
                 try {
@@ -1478,7 +1478,7 @@
                     const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
                 }
                 catch (err) {
-                    notify(err, 'error')
+                    notify(err.data, 'error')
                 }
             }
             getRef('market_orders_list').append(frag)
