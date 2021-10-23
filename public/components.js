@@ -137,12 +137,12 @@ customElements.define('sm-button',
         }
         attributeChangedCallback(name) {
             if (name === 'disabled') {
-                this.removeAttribute('tabindex');
-                this.setAttribute('aria-disabled', 'true');
-            }
-            else {
-                this.setAttribute('tabindex', '0');
-                this.setAttribute('aria-disabled', 'false');
+                if (this.hasAttribute('disabled')) {
+                    this.removeAttribute('tabindex');
+                } else {
+                    this.setAttribute('tabindex', '0');
+                }
+                this.setAttribute('aria-disabled', this.hasAttribute('disabled'));
             }
         }
     })

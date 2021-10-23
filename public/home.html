@@ -1033,10 +1033,12 @@
 
         function showProcess(id) {
             getRef(id).children[0].classList.add('clip')
+            getRef(id).children[0].disabled = true
             getRef(id).append(document.createElement('sm-spinner'))
         }
         function hideProcess(id) {
             getRef(id).children[0].classList.remove('clip')
+            getRef(id).children[0].disabled = false
             getRef(id).querySelector('sm-spinner')?.remove()
         }
         let tradeType = 'buy'
@@ -1284,14 +1286,22 @@
                         getRef('my_orders_section__header').children[1].animate(slideInLeft, animOptions)
                     }
             } else if (selectedOrders.size === 0 && getRef('my_orders_section__header').children[0].classList.contains('hide-completely')) {
-                getRef('my_orders_section__header').children[1].animate(slideOutRight, animOptions)
-                    .onfinish = () => {
-                        getRef('my_orders_section__header').children[1].classList.add('hide-completely')
-                        getRef('my_orders_section__header').children[0].classList.remove('hide-completely')
-                        getRef('my_orders_section__header').children[0].animate(slideInRight, animOptions)
-                    }
+                hideMyOrdersOptions()
             }
         })
+        function hideMyOrdersOptions() {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            getRef('my_orders_section__header').children[1].animate(slideOutRight, animOptions)
+                .onfinish = () => {
+                    getRef('my_orders_section__header').children[1].classList.add('hide-completely')
+                    getRef('my_orders_section__header').children[0].classList.remove('hide-completely')
+                    getRef('my_orders_section__header').children[0].animate(slideInRight, animOptions)
+                }
+        }
         function clearSelection() {
             getRef('orders_list').querySelectorAll('sm-checkbox[checked]').forEach(elem => elem.checked = false)
         }
@@ -1358,9 +1368,9 @@
                                         })
                                         setTimeout(() => {
                                             target.remove()
+                                            refresh()
                                         }, 200);
                                     }
-                                refresh()
                             })
                             .catch(err => notify(err.data, 'error'))
                     }
@@ -1373,18 +1383,17 @@
             getConfirmation('Cancel all selected orders?').then(async res => {
                 if (res) {
                     try {
-                        let proxy_secret = await proxy.secret;
-                        await Promise.all(
-                            [...selectedOrders].map((id, type) => cancelOrder(type, id, proxy_secret))
-                        )
-                        selectedOrders.forEach((type, id) => {
-                            getRef('orders_list').querySelector(`[data-id="${id}"]`).remove()
-                        })
-                        notify('All selected orders cancelled', 'success')
+                        const proxy_secret = await proxy.secret;
+                        const promises = [...selectedOrders].map(([id, type]) => cancelOrder(type, id, proxy_secret))
+                        await Promise.all(promises)
                         selectedOrders.clear()
+                        hideMyOrdersOptions()
                     }
                     catch (err) {
                         notify(err.data, 'error')
+                    }
+                    finally {
+                        refresh()
                     }
                 }
             })
@@ -1409,13 +1418,13 @@
                     frag.append(render.orderCard(orderDetails))
                 })
             } else {
-                (transactions || myTransactions).forEach(transaction => {
-                    const { floID, quantity, unitValue, tx_time, buyer, seller } = transaction
+                transactions.forEach(transaction => {
+                    const { quantity, unitValue, tx_time, buyer, seller } = transaction
                     let type, other;
-                    if (seller === floID) {
+                    if (seller === userID) {
                         type = 'Sold';
-                        other = buyer === floID ? 'MySelf' : buyer;
-                    } else if (buyer === floID) {
+                        other = buyer === userID ? 'MySelf' : buyer;
+                    } else if (buyer === userID) {
                         type = 'Bought';
                         other = seller;
                     } else
