@@ -124,7 +124,7 @@
                 <sm-input id="get_total" variant="outlined" placeholder="Total (₹)" type="number" min="0.01" step="0.01"
                     required hiderequired animate>
                 </sm-input>
-                <div id="quantity_selector" class="flex align-center">
+                <div id="quantity_selector" class="flex align-center quantity-selector">
                     <span id="quantity_type">Rupee</span>
                     <button class="button" value="0.25">25%</button>
                     <button class="button" value="0.5">50%</button>
@@ -399,6 +399,13 @@
             <sm-input id="get_user_amount" variant="outlined" placeholder="Quantity" type="number" min="0.01"
                 step="0.00001" required hiderequired animate>
             </sm-input>
+            <div id="wallet_quantity_selector" class="flex align-center quantity-selector">
+                <span id="quantity_type">Rupee</span>
+                <button class="button" value="0.25">25%</button>
+                <button class="button" value="0.5">50%</button>
+                <button class="button" value="0.75">75%</button>
+                <button class="button" value="1">100%</button>
+            </div>
             <sm-input id="get_private_key" variant="outlined" placeholder="FLO private key" type="password" required
                 error-text="Invalid private key" hiderequired animate>
             </sm-input>
@@ -1083,7 +1090,7 @@
             if (e.target.closest('button')) {
                 const target = e.target.closest('button')
                 const unitValue = parseFloat(getRef('get_price').value)
-                const fraction = parseInt(target.value)
+                const fraction = parseFloat(target.value)
                 if (tradeType === 'buy') {
                     getRef('get_total').value = parseFloat((fraction * balance.rupee).toFixed(2))
                     getRef('get_quantity').value = parseFloat(((balance.rupee * fraction) / unitValue).toFixed(4))
@@ -1107,6 +1114,7 @@
             const unitValue = parseFloat(getRef('get_price').value)
             getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(4)) || 0
         })
+
         getRef('wallet_actions').addEventListener('click', e => {
             if (e.target.closest('.button')) {
                 const target = e.target.closest('.button')
@@ -1116,12 +1124,17 @@
                 getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
+                getRef('get_user_amount').setAttribute('step', asset === 'FLO' ? '0.0001' : '0.01')
+                getRef('get_user_amount').setAttribute('min', asset === 'FLO' ? '0.0001' : '0.01')
                 if (type === 'withdraw') {
                     getRef('get_private_key').classList.add('hide-completely')
+                    getRef('wallet_quantity_selector').classList.remove('hide-completely')
                     getRef('get_private_key').removeAttribute('required')
                     getRef('get_private_key').removeAttribute('hiderequired')
+
                 } else {
                     getRef('get_private_key').setAttribute('required', '')
+                    getRef('wallet_quantity_selector').classList.add('hide-completely')
                     getRef('get_private_key').setAttribute('hiderequired', '')
                     getRef('get_private_key').classList.remove('hide-completely')
                 }
@@ -1171,6 +1184,15 @@
                     getRef('wallet_form').animate(slideInRight, animOptions)
                 }
         }
+        getRef('wallet_quantity_selector').addEventListener('click', e => {
+            // Get latest balance and exchange rate
+            if (e.target.closest('button')) {
+                const target = e.target.closest('button')
+                const asset = getRef('wallet_asset_selector').value.toLowerCase()
+                const fraction = parseFloat(target.value)
+                getRef('get_user_amount').value = parseFloat((balance[asset] * fraction).toFixed(asset === "flo" ? 4 : 2))
+            }
+        })
         getRef('wallet_popup__cta').addEventListener('click', async e => {
             const asset = getRef('wallet_asset_selector').value
             const type = e.target.getAttribute('value')
