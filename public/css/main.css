@@ -647,7 +647,8 @@ sm-checkbox {
   margin-left: 0.5rem;
 }
 
-#quantity_type {
+#quantity_type,
+#wallet_quantity_type {
   font-size: 0.8rem;
   padding-right: 0.5rem;
   border-right: thin solid rgba(var(--text-color), 0.3);

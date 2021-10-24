@@ -400,7 +400,7 @@
                 step="0.00001" required hiderequired animate>
             </sm-input>
             <div id="wallet_quantity_selector" class="flex align-center quantity-selector">
-                <span id="quantity_type">Rupee</span>
+                <span id="wallet_quantity_type">Rupee</span>
                 <button class="button" value="0.25">25%</button>
                 <button class="button" value="0.5">50%</button>
                 <button class="button" value="0.75">75%</button>
@@ -785,6 +785,10 @@
                 let [hours, minutes] = time.split(':').map(v => parseInt(v))
                 const currentTime = new Date()
                 const currentTimeFrag = currentTime.toString().split(' ')
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                ];
+                const monthName = monthNames[month]
 
                 minutes = minutes < 10 ? `0${minutes}` : minutes
                 let finalHours = ``;
@@ -807,16 +811,16 @@
                             else if (dateDiff > 1 && dateDiff < 8)
                                 return currentTimeFrag[0];
                             else
-                                return ` ${day} ${month}`;
+                                return ` ${day} ${monthName}`;
                         }
                         else
-                            return ` ${day} ${month}`;
+                            return ` ${day} ${monthName}`;
                     }
                     else
-                        return `${month} ${year}`;
+                        return `${monthName} ${year}`;
                 }
                 else
-                    return `${finalHours}, ${month} ${day} ${year}`;
+                    return `${finalHours}, ${monthName} ${day} ${year}`;
             } catch (e) {
                 console.error(e);
                 return time;
@@ -1121,6 +1125,7 @@
                 showPopup('wallet_popup')
                 const type = target.value
                 const asset = getRef('wallet_asset_selector').value
+                getRef('wallet_quantity_type').textContent = asset
                 getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
