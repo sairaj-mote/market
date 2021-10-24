@@ -639,7 +639,7 @@ sm-checkbox {
   padding: 1rem 1.5rem 1.5rem 1.5rem;
 }
 
-#quantity_selector .button {
+.quantity-selector .button {
   -webkit-box-flex: 1;
       -ms-flex: 1;
           flex: 1;
@@ -647,7 +647,8 @@ sm-checkbox {
   margin-left: 0.5rem;
 }
 
-#quantity_type {
+#quantity_type,
+#wallet_quantity_type {
   font-size: 0.8rem;
   padding-right: 0.5rem;
   border-right: thin solid rgba(var(--text-color), 0.3);
