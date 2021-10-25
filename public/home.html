@@ -1206,19 +1206,20 @@
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
                 showProcess('wallet_popup__cta_wrapper')
+                const proxySecret = await proxy.secret
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, userID, privKey, await proxy.secret)
+                        await depositFLO(quantity, userID, privKey, proxySecret)
                     } else {
-                        await depositRupee(quantity, userID, privKey, await proxy.secret)
+                        await depositRupee(quantity, userID, privKey, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
-                        await withdrawFLO(quantity, proxy.secret)
+                        await withdrawFLO(quantity, proxySecret)
                     } else {
-                        await withdrawRupee(quantity, proxy.secret)
+                        await withdrawRupee(quantity, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
