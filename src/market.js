@@ -1,3 +1,5 @@
+const group = require("./group");
+
 var net_FLO_price; //container for FLO price (from API or by model)
 var DB; //container for database
 
@@ -168,16 +170,18 @@ function cancelOrder(type, id, floID) {
     });
 }
 
-function matchBuyAndSell() {
-    let cur_price = net_FLO_price;
-    //get the best buyer
-    getBestBuyer(cur_price).then(buyer_best => {
-        //get the best seller
-        getBestSeller(buyer_best.quantity, cur_price).then(result => {
-            let seller_best = result.sellOrder,
-                txQueries = result.txQueries;
-            console.debug("Sell:", seller_best.id, "Buy:", buyer_best.id);
+function initiateCoupling() {
+    group.getBestPairs()
+        .then(bestPairQueue => processCoupling(bestPairQueue))
+        .catch(error => reject(error))
+}
 
+function processCoupling(bestPairQueue) {
+    bestPairQueue.get().then(result => {
+        let buyer_best = result.buyOrder,
+            seller_best = result.sellOrder;
+        console.debug("Sell:", seller_best.id, "Buy:", buyer_best.id);
+        spendFLO(buyer_best, seller_best).then(txQueries => {
             //process the Txn
             var tx_quantity;
             if (seller_best.quantity > buyer_best.quantity)
@@ -189,80 +193,35 @@ function matchBuyAndSell() {
             updateBalance(seller_best, buyer_best, txQueries, cur_price, tx_quantity);
             //process txn query in SQL
             DB.transaction(txQueries).then(results => {
+                bestPairQueue.next();
                 console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
                 //Since a tx was successful, match again
-                matchBuyAndSell();
+                processCoupling(bestPairQueue);
             }).catch(error => console.error(error));
         }).catch(error => console.error(error));
     }).catch(error => console.error(error));
 }
 
-function getBestBuyer(cur_price, n = 0) {
+function spendFLO(buyOrder, sellOrder) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM BuyOrder WHERE maxPrice >= ? ORDER BY time_placed LIMIT ?,1", [cur_price, n]).then(result => {
-            let buyOrder = result.shift();
-            if (!buyOrder)
-                return reject("No valid buyers available");
-            DB.query("SELECT rupeeBalance AS bal FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
-                if (result[0].bal < cur_price * buyOrder.quantity) {
-                    //This should not happen unless a buy order is placed when user doesnt have enough rupee balance
-                    console.warn(`Buy order ${buyOrder.id} is active, but rupee# is insufficient`);
-                    getBestBuyer(cur_price, n + 1)
-                        .then(result => resolve(result))
-                        .catch(error => reject(error));
-                } else
-                    resolve(buyOrder);
-            }).catch(error => reject(error));
-        }).catch(error => reject(error));
-    });
-}
-
-function getBestSeller(maxQuantity, cur_price, n = 0) {
-    return new Promise((resolve, reject) => {
-        //TODO: Add order conditions for priority.
-        DB.query("SELECT * FROM SellOrder WHERE minPrice <=? ORDER BY time_placed LIMIT ?,1", [cur_price, n]).then(result => {
-            let sellOrder = result.shift();
-            if (!sellOrder)
-                return reject("No valid sellers available");
-            DB.query("SELECT id, quantity, base FROM Vault WHERE floID=? ORDER BY base", [sellOrder.floID]).then(result => {
-                let rem = Math.min(sellOrder.quantity, maxQuantity),
-                    sell_base = 0,
-                    base_quantity = 0,
-                    txQueries = [];
-                for (let i = 0; i < result.length && rem > 0; i++) {
-                    if (rem < result[i].quantity) {
-                        txQueries.push(["UPDATE Vault SET quantity=quantity-? WHERE id=?", [rem, result[i].id]]);
-                        if (result[i].base) {
-                            sell_base += (rem * result[i].base);
-                            base_quantity += rem
-                        }
-                        rem = 0;
-                    } else {
-                        txQueries.push(["DELETE FROM Vault WHERE id=?", [result[i].id]]);
-                        if (result[i].base) {
-                            sell_base += (result[i].quantity * result[i].base);
-                            base_quantity += result[i].quantity
-                        }
-                        rem -= result[i].quantity;
-                    }
+        DB.query("SELECT id, quantity, base FROM Vault WHERE floID=? ORDER BY base", [sellOrder.floID]).then(result => {
+            let rem = Math.min(buyOrder.quantity, sellOrder.quantity),
+                txQueries = [];
+            for (let i = 0; i < result.length && rem > 0; i++) {
+                if (rem < result[i].quantity) {
+                    txQueries.push(["UPDATE Vault SET quantity=quantity-? WHERE id=?", [rem, result[i].id]]);
+                    rem = 0;
+                } else {
+                    txQueries.push(["DELETE FROM Vault WHERE id=?", [result[i].id]]);
+                    rem -= result[i].quantity;
                 }
-                if (base_quantity)
-                    sell_base = sell_base / base_quantity;
-                if (rem > 0 || sell_base > cur_price) {
-                    //1st condition (rem>0) should not happen (sell order placement was success when insufficient FLO).
-                    if (rem > 0)
-                        console.warn(`Sell order ${sellOrder.id} is active, but FLO is insufficient`);
-                    getBestSeller(maxQuantity, cur_price, n + 1)
-                        .then(result => resolve(result))
-                        .catch(error => reject(error));
-                } else
-                    resolve({
-                        sellOrder,
-                        txQueries
-                    });
-            }).catch(error => reject(error));
+            }
+            if (rem > 0)
+                reject(`Sell order ${sellOrder.id} is active, but FLO is insufficient`);
+            else
+                resolve(txQueries);
         }).catch(error => reject(error));
-    });
+    })
 }
 
 function processBuyOrder(seller_best, buyer_best, txQueries) {
@@ -643,7 +602,7 @@ function periodicProcess() {
     let old_rate = net_FLO_price;
     getRates().then(cur_rate => {
         transactionReCheck();
-        matchBuyAndSell();
+        initiateCoupling();
     }).catch(error => console.error(error));
 }
 
@@ -669,5 +628,6 @@ module.exports = {
     periodicProcess,
     set DB(db) {
         DB = db;
+        group.DB = db;
     }
 };
