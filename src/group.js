@@ -24,65 +24,110 @@ function getBestPairs(currentRate) {
 
 const bestPair = function(tags, currentRate) {
 
-    const getSellOrder = () => {
+    const getSellOrder = () => new Promise((resolve, reject) => {
         let cache = getSellOrder.cache;
-        return new Promise((resolve, reject) => {
-            if (cache.cur_order) { //If cache already has a pending order
-                checkMinimumGain(cache.cur_order, currentRate).then(result => {
-                    cache.cur_order = result.sellOrder;
-                    resolve(result);
-                }).catch(error => {
-                    if (error !== false)
-                        return reject(error);
-                    //Order not valid (minimum gain)
-                    cache.cur_order = null;
-                    getSellOrder()
-                        .then(result => resolve(result))
-                        .catch(error => reject(error))
-                })
-            } else if (cache.orders && cache.orders.length) { //If cache already has orders in priority
-                getTopValidOrder(cache.orders, currentRate).then(result => {
-                    cache.cur_order = result.sellOrder;
-                    resolve(result);
-                }).catch(error => {
-                    if (error !== false)
-                        return reject(error);
-                    //No valid order found in current tag
-                    cache.orders = null;
-                    getSellOrder()
-                        .then(result => resolve(result))
-                        .catch(error => reject(error))
-                })
-            } else if (cache.tags.length) { //If cache has remaining tags
-                cache.cur_tag = cache.tags.pop();
-                getOrdersInTag(cache.cur_tag, currentRate).then(orders => {
-                    cache.orders = orders;
-                    getSellOrder()
-                        .then(result => resolve(result))
-                        .catch(error => reject(error))
-                }).catch(error => reject(error));
-            } else if (!cache.end) { //Un-tagged floID's orders  (do only once)
-                getUntaggedOrders(currentRate).then(orders => {
-                    cache.orders = orders;
-                    cache.end = true;
-                    getSellOrder()
-                        .then(result => resolve(result))
-                        .catch(error => reject(error))
-                }).catch(error => reject(error));
-            }
-        })
-    };
+        if (cache.cur_order) { //If cache already has a pending order
+            verifySellOrder(cache.cur_order, currentRate).then(result => {
+                cache.cur_order = result.sellOrder;
+                resolve(result);
+            }).catch(error => {
+                if (error !== false)
+                    return reject(error);
+                //Order not valid (minimum gain)
+                cache.cur_order = null;
+                getSellOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            })
+        } else if (cache.orders && cache.orders.length) { //If cache already has orders in priority
+            getTopValidSellOrder(cache.orders, currentRate).then(result => {
+                cache.cur_order = result.sellOrder;
+                resolve(result);
+            }).catch(error => {
+                if (error !== false)
+                    return reject(error);
+                //No valid order found in current tag
+                cache.orders = null;
+                getSellOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            })
+        } else if (cache.tags.length) { //If cache has remaining tags
+            cache.cur_tag = cache.tags.pop();
+            getSellOrdersInTag(cache.cur_tag, currentRate).then(orders => {
+                cache.orders = orders;
+                getSellOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error));
+        } else if (!cache.end) { //Un-tagged floID's orders  (do only once)
+            getUntaggedSellOrders(currentRate).then(orders => {
+                cache.orders = orders;
+                cache.end = true;
+                getSellOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error));
+        } else
+            reject(false);
+    });
     getSeller.cache = {
         tags: Array.from(tags)
     };
 
-    const getBuyOrder = () => {};
+    const getBuyOrder = () => new Promise((resolve, reject) => {
+        let cache = getBuyOrder.cache;
+        if (cache.cur_order) { //If cache already has a pending order
+            verifyBuyOrder(cache.cur_order, currentRate).then(result => {
+                cache.cur_order = result;
+                resolve(result);
+            }).catch(error => {
+                if (error !== false)
+                    return reject(error);
+                //Order not valid (cash not available)
+                cache.cur_order = null;
+                getBuyOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            })
+        } else if (cache.orders && cache.orders.length) { //If cache already has orders in priority
+            getTopValidBuyOrder(cache.orders, currentRate).then(result => {
+                cache.cur_order = result;
+                resolve(result);
+            }).catch(error => {
+                if (error !== false)
+                    return reject(error);
+                //No valid order found in current tag
+                cache.orders = null;
+                getBuyOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            })
+        } else if (cache.tags.length) { //If cache has remaining tags
+            cache.cur_tag = cache.tags.pop();
+            getBuyOrdersInTag(cache.cur_tag, currentRate).then(orders => {
+                cache.orders = orders;
+                getBuyOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error));
+        } else if (!cache.end) { //Un-tagged floID's orders  (do only once)
+            getUntaggedBuyOrders(currentRate).then(orders => {
+                cache.orders = orders;
+                cache.end = true;
+                getBuyOrder()
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error));
+        } else
+            reject(false);
+    });
     getBuyOrder.cache = {
         tags: Array.from(tags) //Maybe diff for buy and sell ?
     };
 }
 
-function getUntaggedOrders(cur_price) {
+function getUntaggedSellOrders(cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
                 " LEFT JOIN Tags ON Tags.floID = SellOrder.floID" +
@@ -92,11 +137,39 @@ function getUntaggedOrders(cur_price) {
     })
 }
 
-function getOrdersInTag(tag, cur_price) {
+function getUntaggedBuyOrders(cur_price) {
+    return new Promise((resolve, reject) => {
+        DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
+                " LEFT JOIN Tags ON Tags.floID = BuyOrder.floID" +
+                " WHERE Tags.floID IS NULL AND BuyOrder.maxPrice >=? ORDER BY BuyOrder.time_placed", [cur_price])
+            .then(orders => resolve(orders))
+            .catch(error => reject(error))
+    })
+}
+
+function getSellOrdersInTag(tag, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
             " INNER JOIN Tags ON Tags.floID = SellOrder.floID" +
             " WHERE Tags.tag = ? AND SellOrder.minPrice <=? ORDER BY SellOrder.time_placed", [tag, cur_price]).then(orders => {
+            if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
+                resolve(orders);
+            else
+                getPointsFromAPI(orders.map(o => o.floID)).then(points => {
+                    let orders_sorted = orders.map(o => [o, points[o.floID]])
+                        .sort((a, b) => a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0) //sort by points (ascending)
+                        .map(x => x[0]);
+                    resolve(orders_sorted);
+                }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    });
+}
+
+function getBuyOrdersInTag(tag, cur_price) {
+    return new Promise((resolve, reject) => {
+        DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
+            " INNER JOIN Tags ON Tags.floID = BuyOrder.floID" +
+            " WHERE Tags.tag = ? AND BuyOrder.maxPrice >=? ORDER BY BuyOrder.time_placed", [tag, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);
             else
@@ -132,23 +205,23 @@ function fetch_api(api, id) {
     })
 }
 
-function getTopValidOrder(orders, cur_price) {
+function getTopValidSellOrder(orders, cur_price) {
     return new Promise((resolve, reject) => {
         if (!orders.length)
             return reject(false)
-        checkMinimumGain(orders.pop(), cur_price) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
+        verifySellOrder(orders.pop(), cur_price) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
             .then(result => resolve(result))
             .catch(error => {
                 if (error !== false)
                     return reject(error);
-                getTopValidOrder(orders, cur_price)
+                getTopValidSellOrder(orders, cur_price)
                     .then(result => resolve(result))
                     .catch(error => reject(error));
             });
     });
 }
 
-function checkMinimumGain(sellOrder, cur_price) {
+function verifySellOrder(sellOrder, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT id, quantity, base FROM Vault WHERE floID=? ORDER BY base", [sellOrder.floID]).then(result => {
             let rem = Math.min(sellOrder.quantity, maxQuantity),
@@ -187,6 +260,35 @@ function checkMinimumGain(sellOrder, cur_price) {
         }).catch(error => reject(error));
     })
 
+}
+
+function getTopValidBuyOrder(orders, cur_price) {
+    return new Promise((resolve, reject) => {
+        if (!orders.length)
+            return reject(false)
+        verifyBuyOrder(orders.pop(), cur_price) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
+            .then(result => resolve(result))
+            .catch(error => {
+                if (error !== false)
+                    return reject(error);
+                getTopValidBuyOrder(orders, cur_price)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error));
+            });
+    });
+}
+
+function verifyBuyOrder(buyOrder, cur_price) {
+    return new Promise((resolve, reject) => {
+        DB.query("SELECT rupeeBalance AS bal FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
+            if (result[0].bal < cur_price * buyOrder.quantity) {
+                //This should not happen unless a buy order is placed when user doesnt have enough rupee balance
+                console.warn(`Buy order ${buyOrder.id} is active, but rupee# is insufficient`);
+                reject(false);
+            } else
+                resolve(buyOrder);
+        }).catch(error => reject(error));
+    })
 }
 
 module.exports = {
