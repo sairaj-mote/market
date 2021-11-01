@@ -15,14 +15,16 @@ function addTag(floID, tag) {
 
 function getBestPairs(currentRate) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT tag FROM TagList ORDER BY priority").then(result => {
-            let tags = result.map(r => r.tag) //Sorted in Ascending (ie, stack; pop for highest)
-            resolve(new bestPair(tags, currentRate));
+        DB.query("SELECT tag, sellPriority, buyPriority FROM TagList").then(result => {
+            //Sorted in Ascending (ie, stack; pop for highest)
+            let tags_buy = result.sort((a, b) => a.buyPriority > b.buyPriority).map(r => r.tag);
+            let tags_sell = result.sort((a, b) => a.sellPriority > b.sellPriority).map(r => r.tag);
+            resolve(new bestPair(currentRate, tags_buy, tags_sell));
         }).catch(error => reject(error))
     })
 }
 
-const bestPair = function(tags, currentRate) {
+const bestPair = function(currentRate, tags_buy, tags_sell) {
 
     this.get = () => new Promise((resolve, reject) => {
         Promise.all([getBuyOrder(), getSellOrder()]).then(results => {
@@ -99,7 +101,7 @@ const bestPair = function(tags, currentRate) {
             reject(false);
     });
     getSeller.cache = {
-        tags: Array.from(tags)
+        tags: tags_sell
     };
 
     const getBuyOrder = () => new Promise((resolve, reject) => {
@@ -150,7 +152,7 @@ const bestPair = function(tags, currentRate) {
             reject(false);
     });
     getBuyOrder.cache = {
-        tags: Array.from(tags) //Maybe diff for buy and sell ?
+        tags: tags_buy
     };
 }
 
