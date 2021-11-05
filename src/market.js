@@ -171,16 +171,17 @@ function cancelOrder(type, id, floID) {
 }
 
 function initiateCoupling() {
-    group.getBestPairs()
+    group.getBestPairs(net_FLO_price)
         .then(bestPairQueue => processCoupling(bestPairQueue))
-        .catch(error => reject(error))
+        .catch(error => console.error("initiateCoupling", error))
 }
 
 function processCoupling(bestPairQueue) {
     bestPairQueue.get().then(result => {
         let buyer_best = result.buyOrder,
             seller_best = result.sellOrder;
-        console.debug("Sell:", seller_best.id, "Buy:", buyer_best.id);
+        console.debug("Sell:", seller_best);
+        console.debug("Buy:", buyer_best);
         spendFLO(buyer_best, seller_best).then(txQueries => {
             //process the Txn
             var tx_quantity;
@@ -190,7 +191,7 @@ function processCoupling(bestPairQueue) {
                 tx_quantity = processSellOrder(seller_best, buyer_best, txQueries);
             else
                 tx_quantity = processBuyAndSellOrder(seller_best, buyer_best, txQueries);
-            updateBalance(seller_best, buyer_best, txQueries, cur_price, tx_quantity);
+            updateBalance(seller_best, buyer_best, txQueries, bestPairQueue.cur_rate, tx_quantity);
             //process txn query in SQL
             DB.transaction(txQueries).then(results => {
                 bestPairQueue.next();
@@ -199,7 +200,12 @@ function processCoupling(bestPairQueue) {
                 processCoupling(bestPairQueue);
             }).catch(error => console.error(error));
         }).catch(error => console.error(error));
-    }).catch(error => console.error(error));
+    }).catch(error => {
+        if (error !== false)
+            console.error(error);
+        else
+            console.log("No valid orders.");
+    });
 }
 
 function spendFLO(buyOrder, sellOrder) {
