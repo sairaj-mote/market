@@ -6,11 +6,19 @@ function addTag(floID, tag) {
             .then(result => resolve(`Added ${floID} to ${tag}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
-                    reject(`${floID} already in ${tag}`);
+                    reject(INVALID(`${floID} already in ${tag}`));
                 else
                     reject(error);
             });
     });
+}
+
+function removeTag(floID, tag) {
+    return new Promise((resolve, reject) => {
+        DB.query("DELETE FROM Tags WHERE floID=? AND tag=?", [floID, tag])
+            .then(result => resolve(`Removed ${floID} from ${tag}`))
+            .catch(error => reject(error));
+    })
 }
 
 function getBestPairs(currentRate) {
@@ -331,6 +339,7 @@ function verifyBuyOrder(buyOrder, cur_price) {
 
 module.exports = {
     addTag,
+    removeTag,
     getBestPairs,
     set DB(db) {
         DB = db;

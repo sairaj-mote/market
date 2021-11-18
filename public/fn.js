@@ -406,3 +406,59 @@ function withdrawRupee(quantity, proxySecret) {
             .catch(error => reject(error))
     })
 }
+
+function addUserTag(floID, tag, proxySecret) {
+    return new Promise((resolve, reject) => {
+        let request = {
+            user: floID,
+            tag: tag,
+            timestamp: Date.now()
+        };
+        request.sign = signRequest({
+            command: "add_Tag",
+            user: request.user,
+            tag: request.tag,
+            timestamp: request.timestamp
+        }, proxySecret);
+        console.debug(request);
+
+        fetch('/add-tag', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error))
+    })
+}
+
+function removeUserTag(floID, tag, proxySecret) {
+    return new Promise((resolve, reject) => {
+        let request = {
+            user: floID,
+            tag: tag,
+            timestamp: Date.now()
+        };
+        request.sign = signRequest({
+            command: "remove_Tag",
+            user: request.user,
+            tag: request.tag,
+            timestamp: request.timestamp
+        }, proxySecret);
+        console.debug(request);
+
+        fetch('/remove-tag', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error))
+    })
+}

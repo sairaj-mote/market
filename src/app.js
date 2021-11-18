@@ -5,7 +5,7 @@ const Request = require('./request');
 
 const REFRESH_INTERVAL = 60 * 1000; //1 min
 
-module.exports = function App(secret, DB) {
+module.exports = function App(secret, trustedIDs, DB) {
 
     const app = express();
     //session middleware
@@ -62,6 +62,11 @@ module.exports = function App(secret, DB) {
     app.post('/withdraw-flo', Request.WithdrawFLO);
     app.post('/deposit-rupee', Request.DepositRupee);
     app.post('/withdraw-rupee', Request.WithdrawRupee);
+
+    //Manage user tags (Access to trusted IDs only)
+    Request.trustedIDs = trustedIDs;
+    app.post('/add-tag', Request.addUserTag);
+    app.post('/remove-tag', Request.removeUserTag);
 
     Request.DB = DB;
     Request.periodicProcess();

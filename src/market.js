@@ -632,6 +632,7 @@ module.exports = {
     depositRupee,
     withdrawRupee,
     periodicProcess,
+    group,
     set DB(db) {
         DB = db;
         group.DB = db;

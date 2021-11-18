@@ -1,5 +1,5 @@
 const market = require("./market");
-var DB; //container for database
+var DB, trustedIDs; //container for database
 
 global.INVALID = function(message) {
     if (!(this instanceof INVALID))
@@ -276,8 +276,11 @@ function Account(req, res) {
                 setLogin("Session Expired! Re-login required");
             else {
                 let floID = req.session.user_id;
-                market.getAccountDetails(floID)
-                    .then(result => res.send(result));
+                market.getAccountDetails(floID).then(result => {
+                    if (trustedIDs.includes(floID))
+                        result.subAdmin = true;
+                    res.send(result)
+                });
             }
         }).catch(_ => res.status(INTERNAL.e_code).send("Try again later!"));
     }
@@ -407,6 +410,75 @@ function WithdrawRupee(req, res) {
     });
 }
 
+function addUserTag(req, res) {
+    let data = req.body,
+        session = req.session;
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    else if (!trustedIDs.includes(session.user_id))
+        return res.status(INVALID.e_code).send("Access Denied");
+    validateRequestFromFloID({
+        command: "add_Tag",
+        user: data.user,
+        tag: data.tag,
+        timestamp: data.timestamp
+    }, data.sign, session.user_id).then(req_str => {
+        market.group.addTag(data.user, data.tag).then(result => {
+            storeRequest(session.user_id, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            }
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
+}
+
+function removeUserTag(req, res) {
+    let data = req.body,
+        session = req.session;
+    if (!session.user_id)
+        return res.status(INVALID.e_code).send("Login required");
+    else if (!trustedIDs.includes(session.user_id))
+        return res.status(INVALID.e_code).send("Access Denied");
+    else
+        validateRequestFromFloID({
+            command: "remove_Tag",
+            user: data.user,
+            tag: data.tag,
+            timestamp: data.timestamp
+        }, data.sign, session.user_id).then(req_str => {
+            market.group.removeTag(data.user, data.tag).then(result => {
+                storeRequest(session.user_id, req_str, data.sign);
+                res.send(result);
+            }).catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+                }
+            });
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            }
+        });
+}
+
 module.exports = {
     SignUp,
     Login,
@@ -424,6 +496,11 @@ module.exports = {
     DepositRupee,
     WithdrawRupee,
     periodicProcess: market.periodicProcess,
+    addUserTag,
+    removeUserTag,
+    set trustedIDs(ids) {
+        trustedIDs = ids;
+    },
     set DB(db) {
         DB = db;
         market.DB = db;
