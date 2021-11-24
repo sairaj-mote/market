@@ -43,25 +43,35 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
         Promise.all([getBuyOrder(), getSellOrder()]).then(results => {
             resolve({
                 buyOrder: results[0],
-                sellOrder: results[1]
+                sellOrder: results[1],
+                null_base: getSellOrder.cache.mode_null
             })
         }).catch(error => reject(error))
     });
 
-    this.next = () => {
+    this.next = (tx_quantity, incomplete_sell, flag_sell) => {
         let buy = getBuyOrder.cache,
             sell = getSellOrder.cache;
         if (buy.cur_order && sell.cur_order) {
-            if (buy.cur_order.quantity > sell.cur_order.quantity) {
-                buy.cur_order.quantity -= sell.cur_order.quantity;
-                sell.cur_order = null;
-            } else if (buy.cur_order.quantity < sell.cur_order.quantity) {
-                sell.cur_order.quantity -= buy.cur_order.quantity;
+            //buy order
+            if (tx_quantity < buy.cur_order.quantity)
+                buy.cur_order.quantity -= tx_quantity;
+            else if (tx_quantity == buy.cur_order.quantity)
                 buy.cur_order = null;
-            } else {
+            else
+                throw Error("Tx quantity cannot be more than order quantity");
+            //sell order
+            if (tx_quantity < sell.cur_order.quantity) {
+                sell.cur_order.quantity -= tx_quantity;
+                if (incomplete_sell) {
+                    if (!sell.mode_null && flag_sell)
+                        sell.null_queue.push(sell.cur_order);
+                    sell.cur_order = null;
+                }
+            } else if (tx_quantity == sell.cur_order.quantity)
                 sell.cur_order = null;
-                buy.cur_order = null;
-            }
+            else
+                throw Error("Tx quantity cannot be more than order quantity");
         } else
             throw Error("No current order found");
     };
@@ -69,7 +79,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
     const getSellOrder = () => new Promise((resolve, reject) => {
         let cache = getSellOrder.cache;
         if (cache.cur_order) { //If cache already has a pending order
-            verifySellOrder(cache.cur_order, currentRate).then(result => {
+            verifySellOrder(cache.cur_order, currentRate, cache.mode_null).then(result => {
                 cache.cur_order = result;
                 resolve(result);
             }).catch(error => {
@@ -82,7 +92,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
                     .catch(error => reject(error))
             })
         } else if (cache.orders && cache.orders.length) { //If cache already has orders in priority
-            getTopValidSellOrder(cache.orders, currentRate).then(result => {
+            getTopValidSellOrder(cache.orders, currentRate, cache.mode_null).then(result => {
                 cache.cur_order = result;
                 resolve(result);
             }).catch(error => {
@@ -111,11 +121,20 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error));
+        } else if (!mode_null) { //Lowest priority Coins (FLO Brought from other sources)
+            cache.orders = cache.null_queue.reverse(); //Reverse it so that we can pop the highest priority
+            cache.mode_null = true;
+            cache.null_queue = null;
+            getSellOrder()
+                .then(result => resolve(result))
+                .catch(error => reject(error))
         } else
             reject(false);
     });
     getSellOrder.cache = {
-        tags: tags_sell
+        tags: tags_sell,
+        null_queue: [],
+        mode_null: false
     };
 
     const getBuyOrder = () => new Promise((resolve, reject) => {
@@ -258,53 +277,56 @@ function fetch_api(api, id) {
     })
 }
 
-function getTopValidSellOrder(orders, cur_price) {
+function getTopValidSellOrder(orders, cur_price, mode_null) {
     return new Promise((resolve, reject) => {
         if (!orders.length)
             return reject(false)
-        verifySellOrder(orders.pop(), cur_price) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
+        verifySellOrder(orders.pop(), cur_price, mode_null) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
             .then(result => resolve(result))
             .catch(error => {
                 if (error !== false)
                     return reject(error);
-                getTopValidSellOrder(orders, cur_price)
+                getTopValidSellOrder(orders, cur_price, mode_null)
                     .then(result => resolve(result))
                     .catch(error => reject(error));
             });
     });
 }
 
-function verifySellOrder(sellOrder, cur_price) {
+function verifySellOrder(sellOrder, cur_price, mode_null) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT id, quantity, base FROM Vault WHERE floID=? ORDER BY base", [sellOrder.floID]).then(result => {
-            let rem = sellOrder.quantity,
-                sell_base = 0,
-                base_quantity = 0;
-            for (let i = 0; i < result.length && rem > 0; i++) {
-                if (rem < result[i].quantity) {
-                    if (result[i].base) {
+        if (!mode_null)
+            DB.query("SELECT quantity, base FROM Vault WHERE floID=? AND base IS NOT NULL ORDER BY base", [sellOrder.floID]).then(result => {
+                let rem = sellOrder.quantity,
+                    sell_base = 0,
+                    base_quantity = 0;
+                for (let i = 0; i < result.length && rem > 0; i++) {
+                    if (rem < result[i].quantity) {
                         sell_base += (rem * result[i].base);
                         base_quantity += rem;
-                    }
-                    rem = 0;
-                } else {
-                    if (result[i].base) {
+                        rem = 0;
+                    } else {
                         sell_base += (result[i].quantity * result[i].base);
                         base_quantity += result[i].quantity;
+                        rem -= result[i].quantity;
                     }
-                    rem -= result[i].quantity;
                 }
-            }
-            if (base_quantity)
-                sell_base = sell_base / base_quantity;
-            if (rem > 0 || sell_base > cur_price) {
-                //1st condition (rem>0) should not happen (sell order placement was success when insufficient FLO).
-                if (rem > 0)
-                    console.warn(`Sell order ${sellOrder.id} is active, but FLO is insufficient`);
-                reject(false);
-            } else
-                resolve(sellOrder);
-        }).catch(error => reject(error));
+                if (base_quantity)
+                    sell_base = sell_base / base_quantity;
+                if (sell_base > cur_price)
+                    reject(false);
+                else
+                    resolve(sellOrder);
+            }).catch(error => reject(error));
+        else if (mode_null)
+            DB.query("SELECT SUM(quantity) as total FROM Vault WHERE floID=?", [sellOrder.floID]).then(result => {
+                if (result.total < sellOrder.quantity)
+                    console.warn(`Sell Order ${sellOrder.id} was made without enough FLO. This should not happen`);
+                if (result.total > 0)
+                    resolve(sellOrder);
+                else
+                    reject(false);
+            }).catch(error => reject(error))
     })
 }
 
