@@ -97,7 +97,9 @@
                     </span>
                 </sm-checkbox>
                 <input type="text" id="sign_in_id" style="display: none;" hidden />
-                <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
+                <div id="login_button_wrapper" class="stateful-button-wrapper">
+                    <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
+                </div>
                 <sm-button onclick="showPopup('registration_popup')">Not registered? click here!</sm-button>
             </sm-form>
             <sm-form id="trade_form" class="user-content hide-completely">
@@ -1204,19 +1206,20 @@
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
                 showProcess('wallet_popup__cta_wrapper')
+                const proxySecret = await proxy.secret
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, userID, privKey, await proxy.secret)
+                        await depositFLO(quantity, userID, privKey, proxySecret)
                     } else {
-                        await depositRupee(quantity, userID, privKey, await proxy.secret)
+                        await depositRupee(quantity, userID, privKey, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
-                        await withdrawFLO(quantity, proxy.secret)
+                        await withdrawFLO(quantity, proxySecret)
                     } else {
-                        await withdrawRupee(quantity, proxy.secret)
+                        await withdrawRupee(quantity, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1480,7 +1483,7 @@
             if (ordersType === 'open') {
                 try {
                     const [buyOrders, sellOrders] = await Promise.all([getBuyList(), getSellList()])
-                    const allOpenOrders = [...(buyOrders), ...(sellOrders)].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
+                    const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
                     allOpenOrders.forEach(order => {
                         const { floID, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
                         const orderDetails = {
@@ -1511,6 +1514,7 @@
                         frag.append(render.marketTransactionCard(transactionDetails))
                     })
                     const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
+                    getRef('market_orders_list').append(marketTransactionList)
                 }
                 catch (err) {
                     notify(err.data, 'error')
@@ -1730,6 +1734,7 @@
             },
 
             login() {
+                showProcess('login_button_wrapper')
                 let privKey = getRef('login_form__priv_key').value;
                 let sid = getRef('sign_in_id').value;
                 let rememberMe = getRef('remember_me').checked;
@@ -1738,7 +1743,10 @@
                     console.log(result);
                     proxy.secret = tmpKey.privKey;
                     account();
-                }).catch(error => notify(error.data, 'error'));
+                }).catch(error => notify(error.data, 'error'))
+                    .finally(() => {
+                        hideProcess('login_button_wrapper')
+                    })
             }
 
         };
