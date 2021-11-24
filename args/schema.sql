@@ -100,6 +100,24 @@ status VARCHAR(50) NOT NULL,
 PRIMARY KEY(id)
 );
 
+CREATE TABLE TagList (
+id INT NOT NULL AUTO_INCREMENT,
+tag VARCHAR(50) NOT NULL,
+sellPriority INT,
+buyPriority INT,
+api TINYTEXT,
+PRIMARY KEY(tag),
+KEY (id)
+);
+
+CREATE TABLE Tags (
+id INT NOT NULL AUTO_INCREMENT,
+floID CHAR(34) NOT NULL,
+tag VARCHAR(50) NOT NULL,
+PRIMARY KEY(floID, tag),
+KEY (id)
+);
+
 /* Backup feature (Table and Triggers) */
 
 CREATE TABLE _backup (
@@ -165,3 +183,17 @@ CREATE TRIGGER outputRupee_U AFTER UPDATE ON outputRupee
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
 CREATE TRIGGER outputRupee_D AFTER DELETE ON outputRupee
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER TagList_I AFTER INSERT ON TagList
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TagList', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TagList_U AFTER UPDATE ON TagList
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TagList', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TagList_D AFTER DELETE ON TagList
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TagList', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER Tags_I AFTER INSERT ON Tags
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER Tags_U AFTER UPDATE ON Tags
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER Tags_D AFTER DELETE ON Tags
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;

@@ -36,7 +36,7 @@ module.exports = function startServer(public_dir) {
     console.debug(PUBLIC_DIR, global.myFloID);
 
     Database(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(DB => {
-        const app = App(config['secret'], DB);
+        const app = App(config['secret'], config['trusted-floIDs'], DB);
         app.listen(PORT, () => console.log(`Server Running at port ${PORT}`));
         //start backup
         if (config["backup-port"] && config["backup-floIDs"].length) {
