@@ -1,6 +1,7 @@
 const group = require("./group");
+const price = require("./price");
+const MINIMUM_BUY_REQUIREMENT = 0.1;
 
-var net_FLO_price; //container for FLO price (from API or by model)
 var DB; //container for database
 
 const tokenAPI = {
@@ -52,46 +53,8 @@ const tokenAPI = {
     }
 }
 
-function getRates() {
-    return new Promise((resolve, reject) => {
-        getRates.FLO_USD().then(FLO_rate => {
-            getRates.USD_INR().then(INR_rate => {
-                net_FLO_price = FLO_rate * INR_rate;
-                console.debug('Rates:', FLO_rate, INR_rate, net_FLO_price);
-                resolve(net_FLO_price);
-            }).catch(error => reject(error))
-        }).catch(error => reject(error))
-    });
-}
-
-getRates.FLO_USD = function() {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.coinlore.net/api/ticker/?id=67').then(response => {
-            if (response.ok) {
-                response.json()
-                    .then(result => resolve(result[0].price_usd))
-                    .catch(error => reject(error));
-            } else
-                reject(response.status);
-        }).catch(error => reject(error));
-    });
-}
-
-getRates.USD_INR = function() {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.exchangerate-api.com/v4/latest/usd').then(response => {
-            if (response.ok) {
-                response.json()
-                    .then(result => resolve(result.rates['INR']))
-                    .catch(error => reject(error));
-            } else
-                reject(response.status);
-        }).catch(error => reject(error));
-    });
-}
-
 function returnRates() {
-    return net_FLO_price;
+    return price.currentRate;
 }
 
 function addSellOrder(floID, quantity, min_price) {
@@ -102,21 +65,38 @@ function addSellOrder(floID, quantity, min_price) {
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof min_price !== "number" || min_price <= 0)
             return reject(INVALID(`Invalid min_price (${min_price})`));
-        DB.query("SELECT SUM(quantity) AS total FROM Vault WHERE floID=?", [floID]).then(result => {
-            let total = result.pop()["total"] || 0;
-            if (total < quantity)
-                return reject(INVALID("Insufficient FLO"));
-            DB.query("SELECT SUM(quantity) AS locked FROM SellOrder WHERE floID=?", [floID]).then(result => {
-                let locked = result.pop()["locked"] || 0;
-                let available = total - locked;
-                if (available < quantity)
-                    return reject(INVALID("Insufficient FLO (Some FLO are locked in another sell order)"));
-                DB.query("INSERT INTO SellOrder(floID, quantity, minPrice) VALUES (?, ?, ?)", [floID, quantity, min_price])
-                    .then(result => resolve("Added SellOrder to DB"))
-                    .catch(error => reject(error));
+        checkSellRequirement().then(_ => {
+            DB.query("SELECT SUM(quantity) AS total FROM Vault WHERE floID=?", [floID]).then(result => {
+                let total = result.pop()["total"] || 0;
+                if (total < quantity)
+                    return reject(INVALID("Insufficient FLO"));
+                DB.query("SELECT SUM(quantity) AS locked FROM SellOrder WHERE floID=?", [floID]).then(result => {
+                    let locked = result.pop()["locked"] || 0;
+                    let available = total - locked;
+                    if (available < quantity)
+                        return reject(INVALID("Insufficient FLO (Some FLO are locked in another sell order)"));
+                    DB.query("INSERT INTO SellOrder(floID, quantity, minPrice) VALUES (?, ?, ?)", [floID, quantity, min_price])
+                        .then(result => resolve("Added SellOrder to DB"))
+                        .catch(error => reject(error));
+                }).catch(error => reject(error));
             }).catch(error => reject(error));
         }).catch(error => reject(error));
     });
+}
+
+function checkSellRequirement(floID) {
+    return new Promise((resolve, reject) => {
+        DB.query("SELECT * FROM Tags WHERE floID=? AND tag=?", [floID, "MINER"]).then(result => {
+            if (result.length)
+                return resolve(true);
+            DB.query("SELECT SUM(quantity) AS brought FROM Transactions WHERE floID=?", [floID]).then(result => {
+                if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
+                    resolve(true);
+                else
+                    reject(INVALID(`Sellers required to buy atleast ${MINIMUM_BUY_REQUIREMENT} FLO before placing a sell order unless they are a Miner`));
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
 }
 
 function addBuyOrder(floID, quantity, max_price) {
@@ -171,9 +151,11 @@ function cancelOrder(type, id, floID) {
 }
 
 function initiateCoupling() {
-    group.getBestPairs(net_FLO_price)
-        .then(bestPairQueue => processCoupling(bestPairQueue))
-        .catch(error => console.error("initiateCoupling", error))
+    price.getRates().then(cur_rate => {
+        group.getBestPairs(cur_rate)
+            .then(bestPairQueue => processCoupling(bestPairQueue))
+            .catch(error => console.error("initiateCoupling", error))
+    }).catch(error => reject(error));
 }
 
 function processCoupling(bestPairQueue) {
@@ -197,10 +179,26 @@ function processCoupling(bestPairQueue) {
             }).catch(error => console.error(error));
         }).catch(error => console.error(error));
     }).catch(error => {
-        if (error !== false)
-            console.error(error);
-        else
-            console.log("No valid orders.");
+        let noBuy, noSell;
+        if (error.buy === undefined)
+            noBuy = false;
+        else if (error.buy !== false) {
+            console.error(error.buy);
+            noBuy = null;
+        } else {
+            console.log("No valid buyOrders.");
+            noBuy = true;
+        }
+        if (error.sell === undefined)
+            noSell = false;
+        if (error.sell !== false) {
+            console.error(error.sell);
+            noSell = null;
+        } else {
+            console.log("No valid sellOrders.");
+            noSell = true;
+        }
+        price.noOrder(noBuy, noSell);
     });
 }
 
@@ -597,11 +595,8 @@ function confirmWithdrawalRupee() {
 }
 
 function periodicProcess() {
-    let old_rate = net_FLO_price;
-    getRates().then(cur_rate => {
-        transactionReCheck();
-        initiateCoupling();
-    }).catch(error => console.error(error));
+    transactionReCheck();
+    initiateCoupling();
 }
 
 function transactionReCheck() {
@@ -628,5 +623,6 @@ module.exports = {
     set DB(db) {
         DB = db;
         group.DB = db;
+        price.DB = db;
     }
 };

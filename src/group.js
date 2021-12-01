@@ -40,12 +40,18 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
     });
 
     this.get = () => new Promise((resolve, reject) => {
-        Promise.all([getBuyOrder(), getSellOrder()]).then(results => {
-            resolve({
-                buyOrder: results[0],
-                sellOrder: results[1],
-                null_base: getSellOrder.cache.mode_null
-            })
+        Promise.allSettled([getBuyOrder(), getSellOrder()]).then(results => {
+            if (results[0].status === "fulfilled" && results[1].status === "fulfilled")
+                resolve({
+                    buyOrder: results[0].value,
+                    sellOrder: results[1].value,
+                    null_base: getSellOrder.cache.mode_null
+                })
+            else
+                reject({
+                    buy: results[0].reason,
+                    sell: results[1].reason
+                })
         }).catch(error => reject(error))
     });
 
