@@ -7,34 +7,51 @@ const MIN_TIME = 1 * 60 * 60 * 1000,
 
 var DB; //container for database
 
-var netValue, //container for FLO price (from API or by model)
-    lastTxTime, //container for timestamp of the last tx
+var cur_rate, //container for FLO price (from API or by model)
+    lastTxTime = Date.now(), //container for timestamp of the last tx
     noBuyOrder,
     noSellOrder
 
-var dayInitRate;
-setInterval(() => dayInitRate = netValue, 24 * 60 * 60 * 1000); //reset the day price every 24 hrs
-
 //store FLO price in DB every 1 hr
 setInterval(function storeRate() {
-    DB.query("INSERT INTO priceHistory (price) VALUE (?)", netValue)
+    DB.query("INSERT INTO priceHistory (rate) VALUE (?)", cur_rate)
         .then(_ => null).catch(error => console.error(error))
 })
 
-/* OLD FUNCTION
-function getRates() {
+function getPastRate(hrs = 24) {
     return new Promise((resolve, reject) => {
-        getRates.FLO_USD().then(FLO_rate => {
-            getRates.USD_INR().then(INR_rate => {
-                net_FLO_price = FLO_rate * INR_rate;
-                console.debug('Rates:', FLO_rate, INR_rate, net_FLO_price);
-                resolve(net_FLO_price);
+        DB.query("SELECT rate FROM priceHistory WHERE rec_time >= NOW() - INTERVAL ? hour ORDER BY rec_time LIMIT 1", [hrs])
+            .then(result => result.length ? resolve(result[0].rate) : reject('No records found in past 24hrs'))
+            .catch(error => reject(error))
+    });
+}
+
+function loadRate() {
+    return new Promise((resolve, reject) => {
+        if (typeof cur_rate !== "undefined")
+            return resolve(cur_rate);
+        DB.query("SELECT rate FROM priceHistory ORDER BY rec_time DESC LIMIT 1").then(result => {
+            if (result.length)
+                resolve(cur_rate = result[0].rate);
+            else
+                fetchRates().then(rate => resolve(cur_rate = rate)).catch(error => reject(error));
+        }).catch(error => reject(error));
+    })
+}
+
+function fetchRates() {
+    return new Promise((resolve, reject) => {
+        fetchRates.FLO_USD().then(FLO_rate => {
+            fetchRates.USD_INR().then(INR_rate => {
+                FLO_INR_rate = FLO_rate * INR_rate;
+                console.debug('Rates:', FLO_rate, INR_rate, FLO_INR_rate);
+                resolve(FLO_INR_rate);
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     });
 }
 
-getRates.FLO_USD = function() {
+fetchRates.FLO_USD = function() {
     return new Promise((resolve, reject) => {
         fetch('https://api.coinlore.net/api/ticker/?id=67').then(response => {
             if (response.ok) {
@@ -47,7 +64,7 @@ getRates.FLO_USD = function() {
     });
 }
 
-getRates.USD_INR = function() {
+fetchRates.USD_INR = function() {
     return new Promise((resolve, reject) => {
         fetch('https://api.exchangerate-api.com/v4/latest/usd').then(response => {
             if (response.ok) {
@@ -59,33 +76,40 @@ getRates.USD_INR = function() {
         }).catch(error => reject(error));
     });
 }
-*/
 
 function getRates() {
     return new Promise((resolve, reject) => {
-        let cur_time = Date.now();
-        if (cur_time - lastTxTime < MIN_TIME) //Minimum time to update not crossed: No update required
-            resolve(netValue);
-        else if (noBuyOrder && noSellOrder) //Both are not available: No update required
-            resolve(netValue);
-        else if (noBuyOrder === null || noSellOrder === null) //An error has occured during last process: No update (might cause price to crash/jump)
-            resolve(netValue);
-        else if (noBuyOrder) {
-            //No Buy, But Sell available: Decrease the price
-            let tmp_val = netValue * (1 - DOWN_RATE);
-            if (tmp_val >= dayInitRate * (1 - MAX_DOWN_PER_DAY))
-                netValue *= tmp_val;
-            resolve(netValue);
-        } else if (noSellOrder) {
-            //No Sell, But Buy available: Increase the price
-            checkForRatedSellers().then(result => {
-                if (result) {
-                    let tmp_val = netValue * (1 + UP_RATE)
-                    if (tmp_val >= dayInitRate * (1 + MAX_UP_PER_DAY))
-                        netValue *= tmp_val;
-                }
-            }).catch(error => console.error(error)).finally(_ => resolve(netValue));
-        }
+        loadRate().then(_ => {
+            let cur_time = Date.now();
+            if (cur_time - lastTxTime < MIN_TIME) //Minimum time to update not crossed: No update required
+                resolve(cur_rate);
+            else if (noBuyOrder && noSellOrder) //Both are not available: No update required
+                resolve(cur_rate);
+            else if (noBuyOrder === null || noSellOrder === null) //An error has occured during last process: No update (might cause price to crash/jump)
+                resolve(cur_rate);
+            else
+                getPastRate().then(ratePast24hr => {
+                    if (noBuyOrder) {
+                        //No Buy, But Sell available: Decrease the price
+                        let tmp_val = cur_rate * (1 - DOWN_RATE);
+                        if (tmp_val >= ratePast24hr * (1 - MAX_DOWN_PER_DAY))
+                            cur_rate *= tmp_val;
+                        resolve(cur_rate);
+                    } else if (noSellOrder) {
+                        //No Sell, But Buy available: Increase the price
+                        checkForRatedSellers().then(result => {
+                            if (result) {
+                                let tmp_val = cur_rate * (1 + UP_RATE)
+                                if (tmp_val >= ratePast24hr * (1 + MAX_UP_PER_DAY))
+                                    cur_rate *= tmp_val;
+                            }
+                        }).catch(error => console.error(error)).finally(_ => resolve(cur_rate));
+                    }
+                }).catch(error => {
+                    console.error(error);
+                    resolve(cur_rate);
+                });
+        }).catch(error => reject(error));
     })
 }
 
@@ -105,9 +129,7 @@ function checkForRatedSellers() {
 
 module.exports = {
     getRates,
-    set lastTxTime(t) {
-        lastTxTime = t;
-    },
+    updateLastTime: () => lastTxTime = Date.now(),
     set noOrder(buy, sell) {
         noBuyOrder = buy;
         noSellOrder = sell;
@@ -116,6 +138,6 @@ module.exports = {
         DB = db;
     },
     get currentRate() {
-        return netValue
+        return cur_rate
     }
 }

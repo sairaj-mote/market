@@ -46,6 +46,7 @@ function requestBackupSync(ws) {
             Users: "created",
             Request_Log: "request_time",
             Transactions: "tx_time",
+            priceHistory: "rec_time",
             _backup: "timestamp"
         };
         let subs = [];

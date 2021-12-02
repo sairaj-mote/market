@@ -174,6 +174,7 @@ function processCoupling(bestPairQueue) {
             DB.transaction(txQueries).then(_ => {
                 bestPairQueue.next(quantity, spend_result.incomplete, spend_result.flag_baseNull);
                 console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
+                price.updateLastTime();
                 //Since a tx was successful, match again
                 processCoupling(bestPairQueue);
             }).catch(error => console.error(error));

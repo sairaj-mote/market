@@ -118,6 +118,11 @@ PRIMARY KEY(floID, tag),
 KEY (id)
 );
 
+CREATE TABLE priceHistory (
+    rate FLOAT NOT NULL,
+    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 /* Backup feature (Table and Triggers) */
 
 CREATE TABLE _backup (

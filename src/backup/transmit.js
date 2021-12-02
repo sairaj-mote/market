@@ -90,7 +90,8 @@ function send_dataImmutable(timestamp, ws) {
     const immutable_tables = {
         Users: "created",
         Request_Log: "request_time",
-        Transactions: "tx_time"
+        Transactions: "tx_time",
+        priceHistory: "rec_time"
     };
     const sendTable = (table, timeCol) => new Promise((res, rej) => {
         DB.query(`SELECT * FROM ${table} WHERE ${timeCol} > ?`, [timestamp])
