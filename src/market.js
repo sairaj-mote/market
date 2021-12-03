@@ -1,3 +1,5 @@
+'use strict';
+
 const group = require("./group");
 const price = require("./price");
 const MINIMUM_BUY_REQUIREMENT = 0.1;
@@ -155,7 +157,7 @@ function initiateCoupling() {
         group.getBestPairs(cur_rate)
             .then(bestPairQueue => processCoupling(bestPairQueue))
             .catch(error => console.error("initiateCoupling", error))
-    }).catch(error => reject(error));
+    }).catch(error => console.error(error));
 }
 
 function processCoupling(bestPairQueue) {
@@ -172,7 +174,7 @@ function processCoupling(bestPairQueue) {
             updateBalance(seller_best, buyer_best, txQueries, bestPairQueue.cur_rate, tx_quantity);
             //process txn query in SQL
             DB.transaction(txQueries).then(_ => {
-                bestPairQueue.next(quantity, spend_result.incomplete, spend_result.flag_baseNull);
+                bestPairQueue.next(tx_quantity, spend_result.incomplete, spend_result.flag_baseNull);
                 console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
                 price.updateLastTime();
                 //Since a tx was successful, match again
@@ -192,7 +194,7 @@ function processCoupling(bestPairQueue) {
         }
         if (error.sell === undefined)
             noSell = false;
-        if (error.sell !== false) {
+        else if (error.sell !== false) {
             console.error(error.sell);
             noSell = null;
         } else {
@@ -207,8 +209,8 @@ function spendFLO(buyOrder, sellOrder, null_base) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT id, quantity, base FROM Vault WHERE floID=? ORDER BY base", [sellOrder.floID]).then(result => {
             let rem = Math.min(buyOrder.quantity, sellOrder.quantity),
-                txQueries = []
-            flag_baseNull = false;
+                txQueries = [],
+                flag_baseNull = false;
             for (let i = 0; i < result.length && rem > 0; i++)
                 if (result[i].base || null_base) {
                     if (rem < result[i].quantity) {

@@ -1,3 +1,5 @@
+'use strict';
+
 const market = require("./market");
 var DB, trustedIDs; //container for database
 

@@ -1,3 +1,5 @@
+'use strict';
+
 var DB; //container for database
 
 function addTag(floID, tag) {
@@ -127,7 +129,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error));
-        } else if (!mode_null) { //Lowest priority Coins (FLO Brought from other sources)
+        } else if (!cache.mode_null) { //Lowest priority Coins (FLO Brought from other sources)
             cache.orders = cache.null_queue.reverse(); //Reverse it so that we can pop the highest priority
             cache.mode_null = true;
             cache.null_queue = null;

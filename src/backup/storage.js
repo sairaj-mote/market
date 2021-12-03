@@ -1,3 +1,4 @@
+'use strict';
 const config = require('../../args/backup-config.json');
 const floGlobals = require('../../public/floGlobals');
 require('../set_globals');

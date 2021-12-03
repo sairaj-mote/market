@@ -1,9 +1,10 @@
+'use strict';
 const express = require('express');
 const cookieParser = require("cookie-parser");
 const sessions = require('express-session');
 const Request = require('./request');
 
-const REFRESH_INTERVAL = 60 * 1000; //1 min
+const REFRESH_INTERVAL = 5 * 1000; //10 * 60 * 1000;
 
 module.exports = function App(secret, trustedIDs, DB) {
 

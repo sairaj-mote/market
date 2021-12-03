@@ -1,3 +1,4 @@
+'use strict';
 const WebSocket = require('ws');
 
 var DB; //Container for database
