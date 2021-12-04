@@ -67,7 +67,7 @@ function addSellOrder(floID, quantity, min_price) {
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof min_price !== "number" || min_price <= 0)
             return reject(INVALID(`Invalid min_price (${min_price})`));
-        checkSellRequirement().then(_ => {
+        checkSellRequirement(floID).then(_ => {
             DB.query("SELECT SUM(quantity) AS total FROM Vault WHERE floID=?", [floID]).then(result => {
                 let total = result.pop()["total"] || 0;
                 if (total < quantity)
@@ -91,7 +91,7 @@ function checkSellRequirement(floID) {
         DB.query("SELECT * FROM Tags WHERE floID=? AND tag=?", [floID, "MINER"]).then(result => {
             if (result.length)
                 return resolve(true);
-            DB.query("SELECT SUM(quantity) AS brought FROM Transactions WHERE floID=?", [floID]).then(result => {
+            DB.query("SELECT SUM(quantity) AS brought FROM Transactions WHERE buyer=?", [floID]).then(result => {
                 if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
                     resolve(true);
                 else

@@ -87,6 +87,7 @@ fetchRates.USD_INR = function() {
 function getRates() {
     return new Promise((resolve, reject) => {
         loadRate().then(_ => {
+            console.debug(cur_rate);
             let cur_time = Date.now();
             if (cur_time - lastTime < MIN_TIME) //Minimum time to update not crossed: No update required
                 resolve(cur_rate);
@@ -102,7 +103,8 @@ function getRates() {
                         if (tmp_val >= ratePast24hr * (1 - MAX_DOWN_PER_DAY)) {
                             cur_rate = tmp_val;
                             updateLastTime();
-                        }
+                        } else
+                            console.debug("Max Price down for the day has reached");
                         resolve(cur_rate);
                     } else if (noSellOrder) {
                         //No Sell, But Buy available: Increase the price
@@ -112,7 +114,8 @@ function getRates() {
                                 if (tmp_val <= ratePast24hr * (1 + MAX_UP_PER_DAY)) {
                                     cur_rate = tmp_val;
                                     updateLastTime();
-                                }
+                                } else
+                                    console.debug("Max Price up for the day has reached");
                             }
                         }).catch(error => console.error(error)).finally(_ => resolve(cur_rate));
                     }
