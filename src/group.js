@@ -9,6 +9,8 @@ function addTag(floID, tag) {
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
                     reject(INVALID(`${floID} already in ${tag}`));
+                else if (error.code === "ER_NO_REFERENCED_ROW")
+                    reject(INVALID(`Invalid user-floID and/or Tag`));
                 else
                     reject(error);
             });
