@@ -491,7 +491,9 @@ function confirmWithdrawalRupee() {
 }
 
 function periodicProcess() {
+    /* Disabled for Beta-testing
     blockchainReCheck();
+    */
     coupling.initiate();
 }
 

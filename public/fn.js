@@ -295,6 +295,7 @@ function cancelOrder(type, id, proxySecret) {
     })
 }
 
+/* Disabled for Beta-testing
 function depositFLO(quantity, userID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
@@ -406,6 +407,7 @@ function withdrawRupee(quantity, proxySecret) {
             .catch(error => reject(error))
     })
 }
+*/
 
 function addUserTag(floID, tag, proxySecret) {
     return new Promise((resolve, reject) => {

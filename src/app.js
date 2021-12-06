@@ -59,10 +59,12 @@ module.exports = function App(secret, trustedIDs, DB) {
     app.get('/account', Request.Account);
 
     //withdraw and deposit request
+    /* Disabled for Beta-testing
     app.post('/deposit-flo', Request.DepositFLO);
     app.post('/withdraw-flo', Request.WithdrawFLO);
     app.post('/deposit-rupee', Request.DepositRupee);
     app.post('/withdraw-rupee', Request.WithdrawRupee);
+    */
 
     //Manage user tags (Access to trusted IDs only)
     Request.trustedIDs = trustedIDs;
