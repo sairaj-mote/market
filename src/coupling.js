@@ -25,13 +25,17 @@ function processCoupling(bestPairQueue) {
                 clear_sell = spend_result.incomplete && !spend_result.flag_baseNull; //clear_sell can be true only if an order is placed without enough FLO
             processOrders(seller_best, buyer_best, txQueries, tx_quantity, clear_sell);
             updateBalance(seller_best, buyer_best, txQueries, bestPairQueue.cur_rate, tx_quantity);
-            //process txn query in SQL
-            DB.transaction(txQueries).then(_ => {
-                bestPairQueue.next(tx_quantity, spend_result.incomplete, spend_result.flag_baseNull);
-                console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
-                price.updateLastTime();
-                //Since a tx was successful, match again
-                processCoupling(bestPairQueue);
+            //begin audit
+            beginAudit(seller_best.floID, buyer_best.floID, bestPairQueue.cur_rate, tx_quantity).then(audit => {
+                //process txn query in SQL
+                DB.transaction(txQueries).then(_ => {
+                    bestPairQueue.next(tx_quantity, spend_result.incomplete, spend_result.flag_baseNull);
+                    console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
+                    audit.end();
+                    price.updateLastTime();
+                    //Since a tx was successful, match again
+                    processCoupling(bestPairQueue);
+                }).catch(error => console.error(error));
             }).catch(error => console.error(error));
         }).catch(error => console.error(error));
     }).catch(error => {
@@ -109,6 +113,44 @@ function updateBalance(seller_best, buyer_best, txQueries, cur_price, quantity) 
     txQueries.push(["INSERT INTO Vault(floID, base, quantity) VALUES (?, ?, ?)", [buyer_best.floID, cur_price, quantity]])
     //Record transaction
     txQueries.push(["INSERT INTO Transactions (seller, buyer, quantity, unitValue) VALUES (?, ?, ?, ?)", [seller_best.floID, buyer_best.floID, quantity, cur_price]]);
+}
+
+function beginAudit(sellerID, buyerID, unit_price, quantity) {
+    return new Promise((resolve, reject) => {
+        auditBalance(sellerID, buyerID).then(old_bal => resolve({
+            end: () => endAudit(sellerID, buyerID, old_bal, unit_price, quantity)
+        })).catch(error => reject(error))
+    })
+}
+
+function endAudit(sellerID, buyerID, old_bal, unit_price, quantity) {
+    auditBalance(sellerID, buyerID).then(new_bal => {
+        DB.query("INSERT INTO auditTransaction (sellerID, buyerID, quantity, unit_price, total_cost, " +
+            " Rupee_seller_old, Rupee_seller_new, Rupee_buyer_old, Rupee_buyer_new," +
+            " FLO_seller_old, FLO_seller_new, FLO_buyer_old, FLO_buyer_new) " +
+            " Value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [sellerID, buyerID, quantity, unit_price, quantity * unit_price,
+                old_bal[sellerID].Rupee, new_bal[sellerID].Rupee, old_bal[buyerID].Rupee, new_bal[buyerID].Rupee,
+                old_bal[sellerID].FLO, new_bal[sellerID].FLO, old_bal[buyerID].FLO, new_bal[buyerID].FLO,
+            ]).then(_ => null).catch(error => console.error(error))
+    }).catch(error => console.error(error));
+}
+
+function auditBalance(sellerID, buyerID) {
+    return new Promise((resolve, reject) => {
+        let balance = {
+            [sellerID]: {},
+            [buyerID]: {}
+        };
+        DB.query("SELECT floID, rupeeBalance FROM Cash WHERE floID IN (?, ?)", [sellerID, buyerID]).then(result => {
+            for (let i in result)
+                balance[result[i].floID].Rupee = result[i].rupeeBalance;
+            DB.query("SELECT floID, SUM(quantity) as floBal FROM Vault WHERE floID IN (?, ?) GROUP BY floID", [sellerID, buyerID]).then(result => {
+                for (let i in result)
+                    balance[result[i].floID].FLO = result[i].floBal;
+                resolve(balance);
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
 }
 
 module.exports = {

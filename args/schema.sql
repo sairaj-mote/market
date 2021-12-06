@@ -137,6 +137,25 @@ CREATE TABLE priceHistory (
     rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE auditTransaction(
+    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    unit_price FLOAT NOT NULL,
+    quantity FLOAT NOT NULL,
+    total_cost FLOAT NOT NULL,
+    sellerID CHAR(34) NOT NULL,
+    FLO_seller_old FLOAT NOT NULL,
+    FLO_seller_new FLOAT NOT NULL,
+    Rupee_seller_old FLOAT NOT NULL,
+    Rupee_seller_new FLOAT NOT NULL,
+    buyerID CHAR(34) NOT NULL,
+    FLO_buyer_old FLOAT NOT NULL,
+    FLO_buyer_new FLOAT NOT NULL,
+    Rupee_buyer_old FLOAT NOT NULL,
+    Rupee_buyer_new FLOAT NOT NULL,
+    FOREIGN KEY (sellerID) REFERENCES Users(floID),
+    FOREIGN KEY (buyerID) REFERENCES Users(floID)
+);
+
 /* Backup feature (Table and Triggers) */
 
 CREATE TABLE _backup (
