@@ -4,6 +4,7 @@
 ## Run commands
 ---------------
 
+```
 npm install                     - Install the app and node modules.
 npm run help                    - List all commands.
 npm run setup                   - Finish the setup (configure and reset password).
@@ -23,3 +24,4 @@ $env:PASSWORD="<password>"; npm start
 
 LINUX:
 PASSWORD="<password"> npm start
+```
