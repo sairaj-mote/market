@@ -1,7 +1,9 @@
 'use strict';
-const WebSocket = require('ws');
+const shareThreshold = 70 / 100;
 
 var DB; //Container for database
+
+//Backup Transfer
 function sendBackup(timestamp, ws) {
     if (!timestamp) timestamp = 0;
     else if (typeof timestamp === "string" && /\.\d{3}Z$/.test(timestamp))
@@ -17,14 +19,14 @@ function sendBackup(timestamp, ws) {
         if (failedSync.length) {
             console.info("Backup Sync Failed:", failedSync);
             ws.send(JSON.stringify({
-                mode: "END",
+                mode: "SYNC_END",
                 status: false,
                 info: failedSync
             }));
         } else {
             console.info("Backup Sync completed");
             ws.send(JSON.stringify({
-                mode: "END",
+                mode: "SYNC_END",
                 status: true
             }));
         }
@@ -35,7 +37,7 @@ function send_deleteSync(timestamp, ws) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT * FROM _backup WHERE mode is NULL AND timestamp > ?", [timestamp]).then(result => {
             ws.send(JSON.stringify({
-                mode: "DELETE",
+                mode: "SYNC_DELETE",
                 delete_data: result
             }));
             resolve("deleteSync");
@@ -52,7 +54,7 @@ function send_dataSync(timestamp, ws) {
             .then(data => {
                 ws.send(JSON.stringify({
                     table,
-                    mode: "ADD_UPDATE",
+                    mode: "SYNC_ADD_UPDATE",
                     data
                 }));
                 res(table);
@@ -66,7 +68,7 @@ function send_dataSync(timestamp, ws) {
             let sync_needed = {};
             result.forEach(r => r.t_name in sync_needed ? sync_needed[r.t_name].push(r.id) : sync_needed[r.t_name] = [r.id]);
             ws.send(JSON.stringify({
-                mode: "ADD_UPDATE_HEADER",
+                mode: "SYNC_ADD_UPDATE_HEADER",
                 add_data: result
             }));
             let promises = [];
@@ -99,7 +101,7 @@ function send_dataImmutable(timestamp, ws) {
             .then(data => {
                 ws.send(JSON.stringify({
                     table,
-                    mode: "ADD_IMMUTABLE",
+                    mode: "SYNC_ADD_IMMUTABLE",
                     data
                 }));
                 res(table);
@@ -124,15 +126,28 @@ function send_dataImmutable(timestamp, ws) {
     })
 }
 
-function startBackupTransmitter(db, port, backupIDs) {
-    DB = db;
-    this.port = port;
-    this.backupIDs = backupIDs;
+//Shares
+function generateNewSink() {
+    let sink = floCrypto.generateNewID();
+    let nextNodes = KB.nextNode(myFloID, null);
+    let shares = floCrypto.createShamirsSecretShares(sink.privKey, nextNodes.length, Math.ceil(nextNodes.length * shareThreshold));
+    sink.shares = {};
+    for (let i in nextNodes)
+        sink.shares[nextNodes[i]] = shares[i];
+    return sink;
+}
 
-    const wss = this.wss = new WebSocket.Server({
-        port: port
-    });
-    this.close = () => wss.close();
+function sendShare(ws, sinkID, share) {
+    ws.send(JSON.stringify({
+        command: "SINK_SHARE",
+        sinkID,
+        keyShare
+    }));
+}
+
+//Transmistter
+var nodeList; //Container for (backup) node list
+function startBackupTransmitter(wss) {
     wss.on('connection', ws => {
         ws.on('message', message => {
             //verify if from a backup node
@@ -158,13 +173,20 @@ function startBackupTransmitter(db, port, backupIDs) {
             } catch (error) {
                 console.error(error);
                 ws.send(JSON.stringify({
+                    mode: "SYNC_ERROR",
                     error: 'Unable to process the request!'
                 }));
             }
         });
     });
-
-    console.log("Backup Transmitter running in port", port);
 }
 
-module.exports = startBackupTransmitter;
+module.exports = {
+    init: startBackupTransmitter,
+    set nodeList(ids) {
+        nodeList = ids;
+    },
+    set DB(db) {
+        DB = db;
+    }
+};
