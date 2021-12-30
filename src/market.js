@@ -54,10 +54,6 @@ const tokenAPI = {
     }
 }
 
-function returnRates() {
-    return coupling.price.currentRate;
-}
-
 function addSellOrder(floID, quantity, min_price) {
     return new Promise((resolve, reject) => {
         if (!floID || !floCrypto.validateAddr(floID))
@@ -505,7 +501,9 @@ function blockchainReCheck() {
 }
 
 module.exports = {
-    returnRates,
+    get rate() {
+        return coupling.price.currentRate;
+    },
     addBuyOrder,
     addSellOrder,
     cancelOrder,
