@@ -1,9 +1,12 @@
 'use strict';
+
+const K_Bucket = require('./KBucket');
 const slave = require('./slave');
 const WebSocket = require('ws');
 const shareThreshold = 50 / 100;
 
 var DB, app, wss; //Container for database and app
+var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
 var nodeShares = null,
     nodeSinkID = null,
     connectedSlaves = {},
@@ -284,7 +287,6 @@ function slaveConnect(floID, ws) {
 }
 
 //Transmistter
-var nodeList; //Container for (backup) node list
 function startBackupTransmitter(server) {
     wss = new WebSocket.Server({
         server
@@ -346,8 +348,10 @@ function initProcess(a) {
 
 module.exports = {
     init: initProcess,
-    set nodeList(ids) {
-        nodeList = ids;
+    set nodeList(list) {
+        nodeURL = list;
+        nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
+        nodeList = nodeKBucket.order;
     },
     set DB(db) {
         DB = db;

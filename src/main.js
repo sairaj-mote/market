@@ -11,12 +11,9 @@ const Database = require("./database");
 const App = require('./app');
 const PORT = config['port'];
 
-const K_Bucket = require('./backup/KBucket');
-const transmit = require('./backup/head');
+const backup = require('./backup/head');
 
 var DB, app;
-
-var nodeList, nodeURL, nodeKBucket;
 
 function refreshData(startup = false) {
     return new Promise((resolve, reject) => {
@@ -47,10 +44,10 @@ function refreshDataFromBlockchain() {
                         nodes_change = true;
                         if (content.Nodes.remove)
                             for (let n of content.Nodes.remove)
-                                promises.push(DB.query("DELETE FROM nodeURL WHERE floID=?", [n]));
+                                promises.push(DB.query("DELETE FROM nodeList WHERE floID=?", [n]));
                         if (content.Nodes.add)
                             for (let n in content.Nodes.add)
-                                promises.push(DB.query("INSERT INTO nodeURL (floID, url) VALUE (?,?) ON DUPLICATE KEY UPDATE url=NEW.url", [n, content.Nodes.add[n]]));
+                                promises.push(DB.query("INSERT INTO nodeList (floID, uri) VALUE (?,?) ON DUPLICATE KEY UPDATE uri=NEW.uri", [n, content.Nodes.add[n]]));
                     }
                     //Trusted List
                     if (content.Trusted) {
@@ -106,16 +103,13 @@ function loadDataFromDB(changes, startup) {
 
 loadDataFromDB.nodeList = function() {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM nodeList").then(result => {
+        DB.query("SELECT (floID, uri) FROM nodeList").then(result => {
             let nodes = {}
             for (let i in result)
-                nodes[result[i].floID] = result[i];
-            nodeURL = nodes;
-            nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
-            nodeList = nodeKBucket.order;
+                nodes[result[i].floID] = result[i].uri;
             //update dependents
-            transmit.nodeList = nodeList;
-            resolve(nodeList);
+            backup.nodeList = nodes;
+            resolve(nodes);
         }).catch(error => reject(error))
     })
 }
@@ -135,7 +129,7 @@ loadDataFromDB.trustedIDs = function() {
 
 function setDB(db) {
     DB = db;
-    transmit.DB = DB;
+    backup.DB = DB;
 }
 
 module.exports = function startServer(public_dir) {
@@ -170,7 +164,7 @@ module.exports = function startServer(public_dir) {
         refreshData(true).then(_ => {
             app.start(PORT).then(result => {
                 console.log(result);
-                transmit.init(app);
+                backup.init(app);
             }).catch(error => console.error(error))
         }).catch(error => console.error(error))
     }).catch(error => console.error(error));
