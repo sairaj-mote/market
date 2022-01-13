@@ -4,22 +4,36 @@ const WAIT_TIME = 30 * 60 * 1000,
     BACKUP_INTERVAL = 10 * 60 * 1000;
 
 var DB; //Container for Database connection
-var masterWS; //Container for Master websocket connection
+var masterWS = null; //Container for Master websocket connection
 
 var intervalID = null;
 
-function startIntervalSync(ws) {
+function startSlaveProcess(ws) {
+    if (!ws) throw Error("Master WS connection required");
+    //stop existing process
+    stopSlaveProcess();
     //set masterWS
     ws.on('message', processDataFromMaster);
     masterWS = ws;
-    //stop existing sync
-    stopIntervalSync();
+    //inform master
+    let message = {
+        floID: global.floID,
+        pubKey: global.pubKey,
+        req_time: Date.now(),
+        type: "SLAVE_CONNECT"
+    }
+    message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
     //start sync
     requestInstance.open();
     intervalID = setInterval(requestInstance.open, BACKUP_INTERVAL);
 }
 
-function stopIntervalSync() {
+function stopSlaveProcess() {
+    if (masterWS !== null) {
+        masterWS.onclose = () => null;
+        masterWS.close();
+        masterWS = null;
+    }
     if (intervalID !== null) {
         clearInterval(intervalID);
         intervalID = null;
@@ -40,13 +54,13 @@ function requestBackupSync(ws) {
             subs.push(`SELECT MAX(${tables[t]}) as ts FROM ${t}`);
         DB.query(`SELECT MAX(ts) as last_time FROM (${subs.join(' UNION ')}) AS Z`).then(result => {
             let request = {
-                floID: myFloID,
+                floID: global.myFloID,
                 pubKey: myPubKey,
                 type: "BACKUP_SYNC",
                 last_time: result[0].last_time,
                 req_time: Date.now()
             };
-            request.sign = floCrypto.signData(request.type + "|" + request.req_time, myPrivKey);
+            request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
             console.debug("REQUEST: ", request);
             ws.send(JSON.stringify(request));
             resolve(request);
@@ -101,17 +115,46 @@ function processDataFromMaster(message) {
     try {
         message = JSON.parse(message);
         console.debug(message);
-        if (message.mode.startsWith("SYNC"))
+        if (message.command.startsWith("SYNC"))
             processBackupData(message);
+        else switch (message.command) {
+            case "SINK_SHARE":
+                storeSinkShare(message);
+                break;
+            case "SEND_SHARE":
+                sendSinkShare();
+                break;
+        }
     } catch (error) {
         console.error(error);
     }
 }
 
+function storeSinkShare(message) {
+    console.debug(Date.now(), '|sinkID:', message.sinkID, '|share:', message.keyShare);
+    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?)", [message.sinkID, message.keyShare])
+        .then(_ => null).catch(error => console.error(error));
+}
+
+function sendSinkShare() {
+    DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
+        let response = {
+            type: "SINK_SHARE",
+            sinkID: result[0].floID,
+            share: result[0].share,
+            floID: global.myFloID,
+            pubKey: global.pubKey,
+            req_time: Date.now()
+        }
+        response.sign = floCrypto.signData(response.type + "|" + response.req_time, global.myPrivKey); //TODO: strengthen signature
+        masterWS.send(JSON.stringify(response));
+    }).catch(error => console.error(error));
+}
+
 function processBackupData(response) {
     const self = requestInstance;
     self.last_response_time = Date.now();
-    switch (response.mode) {
+    switch (response.command) {
         case "SYNC_ERROR":
             console.log(response.error);
             self.close();
@@ -201,6 +244,9 @@ module.exports = {
     set DB(db) {
         DB = db;
     },
-    start: startIntervalSync,
-    stop: stopIntervalSync
+    get masterWS() {
+        return masterWS;
+    },
+    start: startSlaveProcess,
+    stop: stopSlaveProcess
 }

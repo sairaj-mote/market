@@ -4,13 +4,13 @@ require('./set_globals');
 require('./lib');
 require('./floCrypto');
 require('./floBlockchainAPI');
+require('./tokenAPI');
 
 const Database = require("./database");
 const App = require('./app');
 const PORT = config['port'];
 
 const K_Bucket = require('./backup/KBucket');
-const slave = require('./backup/storage');
 const transmit = require('./backup/transmit');
 
 var DB, app;
@@ -134,46 +134,7 @@ loadDataFromDB.trustedIDs = function() {
 
 function setDB(db) {
     DB = db;
-    slave.DB = DB;
     transmit.DB = DB;
-}
-
-function connectWS(floID) {
-    let url = nodeURL[floID];
-    return new Promise((resolve, reject) => {
-        const ws = new WebSocket(url);
-        ws.on('open', _ => resolve(ws));
-        ws.on('error', _ => reject(error));
-    })
-}
-
-function connectToMaster(i = 0) {
-    if (i >= nodeList.length) {
-        console.error("No master is found, and myFloID is not in list. This should not happen!");
-        process.exit(1);
-    }
-    let floID = nodeList[i];
-    if (floID === myFloID)
-        serveAsMaster();
-    else
-        connectWS(floID).then(ws => {
-            ws.floID = floID;
-            ws.onclose = () => connectToMaster(i);
-            serveAsSlave(ws);
-        }).catch(error => {
-            console.log(`Node(${floID}) is offline`);
-            connectToMaster(i + 1)
-        });
-}
-
-function serveAsMaster() {
-    app.resume();
-    slave.stop();
-}
-
-function serveAsSlave(masterWS) {
-    app.pause();
-    slave.start(masterWS);
 }
 
 module.exports = function startServer(public_dir) {
@@ -208,8 +169,7 @@ module.exports = function startServer(public_dir) {
         refreshData(true).then(_ => {
             app.start(PORT).then(result => {
                 console.log(result);
-                transmit.init(app.wss);
-                connectToMaster();
+                transmit.init(app);
             }).catch(error => console.error(error))
         }).catch(error => console.error(error))
     }).catch(error => console.error(error));

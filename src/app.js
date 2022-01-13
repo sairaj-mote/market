@@ -81,15 +81,12 @@ module.exports = function App(secret, DB) {
     var periodInstance = null;
     let self = this;
 
-    //return server, express-app, wss
+    //return server, express-app
     Object.defineProperty(self, "server", {
         get: () => server
     });
     Object.defineProperty(self, "express", {
         get: () => app
-    });
-    Object.defineProperty(self, "wss", {
-        get: () => wss
     });
 
     //set trustedID for subAdmin requests
@@ -100,17 +97,13 @@ module.exports = function App(secret, DB) {
     //Start (or) Stop servers
     self.start = (port) => new Promise(resolve => {
         server = app.listen(port, () => {
-            wss = new WebSocket.Server({
-                server
-            });
             resolve(`Server Running at port ${port}`);
         });
     });
     self.stop = () => new Promise(resolve => {
         server.close(() => {
             server = null;
-            wss = null;
-            resolve('Server stopped')
+            resolve('Server stopped');
         });
     });
 
