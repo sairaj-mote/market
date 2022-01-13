@@ -11,7 +11,7 @@ const App = require('./app');
 const PORT = config['port'];
 
 const K_Bucket = require('./backup/KBucket');
-const transmit = require('./backup/transmit');
+const transmit = require('./backup/head');
 
 var DB, app;
 

@@ -1,5 +1,5 @@
 'use strict';
-const slave = require('./storage');
+const slave = require('./slave');
 const WebSocket = require('ws');
 const shareThreshold = 50 / 100;
 
