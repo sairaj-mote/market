@@ -112,6 +112,17 @@ PRIMARY KEY(id),
 FOREIGN KEY (floID) REFERENCES Users(floID)
 );
 
+CREATE TABLE nodeList(
+floID CHAR(34) NOT NULL, 
+uri TINYTEXT,
+PRIMARY KEY(floID)
+);
+
+CREATE TABLE trustedList(
+floID CHAR(34) NOT NULL,
+FOREIGN KEY (floID) REFERENCES Users(floID),
+);
+
 CREATE TABLE TagList (
 id INT NOT NULL AUTO_INCREMENT,
 tag VARCHAR(50) NOT NULL,
@@ -133,27 +144,34 @@ FOREIGN KEY (tag) REFERENCES TagList(tag)
 );
 
 CREATE TABLE priceHistory (
-    rate FLOAT NOT NULL,
-    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
+rate FLOAT NOT NULL,
+rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE auditTransaction(
-    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    unit_price FLOAT NOT NULL,
-    quantity FLOAT NOT NULL,
-    total_cost FLOAT NOT NULL,
-    sellerID CHAR(34) NOT NULL,
-    FLO_seller_old FLOAT NOT NULL,
-    FLO_seller_new FLOAT NOT NULL,
-    Rupee_seller_old FLOAT NOT NULL,
-    Rupee_seller_new FLOAT NOT NULL,
-    buyerID CHAR(34) NOT NULL,
-    FLO_buyer_old FLOAT NOT NULL,
-    FLO_buyer_new FLOAT NOT NULL,
-    Rupee_buyer_old FLOAT NOT NULL,
-    Rupee_buyer_new FLOAT NOT NULL,
-    FOREIGN KEY (sellerID) REFERENCES Users(floID),
-    FOREIGN KEY (buyerID) REFERENCES Users(floID)
+rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+unit_price FLOAT NOT NULL,
+quantity FLOAT NOT NULL,
+total_cost FLOAT NOT NULL,
+sellerID CHAR(34) NOT NULL,
+FLO_seller_old FLOAT NOT NULL,
+FLO_seller_new FLOAT NOT NULL,
+Rupee_seller_old FLOAT NOT NULL,
+Rupee_seller_new FLOAT NOT NULL,
+buyerID CHAR(34) NOT NULL,
+FLO_buyer_old FLOAT NOT NULL,
+FLO_buyer_new FLOAT NOT NULL,
+Rupee_buyer_old FLOAT NOT NULL,
+Rupee_buyer_new FLOAT NOT NULL,
+FOREIGN KEY (sellerID) REFERENCES Users(floID),
+FOREIGN KEY (buyerID) REFERENCES Users(floID)
+);
+
+CREATE TABLE sinkShares(
+floID CHAR(34) NOT NULL,
+share TEXT,
+time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY(floID, share)
 );
 
 /* Backup feature (Table and Triggers) */
@@ -221,13 +239,6 @@ CREATE TRIGGER outputRupee_U AFTER UPDATE ON outputRupee
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
 CREATE TRIGGER outputRupee_D AFTER DELETE ON outputRupee
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
-
-CREATE TRIGGER TagList_I AFTER INSERT ON TagList
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TagList', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER TagList_U AFTER UPDATE ON TagList
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TagList', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER TagList_D AFTER DELETE ON TagList
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TagList', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER Tags_I AFTER INSERT ON Tags
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;

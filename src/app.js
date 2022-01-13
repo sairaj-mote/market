@@ -3,11 +3,17 @@ const express = require('express');
 const cookieParser = require("cookie-parser");
 const sessions = require('express-session');
 const Request = require('./request');
+const WebSocket = require('ws');
 
 const REFRESH_INTERVAL = 5 * 1000; //10 * 60 * 1000;
 
-module.exports = function App(secret, trustedIDs, DB) {
+module.exports = function App(secret, DB) {
 
+    if (!(this instanceof App))
+        return new App(secret, DB);
+
+    var server = null,
+        wss = null;
     const app = express();
     //session middleware
     app.use(sessions({
@@ -65,12 +71,60 @@ module.exports = function App(secret, trustedIDs, DB) {
     app.post('/withdraw-rupee', Request.WithdrawRupee);
 
     //Manage user tags (Access to trusted IDs only)
-    Request.trustedIDs = trustedIDs;
+
     app.post('/add-tag', Request.addUserTag);
     app.post('/remove-tag', Request.removeUserTag);
 
     Request.DB = DB;
-    Request.periodicProcess();
-    let refresher = setInterval(Request.periodicProcess, REFRESH_INTERVAL);
-    return app;
+
+    //Properties
+    var periodInstance = null;
+    let self = this;
+
+    //return server, express-app
+    Object.defineProperty(self, "server", {
+        get: () => server
+    });
+    Object.defineProperty(self, "express", {
+        get: () => app
+    });
+
+    //set trustedID for subAdmin requests
+    Object.defineProperty(self, "trustedIDs", {
+        set: (ids) => Request.trustedIDs = ids
+    });
+
+    //Start (or) Stop servers
+    self.start = (port) => new Promise(resolve => {
+        server = app.listen(port, () => {
+            resolve(`Server Running at port ${port}`);
+        });
+    });
+    self.stop = () => new Promise(resolve => {
+        server.close(() => {
+            server = null;
+            resolve('Server stopped');
+        });
+    });
+
+    //(Node is not master) Pause serving the clients
+    self.pause = () => {
+        Request.pause();
+        if (periodInstance !== null) {
+            clearInterval(periodInstance);
+            periodInstance = null;
+        }
+    }
+
+    //(Node is master) Resume serving the clients
+    self.resume = () => {
+        Request.resume();
+        Request.periodicProcess();
+        if (periodInstance === null)
+            periodInstance = setInterval(Request.periodicProcess, REFRESH_INTERVAL);
+    }
+
+    Object.defineProperty(self, "periodInstance", {
+        get: () => periodInstance
+    });
 }

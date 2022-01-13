@@ -21,8 +21,13 @@ INTERNAL.e_code = 500;
 const oneDay = 1000 * 60 * 60 * 24;
 const maxSessionTimeout = 60 * oneDay;
 
+var serving;
+const INVALID_SERVER_MSG = "Incorrect Server. Please connect to main server.";
+
 function validateRequestFromFloID(request, sign, floID, proxy = true) {
     return new Promise((resolve, reject) => {
+        if (!serving)
+            return reject(INVALID(INVALID_SERVER_MSG));
         DB.query("SELECT " + (proxy ? "proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
@@ -53,6 +58,8 @@ function storeRequest(floID, req_str, sign) {
 }
 
 function SignUp(req, res) {
+    if (!serving)
+        return res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     let data = req.body,
         session = req.session;
     if (floCrypto.getFloID(data.pubKey) !== data.floID)
@@ -249,11 +256,15 @@ function ListTransactions(req, res) {
 }
 
 function getRate(req, res) {
-    let rate = market.returnRates();
-    res.send(`${rate}`);
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else
+        res.send(`${market.rate}`);
 }
 
 function Account(req, res) {
+    if (!serving)
+        return res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     const setLogin = function(message) {
         let randID = floCrypto.randString(16, true);
         req.session.random = randID;
@@ -506,5 +517,11 @@ module.exports = {
     set DB(db) {
         DB = db;
         market.DB = db;
+    },
+    pause() {
+        serving = false;
+    },
+    resume() {
+        serving = true;
     }
 };
