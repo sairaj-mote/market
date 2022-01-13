@@ -1,3 +1,4 @@
+'use strict';
 const config = require('../args/app-config.json');
 global.floGlobals = require('../public/floGlobals');
 require('./set_globals');
