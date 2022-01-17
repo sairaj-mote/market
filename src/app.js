@@ -1,9 +1,8 @@
 'use strict';
 const express = require('express');
-const cookieParser = require("cookie-parser");
-const sessions = require('express-session');
+//const cookieParser = require("cookie-parser");
+//const sessions = require('express-session');
 const Request = require('./request');
-const WebSocket = require('ws');
 
 const REFRESH_INTERVAL = 5 * 1000; //10 * 60 * 1000;
 
@@ -12,16 +11,15 @@ module.exports = function App(secret, DB) {
     if (!(this instanceof App))
         return new App(secret, DB);
 
-    var server = null,
-        wss = null;
+    var server = null;
     const app = express();
     //session middleware
-    app.use(sessions({
+    /*app.use(sessions({
         secret: secret,
         saveUninitialized: true,
         resave: false,
         name: "session"
-    }));
+    }));*/
     // parsing the incoming data
     app.use(express.json());
     app.use(express.urlencoded({
@@ -30,12 +28,17 @@ module.exports = function App(secret, DB) {
     //serving public file
     app.use(express.static(PUBLIC_DIR));
     // cookie parser middleware
-    app.use(cookieParser());
+    //app.use(cookieParser());
 
+    /* Decentralising - Users will load from user-end files and request via APIs only
     //Initital page loading
     app.get('/', (req, res) => res.sendFile('home.html', {
         root: PUBLIC_DIR
     }));
+    */
+
+    //get code for login or signup
+    app.get('/get-login-code', Request.getLoginCode);
 
     //signup request
     app.post('/signup', Request.SignUp);
@@ -76,6 +79,7 @@ module.exports = function App(secret, DB) {
     app.post('/remove-tag', Request.removeUserTag);
 
     Request.DB = DB;
+    Request.secret = secret;
 
     //Properties
     var periodInstance = null;
