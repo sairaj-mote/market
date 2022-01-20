@@ -30,9 +30,11 @@ function validateRequestFromFloID(request, sign, floID, proxy = true) {
             return reject(INVALID(INVALID_SERVER_MSG));
         else if (!floCrypto.validateAddr(floID))
             return res.status(INVALID.e_code).send("Invalid floID");
-        DB.query("SELECT " + (proxy ? "proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
+        DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
+            if (proxy && result[0].session_time + maxSessionTimeout < Date.now())
+                return res.status(INVALID.e_code).send("Session Expired! Re-login required");
             let req_str = validateRequest(request, sign, result[0].pubKey);
             req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
         }).catch(error => reject(error));
@@ -274,18 +276,11 @@ function Account(req, res) {
         type: "get_account",
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        DB.query("SELECT session_time FROM Sessions WHERE floID=?", [data.floID]).then(result => {
-            if (result.length < 1)
-                res.status(INVALID.e_code).send("floID not registered");
-            else if (result[0].session_time + maxSessionTimeout < Date.now())
-                res.status(INVALID.e_code).send("Session Expired! Re-login required");
-            else
-                market.getAccountDetails(data.floID).then(result => {
-                    if (trustedIDs.includes(data.floID))
-                        result.subAdmin = true;
-                    res.send(result);
-                });
-        }).catch(_ => res.status(INTERNAL.e_code).send("Try again later!"));
+        market.getAccountDetails(data.floID).then(result => {
+            if (trustedIDs.includes(data.floID))
+                result.subAdmin = true;
+            res.send(result);
+        });
     }).catch(error => {
         if (error instanceof INVALID)
             res.status(INVALID.e_code).send(error.message);
