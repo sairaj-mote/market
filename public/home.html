@@ -96,7 +96,8 @@
                         Remember me
                     </span>
                 </sm-checkbox>
-                <input type="text" id="sign_in_id" style="display: none;" hidden />
+                <input type="text" id="sign_in_code" style="display: none;" hidden />
+                <input type="text" id="sign_in_hash" style="display: none;" hidden />
                 <div id="login_button_wrapper" class="stateful-button-wrapper">
                     <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
                 </div>
@@ -854,7 +855,7 @@
             let pageId
             let params
             if (targetPage === '') {
-                if (typeof myFloID === "undefined") {
+                if (typeof proxy.userID === "undefined") {
                     pageId = 'landing'
                 } else {
                     pageId = 'home'
@@ -1206,13 +1207,13 @@
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
                 showProcess('wallet_popup__cta_wrapper')
-                const proxySecret = await proxy.secret
+                const proxySecret = await proxy.secret;
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, userID, privKey, proxySecret)
+                        await depositFLO(quantity, proxy.userID, privKey, proxySecret)
                     } else {
-                        await depositRupee(quantity, userID, privKey, proxySecret)
+                        await depositRupee(quantity, proxy.userID, privKey, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
@@ -1451,10 +1452,10 @@
                 transactions.forEach(transaction => {
                     const { quantity, unitValue, tx_time, buyer, seller } = transaction
                     let type, other;
-                    if (seller === userID) {
+                    if (seller === proxy.userID) {
                         type = 'Sold';
-                        other = buyer === userID ? 'MySelf' : buyer;
-                    } else if (buyer === userID) {
+                        other = buyer === proxy.userID ? 'MySelf' : buyer;
+                    } else if (buyer === proxy.userID) {
                         type = 'Bought';
                         other = seller;
                     } else
@@ -1551,9 +1552,9 @@
 
     </script>
     <script>
-        let userID; //container for user ID and proxy private-key
-
+        //container for user ID and proxy private-key
         const proxy = {
+            user: null,
             private: null,
             public: null,
             async lock() {
@@ -1576,8 +1577,22 @@
             },
             clear() {
                 localStorage.removeItem("proxy_secret");
+                localStorage.removeItem("user_ID");
+                this.user = null;
                 this.private = null;
                 this.public = null;
+            },
+            set userID(id){
+                localStorage.setItem("user_ID", id);
+                this.user = id;
+            },
+            get userID(){
+                if(this.user)
+                    return this.user;
+                else{
+                    let id = localStorage.getItem('user_ID');
+                    return id ? this.user = id : undefined;
+                }  
             },
             set secret(key) {
                 localStorage.setItem("proxy_secret", key);
@@ -1636,13 +1651,24 @@
         }
 
         function refresh(init = false) {
-            if (init)
+            if (init){
                 console.info("init");
-            else
+                if(!proxy.userID){
+                    getRef('home').classList.remove('signed-in');
+                    getLoginCode().then(response => {
+                        getRef("login_form").classList.remove('hide-completely');
+                        document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
+                        getRef('sign_in_code').value = response.code;
+                        getRef('sign_in_hash').value = response.hash;
+                        proxy.clear();
+                    }).catch(error => console.error(error))
+                }
+            } else
                 console.info("refresh");
-            updateRate()
-            renderMarketOrders()
-            account();
+            updateRate();
+            renderMarketOrders();
+            if(proxy.userID)
+                account();
         }
 
         function showBalance(type, availableBalance = 0, lockedBalance = 0) {
@@ -1662,7 +1688,7 @@
 
         let accountDetails = {}
         function account() {
-            getAccount().then(acc => {
+            getAccount(proxy.userID, await proxy.secret).then(acc => {
                 getRef("login_form").classList.add('hide-completely')
                 getRef('home').classList.add('signed-in')
                 accountDetails = acc
@@ -1671,7 +1697,6 @@
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide-completely'))
                 getRef('trade_form').classList.remove('hide-completely')
                 getRef("user_id").value = acc.floID;
-                userID = acc.floID;
                 //FLO Balance
                 let flo_total = acc.coins.reduce((a, x) => a + x.quantity, 0);
                 let flo_locked = acc.sellOrders.reduce((a, x) => a + x.quantity, 0);
@@ -1690,28 +1715,17 @@
                 //My orders
                 renderUserOrders();
                 proxy.secret.then(_ => null).catch(_ => null);
-            }).catch(error => {
-                getRef('home').classList.remove('signed-in')
-                if (error instanceof ResponseError) {
-                    let response = JSON.parse(error.data)
-                    console.log(error);
-                    console.log(response);
-                    getRef("login_form").classList.remove('hide-completely')
-                    document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
-                    getRef('sign_in_id').value = response.sid;
-                    proxy.clear();
-                } else
-                    console.error(error);
-            })
+            }).catch(error => console.error(error))
         };
 
         const UI_evt = {
             signup(privKey) {
-                let sid = getRef('sign_in_id').value;
+                let code = getRef('sign_in_code').value, 
+                    hash = getRef('sign_in_hash').value;
                 if (!privKey)
                     privKey = getRef('get_registration_key').value.trim()
                 if (privKey !== '') {
-                    signUp(privKey, sid).then(result => {
+                    signUp(privKey, code, hash).then(result => {
                         console.info(result);
                         notify("Account registered!", 'success')
                         hidePopup()
@@ -1722,9 +1736,9 @@
             },
 
             logout() {
-                getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(res => {
+                getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(async res => {
                     if (res) {
-                        logout().then(result => {
+                        logout(proxy.userID, await proxy.secret).then(result => {
                             console.warn(result);
                             proxy.clear();
                             location.reload();
@@ -1736,12 +1750,16 @@
             login() {
                 showProcess('login_button_wrapper')
                 let privKey = getRef('login_form__priv_key').value;
-                let sid = getRef('sign_in_id').value;
+                let code = getRef('sign_in_code').value, 
+                    hash = getRef('sign_in_hash').value;
                 let rememberMe = getRef('remember_me').checked;
                 let tmpKey = floCrypto.generateNewID();
-                login(privKey, tmpKey.pubKey, sid, rememberMe).then(result => {
+                login(privKey, tmpKey.pubKey, code, hash).then(result => {
                     console.log(result);
                     proxy.secret = tmpKey.privKey;
+                    proxy.userID = floCrypto.getFloID(privKey);
+                    getRef('sign_in_code').value = null;
+                    getRef('sign_in_hash').value = null;
                     account();
                 }).catch(error => notify(error.data, 'error'))
                     .finally(() => {
@@ -1757,7 +1775,10 @@
         }
 
         window.addEventListener('load', e => {
-            refresh(true);
+            refreshDataFromBlockchain().then(nodes => {
+                console.log(nodes);
+                refresh(true);
+            }).catch(error => reject(error))
         })
     </script>
 </body>
