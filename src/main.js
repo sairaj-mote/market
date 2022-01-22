@@ -1,5 +1,4 @@
 'use strict';
-const config = require('../args/app-config.json');
 global.floGlobals = require('../public/floGlobals');
 require('./set_globals');
 require('./lib');
@@ -9,7 +8,6 @@ require('./tokenAPI');
 
 const Database = require("./database");
 const App = require('./app');
-const PORT = config['port'];
 
 const backup = require('./backup/head');
 
@@ -133,8 +131,9 @@ function setDB(db) {
 }
 
 module.exports = function startServer(public_dir) {
+    const config = require(`../args/config${process.env.I || ""}.json`);
     try {
-        var _tmp = require('../args/keys.json');
+        var _tmp = require(`../args/keys${process.env.I || ""}.json`);
         _tmp = floCrypto.retrieveShamirSecret(_tmp);
         var _pass = process.env.PASSWORD;
         if (!_pass) {
@@ -162,7 +161,7 @@ module.exports = function startServer(public_dir) {
         setDB(db);
         app = new App(config['secret'], DB);
         refreshData(true).then(_ => {
-            app.start(PORT).then(result => {
+            app.start(config['port']).then(result => {
                 console.log(result);
                 backup.init(app);
             }).catch(error => console.error(error))

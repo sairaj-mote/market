@@ -41,7 +41,7 @@ function getPassword() {
                         getPassword()
                             .then(result => resolve(result))
                             .catch(error => reject(error))
-                    } else 
+                    } else
                         resolve(value1);
                 })
             }
@@ -57,7 +57,7 @@ function resetPassword() {
                     let encrypted = Crypto.AES.encrypt(privKey, password);
                     let randNum = floCrypto.randInt(10, 15);
                     let splitShares = floCrypto.createShamirsSecretShares(encrypted, randNum, randNum);
-                    fs.writeFile(__dirname + '/../args/keys.json', JSON.stringify(splitShares), 'utf8', (err) => {
+                    fs.writeFile(__dirname + `/../args/keys${process.env.I || ""}.json`, JSON.stringify(splitShares), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);

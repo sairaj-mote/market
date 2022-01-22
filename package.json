@@ -19,9 +19,6 @@
     "configure": "node setup/configure-settings.js",
     "reset-password": "node setup/reset-password.js",
     "create-schema": "node setup/create-schema.js",
-    "configure-backup": "node setup/configure-backup.js",
-    "create-backup-schema": "node setup/create-backup-schema.js",
-    "backup": "node src/backup/storage.js",
     "start": "node start.js"
   },
   "repository": {

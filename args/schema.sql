@@ -121,11 +121,11 @@ PRIMARY KEY(floID)
 
 CREATE TABLE trustedList(
 floID CHAR(34) NOT NULL,
-FOREIGN KEY (floID) REFERENCES Users(floID),
+PRIMARY KEY(floID),
+FOREIGN KEY (floID) REFERENCES Users(floID)
 );
 
 CREATE TABLE TagList (
-id INT NOT NULL AUTO_INCREMENT,
 tag VARCHAR(50) NOT NULL,
 sellPriority INT,
 buyPriority INT,
@@ -171,7 +171,7 @@ CREATE TABLE sinkShares(
 floID CHAR(34) NOT NULL,
 share TEXT,
 time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY(floID, share)
+PRIMARY KEY(floID)
 );
 
 /* Backup feature (Table and Triggers) */
