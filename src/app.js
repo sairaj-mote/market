@@ -37,6 +37,16 @@ module.exports = function App(secret, DB) {
     }));
     */
 
+    app.use(function(req, res, next) {
+        res.setHeader('Access-Control-Allow-Origin', "*");
+        // Request methods you wish to allow
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
+        // Request headers you wish to allow
+        res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+        // Pass to next layer of middleware
+        next();
+    })
+
     //get code for login or signup
     app.get('/get-login-code', Request.getLoginCode);
 
@@ -47,7 +57,7 @@ module.exports = function App(secret, DB) {
     app.post('/login', Request.Login);
 
     //logout request
-    app.get('/logout', Request.Logout);
+    app.post('/logout', Request.Logout);
 
     //place sell or buy order
     app.post('/buy', Request.PlaceBuyOrder);
@@ -65,7 +75,7 @@ module.exports = function App(secret, DB) {
     app.get('/get-rate', Request.getRate)
 
     //get account details
-    app.get('/account', Request.Account);
+    app.post('/account', Request.Account);
 
     //withdraw and deposit request
     app.post('/deposit-flo', Request.DepositFLO);

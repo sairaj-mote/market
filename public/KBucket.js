@@ -1,5 +1,6 @@
 'use strict';
 
+(function(){
 /*Kademlia DHT K-bucket implementation as a binary tree.*/
 /**
  * Implementation of a Kademlia DHT k-bucket used for storing
@@ -7,7 +8,7 @@
  *
  * @extends EventEmitter
  */
-function BuildKBucket(options = {}) {
+ function BuildKBucket(options = {}) {
     /**
      * `options`:
      *   `distance`: Function
@@ -401,7 +402,7 @@ function BuildKBucket(options = {}) {
     }
 }
 
-module.exports = function K_Bucket(masterID, backupList) {
+function K_Bucket(masterID, backupList) {
     const decodeID = function(floID) {
         let k = bitjs.Base58.decode(floID);
         k.shift();
@@ -457,4 +458,6 @@ module.exports = function K_Bucket(masterID, backupList) {
         return (N == 1 ? nNodes[0] : nNodes);
     };
 
-}
+};
+('object' === typeof module) ? module.exports = K_Bucket : window.K_Bucket = K_Bucket;
+})();

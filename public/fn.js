@@ -6,10 +6,9 @@ function exchangeAPI(api, options) {
         let curPos = exchangeAPI.curPos || 0;
         if (curPos >= nodeList.length)
             return resolve('No Nodes online');
-        let url = nodeURL[nodeList[curPos]];
+        let url = "http://" + nodeURL[nodeList[curPos]];
         (options ? fetch(url + api, options) : fetch(url + api))
         .then(result => resolve(result)).catch(error => {
-            console.debug(error);
             console.warn(nodeList[curPos], 'is offline');
             //try next node
             exchangeAPI.curPos = curPos + 1;
@@ -102,7 +101,7 @@ function getAccount(floID, proxySecret) {
         };
         request.sign = signRequest({
             type: "get_account",
-            timestamp: data.timestamp
+            timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
@@ -168,7 +167,7 @@ function signRequest(request, privKey) {
 
 function getLoginCode() {
     return new Promise((resolve, reject) => {
-        exchangeAPI('/list-buyorders')
+        exchangeAPI('/get-login-code')
             .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
@@ -249,7 +248,7 @@ function logout(floID, proxySecret) {
         };
         request.sign = signRequest({
             type: "logout",
-            timestamp: data.timestamp
+            timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
@@ -543,8 +542,8 @@ function refreshDataFromBlockchain() {
     return new Promise((resolve, reject) => {
         let nodes, lastTx;
         try {
-            nodes = JSON.parse(localStorage.getItems('exhange-nodes'));
-            if (typeof nodes !== 'object')
+            nodes = JSON.parse(localStorage.getItem('exchange-nodes'));
+            if (typeof nodes !== 'object' || nodes === null)
                 throw Error('nodes must be an object')
             else
                 lastTx = parseInt(localStorage.getItem('exchange-lastTx')) || 0;
@@ -569,8 +568,8 @@ function refreshDataFromBlockchain() {
                             nodes[n] = content.Nodes.add[n];
                 }
             });
-            localStorage.setItem('exhange-lastTx', result.totalTxs);
-            localStorage.setItem('exhange-nodes', JSON.stringify(nodes));
+            localStorage.setItem('exchange-lastTx', result.totalTxs);
+            localStorage.setItem('exchange-nodes', JSON.stringify(nodes));
             nodeURL = nodes;
             nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
             nodeList = nodeKBucket.order;

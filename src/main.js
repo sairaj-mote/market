@@ -27,7 +27,6 @@ function refreshDataFromBlockchain() {
     return new Promise((resolve, reject) => {
         DB.query("SELECT num FROM lastTx WHERE floID=?", [floGlobals.adminID]).then(result => {
             let lastTx = result.length ? result[0].num : 0;
-            console.debug('lastTx', lastTx);
             floBlockchainAPI.readData(floGlobals.adminID, {
                 ignoreOld: lastTx,
                 sentOnly: true,
@@ -38,7 +37,6 @@ function refreshDataFromBlockchain() {
                     trusted_change = false;
                 result.data.reverse().forEach(data => {
                     var content = JSON.parse(data)[floGlobals.application];
-                    console.debug(content);
                     //Node List
                     if (content.Nodes) {
                         nodes_change = true;
@@ -95,7 +93,7 @@ function loadDataFromDB(changes, startup) {
         if (startup || changes.nodes)
             promises.push(loadDataFromDB.nodeList());
         if (startup || changes.trusted)
-            promises.push(loadDataFromDB.trustedIDs);
+            promises.push(loadDataFromDB.trustedIDs());
         Promise.all(promises)
             .then(_ => resolve("Data load successful"))
             .catch(error => reject(error))

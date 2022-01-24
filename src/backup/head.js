@@ -1,6 +1,6 @@
 'use strict';
 
-const K_Bucket = require('./KBucket');
+const K_Bucket = require('../../public/KBucket');
 const slave = require('./slave');
 const WebSocket = require('ws');
 const shareThreshold = 50 / 100;
