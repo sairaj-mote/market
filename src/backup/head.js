@@ -276,9 +276,10 @@ function informLiveNodes(init) {
             } else
                 console.warn(`Node(${nodes[i]}) is offline`);
         if (init) {
-            if (flag === true)
+            if (flag === true) {
                 collectShares.active = true;
-            else {
+                syncRequest();
+            } else {
                 //No other node is active (possible 1st node to start exchange)
                 console.debug("Starting the exchange...")
                 let newSink = generateNewSink();
@@ -294,8 +295,19 @@ function informLiveNodes(init) {
     });
 }
 
+function syncRequest(cur = global.myFloID) {
+    //Sync data from next available node
+    console.debug("syncRequest", cur);
+    let nextNode = nodeKBucket.nextNode(cur);
+    if (!nextNode)
+        return console.warn("No nodes available to Sync");
+    connectWS(nextNode)
+        .then(ws => slave.syncRequest(ws))
+        .catch(_ => syncRequest(nextNode));
+}
+
 function updateMaster(floID) {
-    let currentMaster = mod === MASTER_MODE ? global.floID : slave.masterWS.floID;
+    let currentMaster = mod === MASTER_MODE ? global.myFloID : slave.masterWS.floID;
     if (nodeList.indexOf(floID) < nodeList.indexOf(currentMaster))
         connectToMaster();
 }
