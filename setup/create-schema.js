@@ -13,7 +13,7 @@ function createSchema() {
                 let txQueries = data.split(';');
                 txQueries.pop();
                 txQueries = txQueries.map(q => q.trim().replace(/\n/g, ' '));
-                console.log(txQueries);
+                //console.log(txQueries);
                 DB.transaction(txQueries).then(_ => {
                     console.log('SQL Schema created successfully!');
                     resolve(true);

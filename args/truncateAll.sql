@@ -1,13 +1,23 @@
+/* Node data */
 TRUNCATE _backup;
-TRUNCATE buyorder;
-TRUNCATE cash;
-TRUNCATE inputflo;
-TRUNCATE inputrupee;
-TRUNCATE outputflo;
-TRUNCATE outputrupee;
-TRUNCATE request_log;
-TRUNCATE sellorder;
-TRUNCATE sessions;
-TRUNCATE transactions;
-TRUNCATE users;
-TRUNCATE vault;
+TRUNCATE auditTransaction;
+TRUNCATE BuyOrder;
+TRUNCATE Cash;
+TRUNCATE inputFLO;
+TRUNCATE inputRupee;
+TRUNCATE outputFLO;
+TRUNCATE outputRupee;
+TRUNCATE priceHistory;
+TRUNCATE Request_Log;
+TRUNCATE SellOrder;
+TRUNCATE Sessions;
+TRUNCATE Tags;
+TRUNCATE Transactions;
+TRUNCATE Vault;
+TRUNCATE Users;
+
+/* Blockchain data */
+TRUNCATE lastTx;
+TRUNCATE nodeList;
+TRUNCATE trustedList;
+TRUNCATE TagList;
