@@ -1,7 +1,6 @@
 /node_modules/
 /package-lock.json
-/args/app-config.json
-/args/backup-config.json
+/args/config*.json
 /args/param.json
-/args/keys.json
+/args/keys*.json
 *test*

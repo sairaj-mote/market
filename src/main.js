@@ -1,5 +1,4 @@
 'use strict';
-const config = require('../args/app-config.json');
 global.floGlobals = require('../public/floGlobals');
 require('./set_globals');
 require('./lib');
@@ -9,7 +8,6 @@ require('./tokenAPI');
 
 const Database = require("./database");
 const App = require('./app');
-const PORT = config['port'];
 
 const backup = require('./backup/head');
 
@@ -47,7 +45,7 @@ function refreshDataFromBlockchain() {
                                 promises.push(DB.query("DELETE FROM nodeList WHERE floID=?", [n]));
                         if (content.Nodes.add)
                             for (let n in content.Nodes.add)
-                                promises.push(DB.query("INSERT INTO nodeList (floID, uri) VALUE (?,?) ON DUPLICATE KEY UPDATE uri=NEW.uri", [n, content.Nodes.add[n]]));
+                                promises.push(DB.query("INSERT INTO nodeList (floID, uri) VALUE (?,?) AS new ON DUPLICATE KEY UPDATE uri=new.uri", [n, content.Nodes.add[n]]));
                     }
                     //Trusted List
                     if (content.Trusted) {
@@ -57,7 +55,7 @@ function refreshDataFromBlockchain() {
                                 promises.push(DB.query("DELETE FROM trustedList WHERE floID=?", [id]));
                         if (content.Trusted.add)
                             for (let id of content.Trusted.add)
-                                promises.push(DB.query("INSERT INTO trustedList (floID) VALUE (?) ON DUPLICATE KEY UPDATE floID=NEW.floID", [id]));
+                                promises.push(DB.query("INSERT INTO trustedList (floID) VALUE (?) AS new ON DUPLICATE KEY UPDATE floID=new.floID", [id]));
                     }
                     //Tag List with priority and API
                     if (content.Tag) {
@@ -66,16 +64,17 @@ function refreshDataFromBlockchain() {
                                 promises.push(DB.query("DELETE FROM TagList WHERE tag=?", [t]));
                         if (content.Tag.add)
                             for (let t in content.Tag.add)
-                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority, api) VALUE (?,?,?,?)", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority, content.Tag.add[t].api]));
+                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority, api) VALUE (?,?,?,?) AS new ON DUPLICATE KEY UPDATE tag=new.tag", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority, content.Tag.add[t].api]));
                         if (content.Tag.update)
                             for (let t in content.Tag.update)
                                 for (let a in content.Tag.update[t])
                                     promises.push(`UPDATE TagList WHERE tag=? SET ${a}=?`, [t, content.Tag.update[t][a]]);
                     }
                 });
-                promises.push(DB.query("INSERT INTO lastTx (floID, num) VALUE (?, ?) ON DUPLICATE KEY UPDATE num=NEW.num", [floGlobals.adminID, result.totalTxs]));
+                promises.push(DB.query("INSERT INTO lastTx (floID, num) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE num=new.num", [floGlobals.adminID, result.totalTxs]));
                 //Check if all save process were successful
                 Promise.allSettled(promises).then(results => {
+                    console.debug(results.filter(r => r.status === "rejected"));
                     if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
                         console.warn("Some data might not have been saved in database correctly");
                 });
@@ -94,7 +93,7 @@ function loadDataFromDB(changes, startup) {
         if (startup || changes.nodes)
             promises.push(loadDataFromDB.nodeList());
         if (startup || changes.trusted)
-            promises.push(loadDataFromDB.trustedIDs);
+            promises.push(loadDataFromDB.trustedIDs());
         Promise.all(promises)
             .then(_ => resolve("Data load successful"))
             .catch(error => reject(error))
@@ -103,7 +102,7 @@ function loadDataFromDB(changes, startup) {
 
 loadDataFromDB.nodeList = function() {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT (floID, uri) FROM nodeList").then(result => {
+        DB.query("SELECT * FROM nodeList").then(result => {
             let nodes = {}
             for (let i in result)
                 nodes[result[i].floID] = result[i].uri;
@@ -133,23 +132,20 @@ function setDB(db) {
 }
 
 module.exports = function startServer(public_dir) {
+    const config = require(`../args/config${process.env.I || ""}.json`);
     try {
-        var _tmp = require('../args/keys.json');
+        var _tmp = require(`../args/keys${process.env.I || ""}.json`);
         _tmp = floCrypto.retrieveShamirSecret(_tmp);
         var _pass = process.env.PASSWORD;
         if (!_pass) {
             console.error('Password not entered!');
             process.exit(1);
         }
-        _tmp = Crypto.AES.decrypt(_tmp, _pass);
-        if (floCrypto.verifyPrivKey(_tmp, floGlobals.adminID)) {
-            global.myPrivKey = _tmp;
-            global.myPubKey = floCrypto.getPubKeyHex(global.myPrivKey);
-            global.myFloID = floCrypto.getFloID(global.myPubKey);
-        } else {
-            console.error('Loaded wrong private key!');
-            process.exit(1);
-        }
+        global.myPrivKey = Crypto.AES.decrypt(_tmp, _pass);
+        global.myPubKey = floCrypto.getPubKeyHex(global.myPrivKey);
+        global.myFloID = floCrypto.getFloID(global.myPubKey);
+        if (!global.myFloID || !global.myPubKey || !global.myPrivKey)
+            throw "Invalid Keys";
     } catch (error) {
         console.error('Unable to load private key!');
         process.exit(1);
@@ -162,7 +158,7 @@ module.exports = function startServer(public_dir) {
         setDB(db);
         app = new App(config['secret'], DB);
         refreshData(true).then(_ => {
-            app.start(PORT).then(result => {
+            app.start(config['port']).then(result => {
                 console.log(result);
                 backup.init(app);
             }).catch(error => console.error(error))

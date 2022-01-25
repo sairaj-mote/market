@@ -29,12 +29,12 @@ function validateRequestFromFloID(request, sign, floID, proxy = true) {
         if (!serving)
             return reject(INVALID(INVALID_SERVER_MSG));
         else if (!floCrypto.validateAddr(floID))
-            return res.status(INVALID.e_code).send("Invalid floID");
+            return reject(INVALID.e_code).send("Invalid floID");
         DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
             if (proxy && result[0].session_time + maxSessionTimeout < Date.now())
-                return res.status(INVALID.e_code).send("Session Expired! Re-login required");
+                return reject(INVALID.e_code).send("Session Expired! Re-login required");
             let req_str = validateRequest(request, sign, result[0].pubKey);
             req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
         }).catch(error => reject(error));
@@ -64,7 +64,7 @@ function storeRequest(floID, req_str, sign) {
 function getLoginCode(req, res) {
     let randID = floCrypto.randString(8, true) + Math.round(Date.now() / 1000);
     let hash = Crypto.SHA1(randID + secret);
-    res.status(INVALID.e_code).send({
+    res.send({
         code: randID,
         hash: hash
     });
@@ -111,9 +111,9 @@ function Login(req, res) {
         proxyKey: data.proxyKey,
         timestamp: data.timestamp
     }, data.sign, data.floID, false).then(req_str => {
-        DB.query("INSERT INTO Sessions (floID, proxyKey) VALUES (?, ?, ?) " +
-            "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?",
-            [data.floID, data.code, data.proxyKey, data.code, data.proxyKey]).then(_ => {
+        DB.query("INSERT INTO Sessions (floID, proxyKey) VALUE (?, ?) AS new " +
+            "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=new.proxyKey",
+            [data.floID, data.proxyKey]).then(_ => {
             storeRequest(data.floID, req_str, data.sign);
             res.send("Login Successful");
         }).catch(error => {
@@ -131,6 +131,7 @@ function Login(req, res) {
 }
 
 function Logout(req, res) {
+    let data = req.body;
     validateRequestFromFloID({
         type: "logout",
         timestamp: data.timestamp

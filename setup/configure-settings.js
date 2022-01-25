@@ -3,7 +3,7 @@ const getInput = require('./getInput');
 
 var config, flag_new;
 try {
-    config = require('../args/app-config.json');
+    config = require(`../args/config${process.env.I || ""}.json`);
     flag_new = false;
 } catch (error) {
     config = {
@@ -13,12 +13,7 @@ try {
         "sql_user": null,
         "sql_pwd": null,
         "sql_db": "exchange",
-        "sql_host": "localhost",
-
-        "backup-port": "8081",
-        "backup-floIDs": [],
-
-        "trusted-floIDs": []
+        "sql_host": "localhost"
     };
     flag_new = true;
 }
@@ -34,97 +29,11 @@ function flaggedYesOrNo(text) {
     })
 }
 
-function get_IDs(ids) {
-    return new Promise((resolve, reject) => {
-        getInput.Text("", "continue").then(id => {
-            if (id === "continue")
-                resolve(Array.from(new Set(ids)));
-            else {
-                ids.push(id);
-                get_IDs(ids)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error));
-            }
-        })
-    })
-}
-
-function configureBackup() {
-    return new Promise(resolve => {
-        getInput.Text('Enter backup port (N = No backup)', config["backup-port"]).then(backup_port => {
-            config["backup-port"] = (backup_port === 'N' || backup_port === 'n') ? null : backup_port;
-            if (!config["backup-port"])
-                return resolve(true);
-            getInput.YesOrNo('Do you want to add/remove backup floIDs?').then(value => {
-                if (value) {
-                    console.log("Enter floIDs to add as backup: ");
-                    get_IDs(config["backup-floIDs"]).then(ids => {
-                        //delete backup IDs
-                        let tmp_obj = {};
-                        for (let i in ids) {
-                            console.log(i + 1, ":", ids[i]);
-                            tmp_obj[i + 1] = ids[i];
-                        }
-                        getInput.Text("Enter numbers to delete (seperated by comma)", "continue").then(ri => {
-                            if (ri === "continue")
-                                config["backup-floIDs"] = ids;
-                            else {
-                                for (let i of ri.split(","))
-                                    delete tmp_obj[parseInt(i)];
-                                let tmp_array = [];
-                                for (let id of tmp_obj)
-                                    tmp_array.push(id);
-                                config["backup-floIDs"] = tmp_array;
-                            }
-                            resolve(true);
-                        })
-                    })
-                } else
-                    resolve(true);
-            })
-        })
-    })
-}
-
-function configureTrustedIDs() {
-    return new Promise((resolve, reject) => {
-        getInput.YesOrNo('Do you want to add/remove trusted floIDs?').then(value => {
-            if (value) {
-                console.log("Enter floIDs to add as trusted: ");
-                get_IDs(config["trusted-floIDs"]).then(ids => {
-                    //delete trusted IDs
-                    let tmp_obj = {};
-                    for (let i in ids) {
-                        console.log(i + 1, ":", ids[i]);
-                        tmp_obj[i + 1] = ids[i];
-                    }
-                    getInput.Text("Enter numbers to delete (seperated by comma)", "continue").then(ri => {
-                        if (ri === "continue")
-                            config["trusted-floIDs"] = ids;
-                        else {
-                            for (let i of ri.split(","))
-                                delete tmp_obj[parseInt(i)];
-                            let tmp_array = [];
-                            for (let id of tmp_obj)
-                                tmp_array.push(id);
-                            config["trusted-floIDs"] = tmp_array;
-                        }
-                        resolve(true);
-                    })
-                })
-            } else
-                resolve(true);
-        })
-    })
-}
-
 function configurePort() {
     return new Promise(resolve => {
         getInput.Text('Enter port', config["port"]).then(port => {
             config["port"] = port;
-            configureBackup()
-                .then(_ => configureTrustedIDs()
-                    .then(_ => resolve(true)));
+            resolve(true);
         })
     })
 }
@@ -175,7 +84,7 @@ function configure() {
         configurePort().then(port_result => {
             randomizeSessionSecret().then(secret_result => {
                 configureSQL().then(sql_result => {
-                    fs.writeFile(__dirname + '/../args/app-config.json', JSON.stringify(config), 'utf8', (err) => {
+                    fs.writeFile(__dirname + `/../args/config${process.env.I || ""}.json`, JSON.stringify(config), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);
@@ -205,6 +114,6 @@ function configure() {
 }
 
 if (!module.parent)
-    configure().then(_ => null).catch(_ => null);
+    configure().then(_ => null).catch(error => console.error(error));
 else
     module.exports = configure;

@@ -12,27 +12,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-    <script id="floGlobals">
-        /* Constants for FLO blockchain operations !!Make sure to add this at beginning!! */
-        const floGlobals = {
-
-            //Required for all
-            blockchain: "FLO",
-
-            //Required for blockchain API operators
-            apiURL: {
-                FLO: ['https://livenet.flocha.in/', 'https://flosight.duckdns.org/'],
-                FLO_TEST: ['https://testnet-flosight.duckdns.org/', 'https://testnet.flocha.in/']
-            },
-            tokenURL: "https://ranchimallflo.duckdns.org/",
-            token: "rupee",
-            adminID: "FKAEdnPfjXLHSYwrXQu377ugN4tXU7VGdf",
-            sendAmt: 0.001,
-            fee: 0.0005,
-        }
-    </script>
+    <script src="floGlobals.js"></script>
     <script src="https://sairajzero.github.io/Standard_Operations/cdn/floCrypto.js"></script>
     <script src="https://github.com/sairajzero/Standard_Operations/releases/download/test/floBlockchainAPI.js"></script>
+    <script src="KBucket.js"></script>
     <script src="fn.js"></script>
 </head>
 
@@ -1068,9 +1051,9 @@
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
-                    await buy(quantity, price, await proxy.secret)
+                    await buy(quantity, price, proxy.userID, await proxy.secret)
                 } else {
-                    await sell(quantity, price, await proxy.secret)
+                    await sell(quantity, price, proxy.userID, await proxy.secret)
                 }
                 getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
@@ -1218,9 +1201,9 @@
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
-                        await withdrawFLO(quantity, proxySecret)
+                        await withdrawFLO(quantity, proxy.userID, proxySecret)
                     } else {
-                        await withdrawRupee(quantity, proxySecret)
+                        await withdrawRupee(quantity, proxy.userID, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1363,7 +1346,7 @@
                         const target = e.target.closest('.order-card')
                         const id = target.dataset.id
                         const type = target.dataset.type
-                        cancelOrder(type, id, await proxy.secret)
+                        cancelOrder(type, id, proxy.userID, await proxy.secret)
                             .then(() => {
                                 notify('Order cancelled', 'success')
                                 target.animate([
@@ -1415,7 +1398,7 @@
                 if (res) {
                     try {
                         const proxy_secret = await proxy.secret;
-                        const promises = [...selectedOrders].map(([id, type]) => cancelOrder(type, id, proxy_secret))
+                        const promises = [...selectedOrders].map(([id, type]) => cancelOrder(type, id, proxy.userID, proxy_secret))
                         await Promise.all(promises)
                         selectedOrders.clear()
                         hideMyOrdersOptions()
@@ -1687,7 +1670,7 @@
         const balance = {}
 
         let accountDetails = {}
-        function account() {
+        async function account() {
             getAccount(proxy.userID, await proxy.secret).then(acc => {
                 getRef("login_form").classList.add('hide-completely')
                 getRef('home').classList.add('signed-in')
@@ -1778,7 +1761,7 @@
             refreshDataFromBlockchain().then(nodes => {
                 console.log(nodes);
                 refresh(true);
-            }).catch(error => reject(error))
+            }).catch(error => console.error(error))
         })
     </script>
 </body>
