@@ -1,4 +1,5 @@
 //console.log(document.cookie.toString());
+const INVALID_SERVER_MSG = "INCORRECT_SERVER_ERROR";
 var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
 
 function exchangeAPI(api, options) {
@@ -69,7 +70,9 @@ const tokenAPI = {
 }
 
 function ResponseError(status, data) {
-    if (this instanceof ResponseError) {
+    if (data === INVALID_SERVER_MSG)
+        location.reload();
+    else if (this instanceof ResponseError) {
         this.data = data;
         this.status = status;
     } else

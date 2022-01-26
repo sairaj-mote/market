@@ -22,19 +22,19 @@ const oneDay = 1000 * 60 * 60 * 24;
 const maxSessionTimeout = 60 * oneDay;
 
 var serving;
-const INVALID_SERVER_MSG = "Incorrect Server. Please connect to main server.";
+const INVALID_SERVER_MSG = "INCORRECT_SERVER_ERROR";
 
 function validateRequestFromFloID(request, sign, floID, proxy = true) {
     return new Promise((resolve, reject) => {
         if (!serving)
             return reject(INVALID(INVALID_SERVER_MSG));
         else if (!floCrypto.validateAddr(floID))
-            return reject(INVALID.e_code).send("Invalid floID");
+            return reject(INVALID("Invalid floID"));
         DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
             if (proxy && result[0].session_time + maxSessionTimeout < Date.now())
-                return reject(INVALID.e_code).send("Session Expired! Re-login required");
+                return reject(INVALID("Session Expired! Re-login required"));
             let req_str = validateRequest(request, sign, result[0].pubKey);
             req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
         }).catch(error => reject(error));
@@ -62,6 +62,8 @@ function storeRequest(floID, req_str, sign) {
 }
 
 function getLoginCode(req, res) {
+    if (!serving)
+        return res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     let randID = floCrypto.randString(8, true) + Math.round(Date.now() / 1000);
     let hash = Crypto.SHA1(randID + secret);
     res.send({
