@@ -52,7 +52,7 @@ const tokenAPI = {
             }).catch(error => reject(error))
         })
     },
-    sendToken: function(privKey, amount, message = "", receiverID = floGlobals.adminID, token = 'rupee') {
+    sendToken: function(privKey, amount, receiverID, message = "", token = 'rupee') {
         return new Promise((resolve, reject) => {
             let senderID = floCrypto.getFloID(privKey);
             if (typeof amount !== "number" || amount <= 0)
@@ -364,11 +364,11 @@ function cancelOrder(type, id, floID, proxySecret) {
     })
 }
 
-function depositFLO(quantity, floID, privKey, proxySecret) {
+function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
             return reject(`Invalid quantity (${quantity})`);
-        floBlockchainAPI.sendTx(floID, floGlobals.adminID, quantity, privKey, 'Deposit FLO in market').then(txid => {
+        floBlockchainAPI.sendTx(floID, sinkID, quantity, privKey, 'Deposit FLO in market').then(txid => {
             let request = {
                 floID: floID,
                 txid: txid,
@@ -422,11 +422,11 @@ function withdrawFLO(quantity, floID, proxySecret) {
     })
 }
 
-function depositRupee(quantity, floID, privKey, proxySecret) {
+function depositRupee(quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.verifyPrivKey(privKey, floID))
             return reject("Invalid Private Key");
-        tokenAPI.sendToken(privKey, quantity, 'Deposit Rupee in market').then(txid => {
+        tokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market').then(txid => {
             let request = {
                 floID: floID,
                 txid: txid,
