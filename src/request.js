@@ -278,6 +278,7 @@ function Account(req, res) {
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
         market.getAccountDetails(data.floID).then(result => {
+            result.sinkID = global.sinkID;
             if (trustedIDs.includes(data.floID))
                 result.subAdmin = true;
             res.send(result);

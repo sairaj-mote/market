@@ -382,6 +382,7 @@
             <h4 id="wallet_popup__title" class="capitalize"></h4>
         </header>
         <sm-form id="wallet_form">
+            <input type="text" id="sink_id" style="display: none;" hidden />
             <sm-input id="get_user_amount" variant="outlined" placeholder="Quantity" type="number" min="0.01"
                 step="0.00001" required hiderequired animate>
             </sm-input>
@@ -1194,9 +1195,9 @@
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, proxy.userID, privKey, proxySecret)
+                        await depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     } else {
-                        await depositRupee(quantity, proxy.userID, privKey, proxySecret)
+                        await depositRupee(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
@@ -1565,6 +1566,9 @@
                 this.private = null;
                 this.public = null;
             },
+            get sinkID(){
+                return getRef("sink_id").value;
+            },
             set userID(id){
                 localStorage.setItem("user_ID", id);
                 this.user = id;
@@ -1680,6 +1684,7 @@
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide-completely'))
                 getRef('trade_form').classList.remove('hide-completely')
                 getRef("user_id").value = acc.floID;
+                getRef("sink_id").value = acc.sinkID;
                 //FLO Balance
                 let flo_total = acc.coins.reduce((a, x) => a + x.quantity, 0);
                 let flo_locked = acc.sellOrders.reduce((a, x) => a + x.quantity, 0);
