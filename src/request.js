@@ -159,11 +159,12 @@ function PlaceSellOrder(req, res) {
     let data = req.body;
     validateRequestFromFloID({
         type: "sell_order",
+        asset: data.asset,
         quantity: data.quantity,
         min_price: data.min_price,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.addSellOrder(data.floID, data.quantity, data.min_price)
+        market.addSellOrder(data.floID, data.asset, data.quantity, data.min_price)
             .then(result => {
                 storeRequest(data.floID, req_str, data.sign);
                 res.send('Sell Order placed successfully');
@@ -189,11 +190,12 @@ function PlaceBuyOrder(req, res) {
     let data = req.body;
     validateRequestFromFloID({
         type: "buy_order",
+        asset: data.asset,
         quantity: data.quantity,
         max_price: data.max_price,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.addBuyOrder(data.floID, data.quantity, data.max_price)
+        market.addBuyOrder(data.floID, data.asset, data.quantity, data.max_price)
             .then(result => {
                 storeRequest(data.floID, req_str, data.sign);
                 res.send('Buy Order placed successfully');
@@ -351,14 +353,14 @@ function WithdrawFLO(req, res) {
     });
 }
 
-function DepositRupee(req, res) {
+function DepositToken(req, res) {
     let data = req.body;
     validateRequestFromFloID({
-        type: "deposit_Rupee",
+        type: "deposit_Token",
         txid: data.txid,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.depositRupee(data.floID, data.txid).then(result => {
+        market.depositToken(data.floID, data.txid).then(result => {
             storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
@@ -379,14 +381,15 @@ function DepositRupee(req, res) {
     });
 }
 
-function WithdrawRupee(req, res) {
+function WithdrawToken(req, res) {
     let data = req.body;
     validateRequestFromFloID({
-        type: "withdraw_Rupee",
+        type: "withdraw_Token",
+        token: data.token,
         amount: data.amount,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.withdrawRupee(data.floID, data.amount).then(result => {
+        market.withdrawToken(data.floID, data.token, data.amount).then(result => {
             storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
@@ -485,8 +488,8 @@ module.exports = {
     Account,
     DepositFLO,
     WithdrawFLO,
-    DepositRupee,
-    WithdrawRupee,
+    DepositToken,
+    WithdrawToken,
     periodicProcess: market.periodicProcess,
     addUserTag,
     removeUserTag,

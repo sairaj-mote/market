@@ -80,8 +80,8 @@ module.exports = function App(secret, DB) {
     //withdraw and deposit request
     app.post('/deposit-flo', Request.DepositFLO);
     app.post('/withdraw-flo', Request.WithdrawFLO);
-    app.post('/deposit-rupee', Request.DepositRupee);
-    app.post('/withdraw-rupee', Request.WithdrawRupee);
+    app.post('/deposit-token', Request.DepositToken);
+    app.post('/withdraw-token', Request.WithdrawToken);
 
     //Manage user tags (Access to trusted IDs only)
 

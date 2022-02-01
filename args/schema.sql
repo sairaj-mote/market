@@ -28,7 +28,7 @@ FOREIGN KEY (floID) REFERENCES Users(floID)
 CREATE TABLE Cash (
 id INT NOT NULL AUTO_INCREMENT,
 floID CHAR(34) NOT NULL UNIQUE,
-rupeeBalance DECIMAL(12, 2) DEFAULT 0.00,
+balance DECIMAL(12, 2) DEFAULT 0.00,
 PRIMARY KEY(id),
 FOREIGN KEY (floID) REFERENCES Users(floID)
 );
@@ -37,6 +37,7 @@ CREATE TABLE Vault (
 id INT NOT NULL AUTO_INCREMENT,
 floID CHAR(34) NOT NULL,
 locktime DATETIME DEFAULT CURRENT_TIMESTAMP,
+asset VARCHAR(64) NOT NULL,
 base DECIMAL(10, 2),
 quantity FLOAT NOT NULL,
 PRIMARY KEY(id),
@@ -93,20 +94,22 @@ PRIMARY KEY(id),
 FOREIGN KEY (floID) REFERENCES Users(floID)
 );
 
-CREATE TABLE inputRupee (
+CREATE TABLE inputToken (
 id INT NOT NULL AUTO_INCREMENT,
 txid VARCHAR(128) NOT NULL,
 floID CHAR(34) NOT NULL,
+token VARCHAR(64),
 amount FLOAT,
 status VARCHAR(50) NOT NULL,
 PRIMARY KEY(id),
 FOREIGN KEY (floID) REFERENCES Users(floID)
 );
 
-CREATE TABLE outputRupee (
+CREATE TABLE outputToken (
 id INT NOT NULL AUTO_INCREMENT,
 txid VARCHAR(128),
 floID CHAR(34) NOT NULL,
+token VARCHAR(64),
 amount FLOAT NOT NULL,
 status VARCHAR(50) NOT NULL,
 PRIMARY KEY(id),
@@ -159,16 +162,17 @@ rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
 unit_price FLOAT NOT NULL,
 quantity FLOAT NOT NULL,
 total_cost FLOAT NOT NULL,
+asset VARCHAR(64) NOT NULL,
 sellerID CHAR(34) NOT NULL,
-FLO_seller_old FLOAT NOT NULL,
-FLO_seller_new FLOAT NOT NULL,
-Rupee_seller_old FLOAT NOT NULL,
-Rupee_seller_new FLOAT NOT NULL,
+seller_old_asset FLOAT NOT NULL,
+seller_new_asset FLOAT NOT NULL,
+seller_old_cash FLOAT NOT NULL,
+seller_new_cash FLOAT NOT NULL,
 buyerID CHAR(34) NOT NULL,
-FLO_buyer_old FLOAT NOT NULL,
-FLO_buyer_new FLOAT NOT NULL,
-Rupee_buyer_old FLOAT NOT NULL,
-Rupee_buyer_new FLOAT NOT NULL,
+buyer_old_asset FLOAT NOT NULL,
+buyer_new_asset FLOAT NOT NULL,
+buyer_old_cash FLOAT NOT NULL,
+buyer_new_cash FLOAT NOT NULL,
 FOREIGN KEY (sellerID) REFERENCES Users(floID),
 FOREIGN KEY (buyerID) REFERENCES Users(floID)
 );
@@ -239,19 +243,19 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputFLO', NEW.id) ON DU
 CREATE TRIGGER outputFLO_D AFTER DELETE ON outputFLO
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputFLO', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER inputRupee_I AFTER INSERT ON inputRupee
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputRupee', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER inputRupee_U AFTER UPDATE ON inputRupee
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputRupee', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER inputRupee_D AFTER DELETE ON inputRupee
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputRupee', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER inputToken_I AFTER INSERT ON inputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER inputToken_U AFTER UPDATE ON inputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER inputToken_D AFTER DELETE ON inputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER outputRupee_I AFTER INSERT ON outputRupee
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER outputRupee_U AFTER UPDATE ON outputRupee
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER outputRupee_D AFTER DELETE ON outputRupee
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputRupee', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER outputToken_I AFTER INSERT ON outputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER outputToken_U AFTER UPDATE ON outputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER outputToken_D AFTER DELETE ON outputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER Tags_I AFTER INSERT ON Tags
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
