@@ -67,7 +67,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             checkSellRequirement(floID).then(_ => {
-                DB.query("INSERT INTO SellOrder(floID, quantity, minPrice) VALUES (?, ?, ?)", [floID, quantity, min_price])
+                DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price])
                     .then(result => resolve("Added SellOrder to DB"))
                     .catch(error => reject(error));
             }).catch(error => reject(error))
@@ -100,7 +100,7 @@ function addBuyOrder(floID, asset, quantity, max_price) {
         else if (!allowedAssets.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
-            DB.query("INSERT INTO BuyOrder(floID, quantity, maxPrice) VALUES (?, ?, ?)", [floID, quantity, max_price])
+            DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price])
                 .then(result => resolve("Added BuyOrder to DB"))
                 .catch(error => reject(error));
         }).catch(error => reject(error));
@@ -462,6 +462,7 @@ module.exports = {
         coupling.DB = db;
     },
     set allowedAssets(assets) {
-        allowedAssets = assets;
+        allowedAssets = Object.keys(assets);
+        coupling.assetList = assets;
     }
 };
