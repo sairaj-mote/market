@@ -1052,9 +1052,9 @@
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
-                    await buy(quantity, price, proxy.userID, await proxy.secret)
+                    await buy(quantity, price, proxy.userID, await proxy.secret)    //TODO: asset_name
                 } else {
-                    await sell(quantity, price, proxy.userID, await proxy.secret)
+                    await sell(quantity, price, proxy.userID, await proxy.secret)   //TODO: asset_name
                 }
                 getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
@@ -1197,14 +1197,14 @@
                     if (asset === 'FLO') {
                         await depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     } else {
-                        await depositRupee(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                        await depositToken(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)  //TODO: token_name
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
                         await withdrawFLO(quantity, proxy.userID, proxySecret)
                     } else {
-                        await withdrawRupee(quantity, proxy.userID, proxySecret)
+                        await withdrawToken(quantity, proxy.userID, proxySecret)    //TODO: token_name
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1630,10 +1630,11 @@
 
         let floExchangeRate = 0
         function updateRate() {
-            getRate().then(rate => {
-                floExchangeRate = parseFloat(rate)
-                getRef('flo_rate').textContent = formatAmount(parseFloat(rate))
-                getRef('get_price').value = parseFloat(parseFloat(rate).toFixed(2))
+            getRates().then(rates => {
+                let flo_rate = rates["FLO"];
+                floExchangeRate = parseFloat(flo_rate)
+                getRef('flo_rate').textContent = formatAmount(parseFloat(flo_rate))
+                getRef('get_price').value = parseFloat(parseFloat(flo_rate).toFixed(2))
             }).catch(error => console.error(error))
         }
 

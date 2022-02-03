@@ -151,9 +151,9 @@ function getTransactionList() {
     });
 }
 
-function getRate() {
+function getRates() {
     return new Promise((resolve, reject) => {
-        exchangeAPI('/get-rate')
+        exchangeAPI('/get-rates')
             .then(result => responseParse(result, false)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
@@ -268,7 +268,7 @@ function logout(floID, proxySecret) {
     })
 }
 
-function buy(quantity, max_price, floID, proxySecret) {
+function buy(asset, quantity, max_price, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= 0)
             return reject(`Invalid quantity (${quantity})`);
@@ -276,12 +276,14 @@ function buy(quantity, max_price, floID, proxySecret) {
             return reject(`Invalid max_price (${max_price})`);
         let request = {
             floID: floID,
+            asset: asset,
             quantity: quantity,
             max_price: max_price,
             timestamp: Date.now()
         };
         request.sign = signRequest({
             type: "buy_order",
+            asset: asset,
             quantity: quantity,
             max_price: max_price,
             timestamp: request.timestamp
@@ -302,7 +304,7 @@ function buy(quantity, max_price, floID, proxySecret) {
 
 }
 
-function sell(quantity, min_price, floID, proxySecret) {
+function sell(asset, quantity, min_price, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= 0)
             return reject(`Invalid quantity (${quantity})`);
@@ -310,6 +312,7 @@ function sell(quantity, min_price, floID, proxySecret) {
             return reject(`Invalid min_price (${min_price})`);
         let request = {
             floID: floID,
+            asset: asset,
             quantity: quantity,
             min_price: min_price,
             timestamp: Date.now()
@@ -317,6 +320,7 @@ function sell(quantity, min_price, floID, proxySecret) {
         request.sign = signRequest({
             type: "sell_order",
             quantity: quantity,
+            asset: asset,
             min_price: min_price,
             timestamp: request.timestamp
         }, proxySecret);
@@ -379,7 +383,7 @@ function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
             };
             request.sign = signRequest({
                 type: "deposit_FLO",
-                txid: request.txid,
+                txid: txid,
                 timestamp: request.timestamp
             }, proxySecret);
             console.debug(request);
@@ -407,7 +411,7 @@ function withdrawFLO(quantity, floID, proxySecret) {
         };
         request.sign = signRequest({
             type: "withdraw_FLO",
-            amount: request.amount,
+            amount: quantity,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
@@ -425,24 +429,24 @@ function withdrawFLO(quantity, floID, proxySecret) {
     })
 }
 
-function depositRupee(quantity, floID, sinkID, privKey, proxySecret) {
+function depositToken(token, quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.verifyPrivKey(privKey, floID))
             return reject("Invalid Private Key");
-        tokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market').then(txid => {
+        tokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market', token).then(txid => {
             let request = {
                 floID: floID,
                 txid: txid,
                 timestamp: Date.now()
             };
             request.sign = signRequest({
-                type: "deposit_Rupee",
-                txid: request.txid,
+                type: "deposit_Token",
+                txid: txid,
                 timestamp: request.timestamp
             }, proxySecret);
             console.debug(request);
 
-            exchangeAPI('/deposit-rupee', {
+            exchangeAPI('/deposit-token', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'
@@ -456,21 +460,23 @@ function depositRupee(quantity, floID, sinkID, privKey, proxySecret) {
     })
 }
 
-function withdrawRupee(quantity, floID, proxySecret) {
+function withdrawToken(token, quantity, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         let request = {
             floID: floID,
+            token: token,
             amount: quantity,
             timestamp: Date.now()
         };
         request.sign = signRequest({
-            type: "withdraw_Rupee",
-            amount: request.amount,
+            type: "withdraw_Token",
+            token: token,
+            amount: quantity,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        exchangeAPI('/withdraw-rupee', {
+        exchangeAPI('/withdraw-token', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -493,8 +499,8 @@ function addUserTag(tag_user, tag, floID, proxySecret) {
         };
         request.sign = signRequest({
             command: "add_Tag",
-            user: request.user,
-            tag: request.tag,
+            user: tag_user,
+            tag: tag,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
@@ -522,8 +528,8 @@ function removeUserTag(tag_user, tag, floID, proxySecret) {
         };
         request.sign = signRequest({
             command: "remove_Tag",
-            user: request.user,
-            tag: request.tag,
+            user: tag_user,
+            tag: tag,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);

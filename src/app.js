@@ -72,7 +72,7 @@ module.exports = function App(secret, DB) {
 
     //list all process transactions and rate
     app.get('/list-transactions', Request.ListTransactions);
-    app.get('/get-rate', Request.getRate)
+    app.get('/get-rates', Request.getRates)
 
     //get account details
     app.post('/account', Request.Account);

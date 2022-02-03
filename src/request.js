@@ -268,7 +268,7 @@ function ListTransactions(req, res) {
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
 
-function getRate(req, res) {
+function getRates(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     else
@@ -484,7 +484,7 @@ module.exports = {
     ListSellOrders,
     ListBuyOrders,
     ListTransactions,
-    getRate,
+    getRates,
     Account,
     DepositFLO,
     WithdrawFLO,
