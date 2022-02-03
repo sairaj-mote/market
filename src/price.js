@@ -10,37 +10,41 @@ const MIN_TIME = 10 * 1000, // 1 * 60 * 60 * 1000,
 
 var DB; //container for database
 
-var cur_rate, //container for FLO price (from API or by model)
-    lastTime = Date.now(), //container for timestamp of the last tx
-    noBuyOrder,
-    noSellOrder;
+var cur_rate = {}, //container for FLO price (from API or by model)
+    lastTime = {}, //container for timestamp of the last tx
+    noBuyOrder = {},
+    noSellOrder = {};
 
-const updateLastTime = () => lastTime = Date.now();
+const updateLastTime = asset => lastTime[asset] = Date.now();
 
 //store FLO price in DB every 1 hr
-function storeRate(rate = cur_rate) {
-    DB.query("INSERT INTO priceHistory (rate) VALUE (?)", rate)
+function storeRate(asset, rate) {
+    DB.query("INSERT INTO priceHistory (asset, rate) VALUE (?, ?)", [asset, rate])
         .then(_ => null).catch(error => console.error(error))
 }
-setInterval(storeRate, REC_HISTORY_INTERVAL)
+setInterval(() => {
+    for (let asset in cur_rate)
+        storeRate(asset, cur_rate[asset]);
+}, REC_HISTORY_INTERVAL)
 
-function getPastRate(hrs = 24) {
+function getPastRate(asset, hrs = 24) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT rate FROM priceHistory WHERE rec_time >= NOW() - INTERVAL ? hour ORDER BY rec_time LIMIT 1", [hrs])
+        DB.query("SELECT rate FROM priceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? hour ORDER BY rec_time LIMIT 1", [asset, hrs])
             .then(result => result.length ? resolve(result[0].rate) : reject('No records found in past 24hrs'))
             .catch(error => reject(error))
     });
 }
 
-function loadRate() {
+function loadRate(asset) {
     return new Promise((resolve, reject) => {
-        if (typeof cur_rate !== "undefined")
-            return resolve(cur_rate);
-        DB.query("SELECT rate FROM priceHistory ORDER BY rec_time DESC LIMIT 1").then(result => {
+        if (typeof cur_rate[asset] !== "undefined")
+            return resolve(cur_rate[asset]);
+        updateLastTime(asset);
+        DB.query("SELECT rate FROM priceHistory WHERE asset=? ORDER BY rec_time DESC LIMIT 1", [asset]).then(result => {
             if (result.length)
-                resolve(cur_rate = result[0].rate);
+                resolve(cur_rate[asset] = result[0].rate);
             else
-                fetchRates().then(rate => resolve(cur_rate = rate)).catch(error => reject(error));
+                fetchRates().then(rate => resolve(cur_rate[asset] = rate)).catch(error => reject(error));
         }).catch(error => reject(error));
     })
 }
@@ -84,50 +88,50 @@ fetchRates.USD_INR = function() {
     });
 }
 
-function getRates() {
+function getRates(asset) {
     return new Promise((resolve, reject) => {
-        loadRate().then(_ => {
-            console.debug(cur_rate);
+        loadRate(asset).then(_ => {
+            console.debug(cur_rate[asset]);
             let cur_time = Date.now();
-            if (cur_time - lastTime < MIN_TIME) //Minimum time to update not crossed: No update required
-                resolve(cur_rate);
-            else if (noBuyOrder && noSellOrder) //Both are not available: No update required
-                resolve(cur_rate);
-            else if (noBuyOrder === null || noSellOrder === null) //An error has occured during last process: No update (might cause price to crash/jump)
-                resolve(cur_rate);
+            if (cur_time - lastTime[asset] < MIN_TIME) //Minimum time to update not crossed: No update required
+                resolve(cur_rate[asset]);
+            else if (noBuyOrder[asset] && noSellOrder[asset]) //Both are not available: No update required
+                resolve(cur_rate[asset]);
+            else if (noBuyOrder[asset] === null || noSellOrder[asset] === null) //An error has occured during last process: No update (might cause price to crash/jump)
+                resolve(cur_rate[asset]);
             else
-                getPastRate().then(ratePast24hr => {
-                    if (noBuyOrder) {
+                getPastRate(asset).then(ratePast24hr => {
+                    if (noBuyOrder[asset]) {
                         //No Buy, But Sell available: Decrease the price
-                        let tmp_val = cur_rate * (1 - DOWN_RATE);
+                        let tmp_val = cur_rate[asset] * (1 - DOWN_RATE);
                         if (tmp_val >= ratePast24hr * (1 - MAX_DOWN_PER_DAY)) {
-                            cur_rate = tmp_val;
-                            updateLastTime();
+                            cur_rate[asset] = tmp_val;
+                            updateLastTime(asset);
                         } else
                             console.debug("Max Price down for the day has reached");
-                        resolve(cur_rate);
-                    } else if (noSellOrder) {
+                        resolve(cur_rate[asset]);
+                    } else if (noSellOrder[asset]) {
                         //No Sell, But Buy available: Increase the price
                         checkForRatedSellers().then(result => {
                             if (result) {
-                                let tmp_val = cur_rate * (1 + UP_RATE);
+                                let tmp_val = cur_rate[asset] * (1 + UP_RATE);
                                 if (tmp_val <= ratePast24hr * (1 + MAX_UP_PER_DAY)) {
-                                    cur_rate = tmp_val;
-                                    updateLastTime();
+                                    cur_rate[asset] = tmp_val;
+                                    updateLastTime(asset);
                                 } else
                                     console.debug("Max Price up for the day has reached");
                             }
-                        }).catch(error => console.error(error)).finally(_ => resolve(cur_rate));
+                        }).catch(error => console.error(error)).finally(_ => resolve(cur_rate[asset]));
                     }
                 }).catch(error => {
                     console.error(error);
-                    resolve(cur_rate);
+                    resolve(cur_rate[asset]);
                 });
         }).catch(error => reject(error));
     })
 }
 
-function checkForRatedSellers() {
+function checkForRatedSellers(asset) {
     //Check if there are best rated sellers?
     return new Promise((resolve, reject) => {
         DB.query("SELECT MAX(sellPriority) as max_p FROM TagList").then(result => {
@@ -144,14 +148,14 @@ function checkForRatedSellers() {
 module.exports = {
     getRates,
     updateLastTime,
-    noOrder(buy, sell) {
-        noBuyOrder = buy;
-        noSellOrder = sell;
+    noOrder(asset, buy, sell) {
+        noBuyOrder[asset] = buy;
+        noSellOrder[asset] = sell;
     },
     set DB(db) {
         DB = db;
     },
-    get currentRate() {
-        return cur_rate
+    get currentRates() {
+        return Object.assign({}, cur_rate);
     }
 }

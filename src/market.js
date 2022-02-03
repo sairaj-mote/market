@@ -444,8 +444,8 @@ function blockchainReCheck() {
 }
 
 module.exports = {
-    get rate() {
-        return coupling.price.currentRate;
+    get rates() {
+        return coupling.price.currentRates;
     },
     addBuyOrder,
     addSellOrder,
