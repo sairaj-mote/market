@@ -35,7 +35,7 @@
                 }).catch(error => reject(error))
             })
         },
-        sendToken: function(privKey, amount, message = "", receiverID = floGlobals.adminID, token = floGlobals.currency) {
+        sendToken: function(privKey, amount, receiverID, message = "", token = floGlobals.currency) {
             return new Promise((resolve, reject) => {
                 let senderID = floCrypto.getFloID(privKey);
                 if (typeof amount !== "number" || amount <= 0)

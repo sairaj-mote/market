@@ -30,7 +30,7 @@ function validateRequestFromFloID(request, sign, floID, proxy = true) {
             return reject(INVALID(INVALID_SERVER_MSG));
         else if (!floCrypto.validateAddr(floID))
             return reject(INVALID("Invalid floID"));
-        DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
+        DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM UserSession" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
             if (proxy && result[0].session_time + maxSessionTimeout < Date.now())
@@ -113,7 +113,7 @@ function Login(req, res) {
         proxyKey: data.proxyKey,
         timestamp: data.timestamp
     }, data.sign, data.floID, false).then(req_str => {
-        DB.query("INSERT INTO Sessions (floID, proxyKey) VALUE (?, ?) AS new " +
+        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?, ?) AS new " +
             "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=new.proxyKey",
             [data.floID, data.proxyKey]).then(_ => {
             storeRequest(data.floID, req_str, data.sign);
@@ -138,7 +138,7 @@ function Logout(req, res) {
         type: "logout",
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        DB.query("DELETE FROM Sessions WHERE floID=?", [data.floID]).then(_ => {
+        DB.query("DELETE FROM UserSession WHERE floID=?", [data.floID]).then(_ => {
             storeRequest(data.floID, req_str, data.sign);
             res.send('Logout successful');
         }).catch(error => {
@@ -263,7 +263,7 @@ function ListBuyOrders(req, res) {
 
 function ListTransactions(req, res) {
     //TODO: Limit size (recent)
-    DB.query("SELECT * FROM Transactions ORDER BY tx_time DESC")
+    DB.query("SELECT * FROM TransactionHistory ORDER BY tx_time DESC")
         .then(result => res.send(result))
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
@@ -495,6 +495,9 @@ module.exports = {
     removeUserTag,
     set trustedIDs(ids) {
         trustedIDs = ids;
+    },
+    set assetList(assets){
+        market.assetList = assets;
     },
     set DB(db) {
         DB = db;

@@ -19,7 +19,7 @@ const updateLastTime = asset => lastTime[asset] = Date.now();
 
 //store FLO price in DB every 1 hr
 function storeRate(asset, rate) {
-    DB.query("INSERT INTO priceHistory (asset, rate) VALUE (?, ?)", [asset, rate])
+    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?, ?)", [asset, rate])
         .then(_ => null).catch(error => console.error(error))
 }
 setInterval(() => {
@@ -29,7 +29,7 @@ setInterval(() => {
 
 function getPastRate(asset, hrs = 24) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT rate FROM priceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? hour ORDER BY rec_time LIMIT 1", [asset, hrs])
+        DB.query("SELECT rate FROM PriceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? hour ORDER BY rec_time LIMIT 1", [asset, hrs])
             .then(result => result.length ? resolve(result[0].rate) : reject('No records found in past 24hrs'))
             .catch(error => reject(error))
     });
@@ -40,15 +40,18 @@ function loadRate(asset) {
         if (typeof cur_rate[asset] !== "undefined")
             return resolve(cur_rate[asset]);
         updateLastTime(asset);
-        DB.query("SELECT rate FROM priceHistory WHERE asset=? ORDER BY rec_time DESC LIMIT 1", [asset]).then(result => {
+        DB.query("SELECT rate FROM PriceHistory WHERE asset=? ORDER BY rec_time DESC LIMIT 1", [asset]).then(result => {
             if (result.length)
                 resolve(cur_rate[asset] = result[0].rate);
             else
-                fetchRates().then(rate => resolve(cur_rate[asset] = rate)).catch(error => reject(error));
+                DB.query("SELECT initialPrice FROM AssetList WHERE asset=?", [asset])
+                .then(result => resolve(result[0].initialPrice))
+                .catch(error => reject(error))
         }).catch(error => reject(error));
     })
 }
 
+/*
 function fetchRates() {
     return new Promise((resolve, reject) => {
         fetchRates.FLO_USD().then(FLO_rate => {
@@ -87,6 +90,7 @@ fetchRates.USD_INR = function() {
         }).catch(error => reject(error));
     });
 }
+*/
 
 function getRates(asset) {
     return new Promise((resolve, reject) => {
@@ -137,7 +141,7 @@ function checkForRatedSellers(asset) {
         DB.query("SELECT MAX(sellPriority) as max_p FROM TagList").then(result => {
             let ratedMin = result[0].max_p * (1 - TOP_RANGE);
             DB.query("SELECT COUNT(*) as value FROM SellOrder WHERE floID IN (" +
-                " SELECT Tags.floID FROM Tags INNER JOIN TagList ON Tags.tag = TagList.tag" +
+                " SELECT UserTag.floID FROM UserTag INNER JOIN TagList ON UserTag.tag = TagList.tag" +
                 " WHERE TagList.sellPriority > ?)", [ratedMin]).then(result => {
                 resolve(result[0].value > 0);
             }).catch(error => reject(error))

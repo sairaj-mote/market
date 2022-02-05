@@ -1,208 +1,224 @@
-/* Main Tables */
+/* Blockchain Data */
 
-CREATE TABLE Users (
-floID CHAR(34) NOT NULL,
-pubKey CHAR(66) NOT NULL,
-created DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY(floID)
+CREATE TABLE LastTx(
+    floID CHAR(34) NOT NULL,
+    num INT,
+    PRIMARY KEY(floID)
 );
 
-CREATE TABLE Sessions (
-id INT NOT NULL AUTO_INCREMENT,
-floID CHAR(34) NOT NULL,
-proxyKey CHAR(66) NOT NULL,
-session_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-KEY (id),
-PRIMARY KEY(floID),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE Request_Log(
-floID CHAR(34) NOT NULL,
-request TEXT NOT NULL,
-sign TEXT NOT NULL,
-request_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE Cash (
-id INT NOT NULL AUTO_INCREMENT,
-floID CHAR(34) NOT NULL UNIQUE,
-balance DECIMAL(12, 2) DEFAULT 0.00,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE Vault (
-id INT NOT NULL AUTO_INCREMENT,
-floID CHAR(34) NOT NULL,
-locktime DATETIME DEFAULT CURRENT_TIMESTAMP,
-asset VARCHAR(64) NOT NULL,
-base DECIMAL(10, 2),
-quantity FLOAT NOT NULL,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE SellOrder (
-id INT NOT NULL AUTO_INCREMENT,
-floID CHAR(34) NOT NULL,
-asset VARCHAR(64) NOT NULL,
-quantity FLOAT NOT NULL,
-minPrice DECIMAL(10, 2),
-time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE BuyOrder (
-id INT NOT NULL AUTO_INCREMENT,
-floID CHAR(34) NOT NULL,
-asset VARCHAR(64) NOT NULL,
-quantity FLOAT NOT NULL,
-maxPrice DECIMAL(10, 2) NOT NULL,
-time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE Transactions (
-seller CHAR(34) NOT NULL,
-buyer CHAR(34) NOT NULL,
-asset VARCHAR(64) NOT NULL,
-quantity FLOAT NOT NULL,
-unitValue DECIMAL(10, 2) NOT NULL,
-tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (buyer) REFERENCES Users(floID),
-FOREIGN KEY (seller) REFERENCES Users(floID)
-);
-
-CREATE TABLE inputFLO (
-id INT NOT NULL AUTO_INCREMENT,
-txid VARCHAR(128) NOT NULL,
-floID CHAR(34) NOT NULL,
-amount FLOAT,
-status VARCHAR(50) NOT NULL,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE outputFLO (
-id INT NOT NULL AUTO_INCREMENT,
-txid VARCHAR(128),
-floID CHAR(34) NOT NULL,
-amount FLOAT NOT NULL,
-status VARCHAR(50) NOT NULL,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE inputToken (
-id INT NOT NULL AUTO_INCREMENT,
-txid VARCHAR(128) NOT NULL,
-floID CHAR(34) NOT NULL,
-token VARCHAR(64),
-amount FLOAT,
-status VARCHAR(50) NOT NULL,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE outputToken (
-id INT NOT NULL AUTO_INCREMENT,
-txid VARCHAR(128),
-floID CHAR(34) NOT NULL,
-token VARCHAR(64),
-amount FLOAT NOT NULL,
-status VARCHAR(50) NOT NULL,
-PRIMARY KEY(id),
-FOREIGN KEY (floID) REFERENCES Users(floID)
-);
-
-CREATE TABLE lastTx(
-floID CHAR(34) NOT NULL,
-num INT,
-PRIMARY KEY(floID)
-);
-
-CREATE TABLE nodeList(
-floID CHAR(34) NOT NULL, 
-uri TINYTEXT,
-PRIMARY KEY(floID)
-);
-
-CREATE TABLE trustedList(
-floID CHAR(34) NOT NULL,
-PRIMARY KEY(floID),
-FOREIGN KEY (floID) REFERENCES Users(floID)
+CREATE TABLE NodeList(
+    floID CHAR(34) NOT NULL, 
+    uri TINYTEXT,
+    PRIMARY KEY(floID)
 );
 
 CREATE TABLE TagList (
-tag VARCHAR(50) NOT NULL,
-sellPriority INT,
-buyPriority INT,
-api TINYTEXT,
-PRIMARY KEY(tag)
+    tag VARCHAR(50) NOT NULL,
+    sellPriority INT,
+    buyPriority INT,
+    api TINYTEXT,
+    PRIMARY KEY(tag)
 );
 
-CREATE TABLE Tags (
-id INT NOT NULL AUTO_INCREMENT,
-floID CHAR(34) NOT NULL,
-tag VARCHAR(50) NOT NULL,
-PRIMARY KEY(floID, tag),
-KEY (id),
-FOREIGN KEY (floID) REFERENCES Users(floID),
-FOREIGN KEY (tag) REFERENCES TagList(tag)
+CREATE TABLE AssetList (
+    asset VARCHAR(64) NOT NULL,
+    initialPrice FLOAT,
+    PRIMARY KEY(asset)
 );
 
-CREATE TABLE priceHistory (
-rate FLOAT NOT NULL,
-rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE TrustedList(
+    floID CHAR(34) NOT NULL,
+    PRIMARY KEY(floID)
 );
 
-CREATE TABLE auditTransaction(
-rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-unit_price FLOAT NOT NULL,
-quantity FLOAT NOT NULL,
-total_cost FLOAT NOT NULL,
-asset VARCHAR(64) NOT NULL,
-sellerID CHAR(34) NOT NULL,
-seller_old_asset FLOAT NOT NULL,
-seller_new_asset FLOAT NOT NULL,
-seller_old_cash FLOAT NOT NULL,
-seller_new_cash FLOAT NOT NULL,
-buyerID CHAR(34) NOT NULL,
-buyer_old_asset FLOAT NOT NULL,
-buyer_new_asset FLOAT NOT NULL,
-buyer_old_cash FLOAT NOT NULL,
-buyer_new_cash FLOAT NOT NULL,
-FOREIGN KEY (sellerID) REFERENCES Users(floID),
-FOREIGN KEY (buyerID) REFERENCES Users(floID)
+/* User Data */
+
+CREATE TABLE Users (
+    floID CHAR(34) NOT NULL,
+    pubKey CHAR(66) NOT NULL,
+    created DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(floID)
+);
+
+CREATE TABLE UserSession (
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    proxyKey CHAR(66) NOT NULL,
+    session_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY (id),
+    PRIMARY KEY(floID),
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+CREATE TABLE Cash (
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL UNIQUE,
+    balance DECIMAL(12, 2) DEFAULT 0.00,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+CREATE TABLE Vault (
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    locktime DATETIME DEFAULT CURRENT_TIMESTAMP,
+    asset VARCHAR(64) NOT NULL,
+    base DECIMAL(10, 2),
+    quantity FLOAT NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID),
+    FOREIGN KEY (asset) REFERENCES Users(asset)
+);
+
+CREATE TABLE UserTag (
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    tag VARCHAR(50) NOT NULL,
+    PRIMARY KEY(floID, tag),
+    KEY (id),
+    FOREIGN KEY (floID) REFERENCES Users(floID),
+    FOREIGN KEY (tag) REFERENCES TagList(tag)
+);
+
+/* User Requests */
+
+CREATE TABLE Request_Log(
+    floID CHAR(34) NOT NULL,
+    request TEXT NOT NULL,
+    sign TEXT NOT NULL,
+    request_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+CREATE TABLE SellOrder (
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    asset VARCHAR(64) NOT NULL,
+    quantity FLOAT NOT NULL,
+    minPrice DECIMAL(10, 2),
+    time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID),
+    FOREIGN KEY (asset) REFERENCES Users(asset)
+);
+
+CREATE TABLE BuyOrder (
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    asset VARCHAR(64) NOT NULL,
+    quantity FLOAT NOT NULL,
+    maxPrice DECIMAL(10, 2) NOT NULL,
+    time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID),
+    FOREIGN KEY (asset) REFERENCES Users(asset)
+);
+
+CREATE TABLE InputFLO (
+    id INT NOT NULL AUTO_INCREMENT,
+    txid VARCHAR(128) NOT NULL,
+    floID CHAR(34) NOT NULL,
+    amount FLOAT,
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+CREATE TABLE OutputFLO (
+    id INT NOT NULL AUTO_INCREMENT,
+    txid VARCHAR(128),
+    floID CHAR(34) NOT NULL,
+    amount FLOAT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+CREATE TABLE InputToken (
+    id INT NOT NULL AUTO_INCREMENT,
+    txid VARCHAR(128) NOT NULL,
+    floID CHAR(34) NOT NULL,
+    token VARCHAR(64),
+    amount FLOAT,
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+CREATE TABLE OutputToken (
+    id INT NOT NULL AUTO_INCREMENT,
+    txid VARCHAR(128),
+    floID CHAR(34) NOT NULL,
+    token VARCHAR(64),
+    amount FLOAT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id),
+    FOREIGN KEY (floID) REFERENCES Users(floID)
+);
+
+/* Transaction Data */
+
+CREATE TABLE PriceHistory (
+    rate FLOAT NOT NULL,
+    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE TransactionHistory (
+    seller CHAR(34) NOT NULL,
+    buyer CHAR(34) NOT NULL,
+    asset VARCHAR(64) NOT NULL,
+    quantity FLOAT NOT NULL,
+    unitValue DECIMAL(10, 2) NOT NULL,
+    tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (buyer) REFERENCES Users(floID),
+    FOREIGN KEY (seller) REFERENCES Users(floID),
+    FOREIGN KEY (asset) REFERENCES Users(asset)
+);
+
+CREATE TABLE AuditTransaction(
+    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    unit_price FLOAT NOT NULL,
+    quantity FLOAT NOT NULL,
+    total_cost FLOAT NOT NULL,
+    asset VARCHAR(64) NOT NULL,
+    sellerID CHAR(34) NOT NULL,
+    seller_old_asset FLOAT NOT NULL,
+    seller_new_asset FLOAT NOT NULL,
+    seller_old_cash FLOAT NOT NULL,
+    seller_new_cash FLOAT NOT NULL,
+    buyerID CHAR(34) NOT NULL,
+    buyer_old_asset FLOAT NOT NULL,
+    buyer_new_asset FLOAT NOT NULL,
+    buyer_old_cash FLOAT NOT NULL,
+    buyer_new_cash FLOAT NOT NULL,
+    FOREIGN KEY (sellerID) REFERENCES Users(floID),
+    FOREIGN KEY (buyerID) REFERENCES Users(floID),
+    FOREIGN KEY (asset) REFERENCES Users(asset)
+);
+
+/* Backup Feature (Tables & Triggers) */
+
+CREATE TABLE _backup (
+    t_name VARCHAR(20),
+    id INT,
+    mode BOOLEAN DEFAULT TRUE,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(t_name, id)
 );
 
 CREATE TABLE sinkShares(
-floID CHAR(34) NOT NULL,
-share TEXT,
-time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY(floID)
+    floID CHAR(34) NOT NULL,
+    share TEXT,
+    time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(floID)
 );
 
-/* Backup feature (Table and Triggers) */
-
-CREATE TABLE _backup (
-t_name VARCHAR(20),
-id INT,
-mode BOOLEAN DEFAULT TRUE,
-timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY(t_name, id)
-);
-
-CREATE TRIGGER Sessions_I AFTER INSERT ON Sessions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Sessions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Sessions_U AFTER UPDATE ON Sessions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Sessions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Sessions_D AFTER DELETE ON Sessions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Sessions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER UserSession_I AFTER INSERT ON UserSession
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER UserSession_U AFTER UPDATE ON UserSession
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER UserSession_D AFTER DELETE ON UserSession
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER Cash_I AFTER INSERT ON Cash
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Cash', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
@@ -232,37 +248,37 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUP
 CREATE TRIGGER BuyOrder_D AFTER DELETE ON BuyOrder
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER inputFLO_I AFTER INSERT ON inputFLO
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER inputFLO_U AFTER UPDATE ON inputFLO
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER inputFLO_D AFTER DELETE ON inputFLO
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputFLO', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER InputFLO_I AFTER INSERT ON InputFLO
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER InputFLO_U AFTER UPDATE ON InputFLO
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER InputFLO_D AFTER DELETE ON InputFLO
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputFLO', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER outputFLO_I AFTER INSERT ON outputFLO
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER outputFLO_U AFTER UPDATE ON outputFLO
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER outputFLO_D AFTER DELETE ON outputFLO
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputFLO', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER OutputFLO_I AFTER INSERT ON OutputFLO
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER OutputFLO_U AFTER UPDATE ON OutputFLO
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputFLO', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER OutputFLO_D AFTER DELETE ON OutputFLO
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputFLO', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER inputToken_I AFTER INSERT ON inputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER inputToken_U AFTER UPDATE ON inputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER inputToken_D AFTER DELETE ON inputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('inputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER InputToken_I AFTER INSERT ON InputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER InputToken_U AFTER UPDATE ON InputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER InputToken_D AFTER DELETE ON InputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER outputToken_I AFTER INSERT ON outputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER outputToken_U AFTER UPDATE ON outputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER outputToken_D AFTER DELETE ON outputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('outputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER OutputToken_I AFTER INSERT ON OutputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER OutputToken_U AFTER UPDATE ON OutputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER OutputToken_D AFTER DELETE ON OutputToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER Tags_I AFTER INSERT ON Tags
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Tags_U AFTER UPDATE ON Tags
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Tags_D AFTER DELETE ON Tags
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Tags', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER UserTag_I AFTER INSERT ON UserTag
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER UserTag_U AFTER UPDATE ON UserTag
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER UserTag_D AFTER DELETE ON UserTag
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;

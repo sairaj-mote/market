@@ -108,6 +108,10 @@ module.exports = function App(secret, DB) {
         set: (ids) => Request.trustedIDs = ids
     });
 
+    Object.defineProperty(self, "assetList", {
+        set: (assets) => Request.assetList = assets
+    });
+
     //Start (or) Stop servers
     self.start = (port) => new Promise(resolve => {
         server = app.listen(port, () => {

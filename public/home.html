@@ -1631,6 +1631,7 @@
         let floExchangeRate = 0
         function updateRate() {
             getRates().then(rates => {
+                console.debug(rates);
                 let flo_rate = rates["FLO"];
                 floExchangeRate = parseFloat(flo_rate)
                 getRef('flo_rate').textContent = formatAmount(parseFloat(flo_rate))

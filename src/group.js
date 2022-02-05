@@ -4,7 +4,7 @@ var DB; //container for database
 
 function addTag(floID, tag) {
     return new Promise((resolve, reject) => {
-        DB.query("INSERT INTO Tags (floID, tag) VALUE (?,?)", [floID, tag])
+        DB.query("INSERT INTO UserTag (floID, tag) VALUE (?,?)", [floID, tag])
             .then(result => resolve(`Added ${floID} to ${tag}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
@@ -19,7 +19,7 @@ function addTag(floID, tag) {
 
 function removeTag(floID, tag) {
     return new Promise((resolve, reject) => {
-        DB.query("DELETE FROM Tags WHERE floID=? AND tag=?", [floID, tag])
+        DB.query("DELETE FROM UserTag WHERE floID=? AND tag=?", [floID, tag])
             .then(result => resolve(`Removed ${floID} from ${tag}`))
             .catch(error => reject(error));
     })
@@ -206,8 +206,8 @@ const bestPair = function(asset, cur_rate, tags_buy, tags_sell) {
 function getUntaggedSellOrders(asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
-                " LEFT JOIN Tags ON Tags.floID = SellOrder.floID" +
-                " WHERE Tags.floID IS NULL AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
+                " LEFT JOIN UserTag ON UserTag.floID = SellOrder.floID" +
+                " WHERE UserTag.floID IS NULL AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
                 " ORDER BY SellOrder.time_placed DESC", [asset, cur_price])
             .then(orders => resolve(orders))
             .catch(error => reject(error))
@@ -217,8 +217,8 @@ function getUntaggedSellOrders(asset, cur_price) {
 function getUntaggedBuyOrders(asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
-                " LEFT JOIN Tags ON Tags.floID = BuyOrder.floID" +
-                " WHERE Tags.floID IS NULL AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=? " +
+                " LEFT JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
+                " WHERE UserTag.floID IS NULL AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=? " +
                 " ORDER BY BuyOrder.time_placed DESC", [asset, cur_price])
             .then(orders => resolve(orders))
             .catch(error => reject(error))
@@ -228,8 +228,8 @@ function getUntaggedBuyOrders(asset, cur_price) {
 function getSellOrdersInTag(tag, asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
-            " INNER JOIN Tags ON Tags.floID = SellOrder.floID" +
-            " WHERE Tags.tag = ? AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
+            " INNER JOIN UserTag ON UserTag.floID = SellOrder.floID" +
+            " WHERE UserTag.tag = ? AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
             " ORDER BY SellOrder.time_placed DESC", [tag, asset, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);
@@ -247,8 +247,8 @@ function getSellOrdersInTag(tag, asset, cur_price) {
 function getBuyOrdersInTag(tag, asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
-            " INNER JOIN Tags ON Tags.floID = BuyOrder.floID" +
-            " WHERE Tags.tag = ? AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=?" +
+            " INNER JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
+            " WHERE UserTag.tag = ? AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=?" +
             " ORDER BY BuyOrder.time_placed DESC", [tag, asset, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);

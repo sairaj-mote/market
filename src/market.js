@@ -3,7 +3,7 @@
 const coupling = require('./coupling');
 const MINIMUM_BUY_REQUIREMENT = 0.1;
 
-var DB, allowedAssets; //container for database and allowed assets
+var DB, assetList; //container for database and allowed assets
 
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
     let promises = (asset === floGlobals.currency) ? [
@@ -63,7 +63,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof min_price !== "number" || min_price <= 0)
             return reject(INVALID(`Invalid min_price (${min_price})`));
-        else if (!allowedAssets.includes(asset))
+        else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             checkSellRequirement(floID).then(_ => {
@@ -76,11 +76,11 @@ function addSellOrder(floID, asset, quantity, min_price) {
 }
 
 const checkSellRequirement = floID => new Promise((resolve, reject) => {
-    DB.query("SELECT * FROM Tags WHERE floID=? AND tag=?", [floID, "MINER"]).then(result => {
+    DB.query("SELECT * FROM UserTag WHERE floID=? AND tag=?", [floID, "MINER"]).then(result => {
         if (result.length)
             return resolve(true);
         //TODO: Should seller need to buy same type of asset before selling?
-        DB.query("SELECT SUM(quantity) AS brought FROM Transactions WHERE buyer=?", [floID]).then(result => {
+        DB.query("SELECT SUM(quantity) AS brought FROM TransactionHistory WHERE buyer=?", [floID]).then(result => {
             if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
                 resolve(true);
             else
@@ -97,7 +97,7 @@ function addBuyOrder(floID, asset, quantity, max_price) {
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof max_price !== "number" || max_price <= 0)
             return reject(INVALID(`Invalid max_price (${max_price})`));
-        else if (!allowedAssets.includes(asset))
+        else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price])
@@ -163,7 +163,7 @@ function getAccountDetails(floID) {
                             break;
                     }
             });
-            DB.query("SELECT * FROM Transactions WHERE seller=? OR buyer=?", [floID, floID])
+            DB.query("SELECT * FROM TransactionHistory WHERE seller=? OR buyer=?", [floID, floID])
                 .then(result => response.transactions = result)
                 .catch(error => console.error(error))
                 .finally(_ => resolve(response));
@@ -173,7 +173,7 @@ function getAccountDetails(floID) {
 
 function depositFLO(floID, txid) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM inputFLO WHERE txid=? AND floID=?", [txid, floID]).then(result => {
+        DB.query("SELECT status FROM InputFLO WHERE txid=? AND floID=?", [txid, floID]).then(result => {
             if (result.length) {
                 switch (result[0].status) {
                     case "PENDING":
@@ -184,7 +184,7 @@ function depositFLO(floID, txid) {
                         return reject(INVALID("Transaction already used to add coins"));
                 }
             } else
-                DB.query("INSERT INTO inputFLO(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
+                DB.query("INSERT INTO InputFLO(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
                 .then(result => resolve("Deposit request in process"))
                 .catch(error => reject(error));
         }).catch(error => reject(error))
@@ -192,19 +192,19 @@ function depositFLO(floID, txid) {
 }
 
 function confirmDepositFLO() {
-    DB.query("SELECT id, floID, txid FROM inputFLO WHERE status=?", ["PENDING"]).then(results => {
+    DB.query("SELECT id, floID, txid FROM InputFLO WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
             confirmDepositFLO.checkTx(req.floID, req.txid).then(amount => {
                 let txQueries = [];
                 txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [req.floID, amount]]);
-                txQueries.push(["UPDATE inputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
+                txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
                 DB.transaction(txQueries)
                     .then(result => console.debug("FLO deposited:", req.floID, amount))
                     .catch(error => console.error(error))
             }).catch(error => {
                 console.error(error);
                 if (error[0])
-                    DB.query("UPDATE inputFLO SET status=? WHERE id=?", ["REJECTED", req.id])
+                    DB.query("UPDATE InputFLO SET status=? WHERE id=?", ["REJECTED", req.id])
                     .then(_ => null).catch(error => console.error(error));
             });
         })
@@ -247,12 +247,12 @@ function withdrawFLO(floID, amount) {
                         if (!txid)
                             throw Error("Transaction not successful");
                         //Transaction was successful, Add in DB
-                        DB.query("INSERT INTO outputFLO (floID, amount, txid, status) VALUES (?, ?, ?, ?)", [floID, amount, txid, "WAITING_CONFIRMATION"])
+                        DB.query("INSERT INTO OutputFLO (floID, amount, txid, status) VALUES (?, ?, ?, ?)", [floID, amount, txid, "WAITING_CONFIRMATION"])
                             .then(_ => null).catch(error => console.error(error))
                             .finally(_ => resolve("Withdrawal was successful"));
                     }).catch(error => {
                         console.debug(error);
-                        DB.query("INSERT INTO outputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
+                        DB.query("INSERT INTO OutputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
                             .then(_ => null).catch(error => console.error(error))
                             .finally(_ => resolve("Withdrawal request is in process"));
                     });
@@ -263,13 +263,13 @@ function withdrawFLO(floID, amount) {
 }
 
 function retryWithdrawalFLO() {
-    DB.query("SELECT id, floID, amount FROM outputFLO WHERE status=?", ["PENDING"]).then(results => {
+    DB.query("SELECT id, floID, amount FROM OutputFLO WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
             floBlockchainAPI.sendTx(global.myFloID, req.floID, req.amount, global.myPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
-                DB.query("UPDATE outputFLO SET status=? WHERE id=?", ["WAITING_CONFIRMATION", req.id])
+                DB.query("UPDATE OutputFLO SET status=? WHERE id=?", ["WAITING_CONFIRMATION", req.id])
                     .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error));
         })
@@ -277,12 +277,12 @@ function retryWithdrawalFLO() {
 }
 
 function confirmWithdrawalFLO() {
-    DB.query("SELECT id, floID, amount, txid FROM outputFLO WHERE status=?", ["WAITING_CONFIRMATION"]).then(results => {
+    DB.query("SELECT id, floID, amount, txid FROM OutputFLO WHERE status=?", ["WAITING_CONFIRMATION"]).then(results => {
         results.forEach(req => {
             floBlockchainAPI.getTx(req.txid).then(tx => {
                 if (!tx.blockheight || !tx.confirmations) //Still not confirmed
                     return;
-                DB.query("UPDATE outputFLO SET status=? WHERE id=?", ["SUCCESS", req.id])
+                DB.query("UPDATE OutputFLO SET status=? WHERE id=?", ["SUCCESS", req.id])
                     .then(result => console.debug("FLO withdrawed:", req.floID, req.amount))
                     .catch(error => console.error(error))
             }).catch(error => console.error(error));
@@ -292,7 +292,7 @@ function confirmWithdrawalFLO() {
 
 function depositToken(floID, txid) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM inputToken WHERE txid=? AND floID=?", [txid, floID]).then(result => {
+        DB.query("SELECT status FROM InputToken WHERE txid=? AND floID=?", [txid, floID]).then(result => {
             if (result.length) {
                 switch (result[0].status) {
                     case "PENDING":
@@ -303,7 +303,7 @@ function depositToken(floID, txid) {
                         return reject(INVALID("Transaction already used to add tokens"));
                 }
             } else
-                DB.query("INSERT INTO inputToken(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
+                DB.query("INSERT INTO InputToken(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
                 .then(result => resolve("Deposit request in process"))
                 .catch(error => reject(error));
         }).catch(error => reject(error))
@@ -311,10 +311,10 @@ function depositToken(floID, txid) {
 }
 
 function confirmDepositToken() {
-    DB.query("SELECT id, floID, txid FROM inputToken WHERE status=?", ["PENDING"]).then(results => {
+    DB.query("SELECT id, floID, txid FROM InputToken WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
             confirmDepositToken.checkTx(req.floID, req.txid).then(amounts => {
-                DB.query("SELECT id FROM inputFLO where floID=? AND txid=?", [req.floID, req.txid]).then(result => {
+                DB.query("SELECT id FROM InputFLO where floID=? AND txid=?", [req.floID, req.txid]).then(result => {
                     let txQueries = [],
                         token_name = amounts[0],
                         amount_token = amounts[1];
@@ -322,9 +322,9 @@ function confirmDepositToken() {
                     if (!result.length) {
                         let amount_flo = amounts[2];
                         txQueries.push(["INSERT INTO Vault(floID, asset, quantity) VALUES (?, ?, ?)", [req.floID, "FLO", amount_flo]]);
-                        txQueries.push(["INSERT INTO inputFLO(txid, floID, amount, status) VALUES (?, ?, ?, ?)", [req.txid, req.floID, amount_flo, "SUCCESS"]]);
+                        txQueries.push(["INSERT INTO InputFLO(txid, floID, amount, status) VALUES (?, ?, ?, ?)", [req.txid, req.floID, amount_flo, "SUCCESS"]]);
                     }
-                    txQueries.push(["UPDATE inputToken SET status=?, token=?, amount=? WHERE id=?", ["SUCCESS", token_name, amount_token, req.id]]);
+                    txQueries.push(["UPDATE InputToken SET status=?, token=?, amount=? WHERE id=?", ["SUCCESS", token_name, amount_token, req.id]]);
                     if (token_name === floGlobals.currency)
                         txQueries.push(["UPDATE Cash SET balance=balance+? WHERE floID=?", [amount_token, req.floID]]);
                     else
@@ -336,7 +336,7 @@ function confirmDepositToken() {
             }).catch(error => {
                 console.error(error);
                 if (error[0])
-                    DB.query("UPDATE inputToken SET status=? WHERE id=?", ["REJECTED", req.id])
+                    DB.query("UPDATE InputToken SET status=? WHERE id=?", ["REJECTED", req.id])
                     .then(_ => null).catch(error => console.error(error));
             });
         })
@@ -353,7 +353,7 @@ confirmDepositToken.checkTx = function(sender, txid) {
                 return reject([true, "Transaction transfer is not 'token'"]);
             var token_name = tx.parsedFloData.tokenIdentification,
                 amount_token = tx.parsedFloData.tokenAmount;
-            if (!allowedAssets.includes(token_name) || token_name === "FLO")
+            if (!assetList.includes(token_name) || token_name === "FLO")
                 return reject([true, "Token not authorised"]);
             let vin_sender = tx.transactionDetails.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
@@ -373,7 +373,7 @@ function withdrawToken(floID, token, amount) {
             return reject(INVALID("Invalid FLO ID"));
         else if (typeof amount !== "number" || amount <= 0)
             return reject(INVALID(`Invalid amount (${amount})`));
-        else if (!allowedAssets.includes(token) || token === "FLO")
+        else if (!assetList.includes(token) || token === "FLO")
             return reject(INVALID("Invalid Token"));
         //Check for FLO balance (transaction fee)
         const required_flo = floGlobals.sendAmt + floGlobals.fee;
@@ -383,15 +383,15 @@ function withdrawToken(floID, token, amount) {
                     consumeAsset(floID, token, amount, txQueries).then(txQueries => {
                         DB.transaction(txQueries).then(result => {
                             //Send FLO to user via blockchain API
-                            tokenAPI.sendToken(global.myPrivKey, amount, '(withdrawal from market)', floID, token).then(txid => {
+                            tokenAPI.sendToken(global.myPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
                                 if (!txid) throw Error("Transaction not successful");
                                 //Transaction was successful, Add in DB
-                                DB.query("INSERT INTO outputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
+                                DB.query("INSERT INTO OutputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
                                     .then(_ => null).catch(error => console.error(error))
                                     .finally(_ => resolve("Withdrawal was successful"));
                             }).catch(error => {
                                 console.debug(error);
-                                DB.query("INSERT INTO outputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
+                                DB.query("INSERT INTO OutputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
                                     .then(_ => null).catch(error => console.error(error))
                                     .finally(_ => resolve("Withdrawal request is in process"));
                             });
@@ -404,13 +404,13 @@ function withdrawToken(floID, token, amount) {
 }
 
 function retryWithdrawalToken() {
-    DB.query("SELECT id, floID, token, amount FROM outputToken WHERE status=?", ["PENDING"]).then(results => {
+    DB.query("SELECT id, floID, token, amount FROM OutputToken WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
-            tokenAPI.sendToken(global.myPrivKey, req.amount, '(withdrawal from market)', req.floID, req.token).then(txid => {
+            tokenAPI.sendToken(global.myPrivKey, req.amount, req.floID, '(withdrawal from market)', req.token).then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
-                DB.query("UPDATE outputToken SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, req.id])
+                DB.query("UPDATE OutputToken SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, req.id])
                     .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error));
         });
@@ -418,10 +418,10 @@ function retryWithdrawalToken() {
 }
 
 function confirmWithdrawalToken() {
-    DB.query("SELECT id, floID, token, amount, txid FROM outputToken WHERE status=?", ["WAITING_CONFIRMATION"]).then(results => {
+    DB.query("SELECT id, floID, token, amount, txid FROM OutputToken WHERE status=?", ["WAITING_CONFIRMATION"]).then(results => {
         results.forEach(req => {
             tokenAPI.getTx(req.txid).then(tx => {
-                DB.query("UPDATE outputToken SET status=? WHERE id=?", ["SUCCESS", req.id])
+                DB.query("UPDATE OutputToken SET status=? WHERE id=?", ["SUCCESS", req.id])
                     .then(result => console.debug("Token withdrawed:", req.floID, req.token, req.amount))
                     .catch(error => console.error(error));
             }).catch(error => console.error(error));
@@ -431,7 +431,7 @@ function confirmWithdrawalToken() {
 
 function periodicProcess() {
     blockchainReCheck();
-    coupling.initiate();
+    assetList.forEach(asset => coupling.initiate(asset));
 }
 
 function blockchainReCheck() {
@@ -461,8 +461,7 @@ module.exports = {
         DB = db;
         coupling.DB = db;
     },
-    set allowedAssets(assets) {
-        allowedAssets = Object.keys(assets);
-        coupling.assetList = assets;
+    set assetList(assets) {
+        assetList = assets;
     }
 };

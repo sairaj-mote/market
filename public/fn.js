@@ -53,7 +53,7 @@ const tokenAPI = {
             }).catch(error => reject(error))
         })
     },
-    sendToken: function(privKey, amount, receiverID, message = "", token = 'rupee') {
+    sendToken: function(privKey, amount, receiverID, message = "", token = floGlobals.currency) {
         return new Promise((resolve, reject) => {
             let senderID = floCrypto.getFloID(privKey);
             if (typeof amount !== "number" || amount <= 0)
