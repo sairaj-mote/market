@@ -67,7 +67,7 @@ CREATE TABLE Vault (
     quantity FLOAT NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY (floID) REFERENCES Users(floID),
-    FOREIGN KEY (asset) REFERENCES Users(asset)
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE UserTag (
@@ -99,7 +99,7 @@ CREATE TABLE SellOrder (
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (floID) REFERENCES Users(floID),
-    FOREIGN KEY (asset) REFERENCES Users(asset)
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE BuyOrder (
@@ -111,7 +111,7 @@ CREATE TABLE BuyOrder (
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (floID) REFERENCES Users(floID),
-    FOREIGN KEY (asset) REFERENCES Users(asset)
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE InputFLO (
@@ -159,8 +159,10 @@ CREATE TABLE OutputToken (
 /* Transaction Data */
 
 CREATE TABLE PriceHistory (
+    asset VARCHAR(64) NOT NULL,
     rate FLOAT NOT NULL,
-    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP
+    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE TransactionHistory (
@@ -172,7 +174,7 @@ CREATE TABLE TransactionHistory (
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (buyer) REFERENCES Users(floID),
     FOREIGN KEY (seller) REFERENCES Users(floID),
-    FOREIGN KEY (asset) REFERENCES Users(asset)
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE AuditTransaction(
@@ -193,7 +195,7 @@ CREATE TABLE AuditTransaction(
     buyer_new_cash FLOAT NOT NULL,
     FOREIGN KEY (sellerID) REFERENCES Users(floID),
     FOREIGN KEY (buyerID) REFERENCES Users(floID),
-    FOREIGN KEY (asset) REFERENCES Users(asset)
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 /* Backup Feature (Tables & Triggers) */

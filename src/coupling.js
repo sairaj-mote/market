@@ -19,17 +19,21 @@ function processCoupling(bestPairQueue) {
             seller_best = pair_result.sellOrder;
         console.debug("Sell:", seller_best);
         console.debug("Buy:", buyer_best);
-        spendAsset(bestPairQueue.asset, buyer_best, seller_best, pair_result.null_base).then(spend_result => {
-            let tx_quantity = spend_result.quantity,
-                txQueries = spend_result.txQueries,
-                clear_sell = spend_result.incomplete && !spend_result.flag_baseNull; //clear_sell can be true only if an order is placed without enough ASSET
-            processOrders(seller_best, buyer_best, txQueries, tx_quantity, clear_sell);
-            updateBalance(seller_best, buyer_best, txQueries, bestPairQueue.asset, bestPairQueue.cur_rate, tx_quantity);
+        spendAsset(bestPairQueue.asset, buyer_best, seller_best, pair_result.null_base).then(spent => {
+            if (!spent.quantity) {
+                //Happens when there are only Null-base assets
+                bestPairQueue.next(spent.quantity, spent.incomplete);
+                processCoupling(bestPairQueue);
+                return;
+            }
+            let txQueries = spent.txQueries;
+            processOrders(seller_best, buyer_best, txQueries, spent.quantity, spent.incomplete && pair_result.null_base);
+            updateBalance(seller_best, buyer_best, txQueries, bestPairQueue.asset, bestPairQueue.cur_rate, spent.quantity);
             //begin audit
-            beginAudit(seller_best.floID, buyer_best.floID, bestPairQueue.asset, bestPairQueue.cur_rate, tx_quantity).then(audit => {
+            beginAudit(seller_best.floID, buyer_best.floID, bestPairQueue.asset, bestPairQueue.cur_rate, spent.quantity).then(audit => {
                 //process txn query in SQL
                 DB.transaction(txQueries).then(_ => {
-                    bestPairQueue.next(tx_quantity, spend_result.incomplete, spend_result.flag_baseNull);
+                    bestPairQueue.next(spent.quantity, spent.incomplete);
                     console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
                     audit.end();
                     price.updateLastTime();
@@ -46,7 +50,7 @@ function processCoupling(bestPairQueue) {
             console.error(error.buy);
             noBuy = null;
         } else {
-            console.log("No valid buyOrders.");
+            console.log("No valid buyOrders for Asset:", bestPairQueue.asset);
             noBuy = true;
         }
         if (error.sell === undefined)
@@ -55,7 +59,7 @@ function processCoupling(bestPairQueue) {
             console.error(error.sell);
             noSell = null;
         } else {
-            console.log("No valid sellOrders.");
+            console.log("No valid sellOrders for Asset:", bestPairQueue.asset);
             noSell = true;
         }
         price.noOrder(bestPairQueue.asset, noBuy, noSell);
@@ -64,26 +68,22 @@ function processCoupling(bestPairQueue) {
 
 function spendAsset(asset, buyOrder, sellOrder, null_base) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT id, quantity, base FROM Vault WHERE floID=? AND asset=? ORDER BY base", [sellOrder.floID, asset]).then(result => {
+        DB.query('SELECT id, quantity FROM Vault WHERE floID=? AND asset=? AND base IS ' +
+            (null_base ? "NULL ORDER BY locktime" : "NOT NULL ORDER BY base"), [sellOrder.floID, asset]).then(result => {
             let rem = Math.min(buyOrder.quantity, sellOrder.quantity),
-                txQueries = [],
-                flag_baseNull = false;
+                txQueries = [];
             for (let i = 0; i < result.length && rem > 0; i++)
-                if (result[i].base || null_base) {
-                    if (rem < result[i].quantity) {
-                        txQueries.push(["UPDATE Vault SET quantity=quantity-? WHERE id=?", [rem, result[i].id]]);
-                        rem = 0;
-                    } else {
-                        txQueries.push(["DELETE FROM Vault WHERE id=?", [result[i].id]]);
-                        rem -= result[i].quantity;
-                    }
-                } else
-                    flag_baseNull = true;
+                if (rem < result[i].quantity) {
+                    txQueries.push(["UPDATE Vault SET quantity=quantity-? WHERE id=?", [rem, result[i].id]]);
+                    rem = 0;
+                } else {
+                    txQueries.push(["DELETE FROM Vault WHERE id=?", [result[i].id]]);
+                    rem -= result[i].quantity;
+                }
             resolve({
                 quantity: Math.min(buyOrder.quantity, sellOrder.quantity) - rem,
                 txQueries,
-                incomplete: rem > 0,
-                flag_baseNull
+                incomplete: rem > 0
             });
         }).catch(error => reject(error));
     })
@@ -98,7 +98,7 @@ function processOrders(seller_best, buyer_best, txQueries, quantity, clear_sell)
     else
         txQueries.push(["UPDATE BuyOrder SET quantity=quantity-? WHERE id=?", [quantity, buyer_best.id]]);
     //Process Sell Order
-    if (quantity == seller_best.quantity || clear_sell)
+    if (quantity == seller_best.quantity || clear_sell) //clear_sell must be true iff an order is placed without enough Asset
         txQueries.push(["DELETE FROM SellOrder WHERE id=?", [seller_best.id]]);
     else
         txQueries.push(["UPDATE SellOrder SET quantity=quantity-? WHERE id=?", [quantity, seller_best.id]]);

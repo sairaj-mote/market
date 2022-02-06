@@ -62,7 +62,7 @@ const bestPair = function(asset, cur_rate, tags_buy, tags_sell) {
         }).catch(error => reject(error))
     });
 
-    this.next = (tx_quantity, incomplete_sell, flag_sell) => {
+    this.next = (tx_quantity, incomplete_sell) => {
         let buy = getBuyOrder.cache,
             sell = getSellOrder.cache;
         if (buy.cur_order && sell.cur_order) {
@@ -77,7 +77,7 @@ const bestPair = function(asset, cur_rate, tags_buy, tags_sell) {
             if (tx_quantity < sell.cur_order.quantity) {
                 sell.cur_order.quantity -= tx_quantity;
                 if (incomplete_sell) {
-                    if (!sell.mode_null && flag_sell)
+                    if (!sell.mode_null)
                         sell.null_queue.push(sell.cur_order);
                     sell.cur_order = null;
                 }
@@ -134,7 +134,7 @@ const bestPair = function(asset, cur_rate, tags_buy, tags_sell) {
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error));
-        } else if (!cache.mode_null) { //Lowest priority Coins (FLO Brought from other sources)
+        } else if (!cache.mode_null) { //Lowest priority Assets (Brought from other sources)
             cache.orders = cache.null_queue.reverse(); //Reverse it so that we can pop the highest priority
             cache.mode_null = true;
             cache.null_queue = null;
@@ -337,9 +337,9 @@ function verifySellOrder(sellOrder, asset, cur_price, mode_null) {
             }).catch(error => reject(error));
         else if (mode_null)
             DB.query("SELECT SUM(quantity) as total FROM Vault WHERE floID=? AND asset=?", [sellOrder.floID, asset]).then(result => {
-                if (result.total < sellOrder.quantity)
-                    console.warn(`Sell Order ${sellOrder.id} was made without enough FLO. This should not happen`);
-                if (result.total > 0)
+                if (result[0].total < sellOrder.quantity)
+                    console.warn(`Sell Order ${sellOrder.id} was made without enough Assets. This should not happen`);
+                if (result[0].total > 0)
                     resolve(sellOrder);
                 else
                     reject(false);

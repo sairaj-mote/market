@@ -154,7 +154,7 @@ function getTransactionList() {
 function getRates() {
     return new Promise((resolve, reject) => {
         exchangeAPI('/get-rates')
-            .then(result => responseParse(result, false)
+            .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
             .catch(error => reject(error));

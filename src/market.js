@@ -10,7 +10,7 @@ const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
         DB.query("SELECT balance FROM Cash WHERE floID=?", [floID]),
         DB.query("SELECT SUM(quantity*maxPrice) AS locked FROM BuyOrder WHERE floID=?", [floID])
     ] : [
-        DB.query("SELECT SUM(quantity) AS balance FROM Vault WHERE floID=?, asset=?", [floID, asset]),
+        DB.query("SELECT SUM(quantity) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, asset]),
         DB.query("SELECT SUM(quantity) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
     ];
     Promise.all(promises).then(result => resolve({

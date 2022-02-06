@@ -272,7 +272,7 @@ function getRates(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     else
-        res.send(`${market.rates}`);
+        res.send(market.rates);
 }
 
 function Account(req, res) {

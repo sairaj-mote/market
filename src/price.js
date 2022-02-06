@@ -10,7 +10,7 @@ const MIN_TIME = 10 * 1000, // 1 * 60 * 60 * 1000,
 
 var DB; //container for database
 
-var cur_rate = {}, //container for FLO price (from API or by model)
+var currentRate = {}, //container for FLO price (from API or by model)
     lastTime = {}, //container for timestamp of the last tx
     noBuyOrder = {},
     noSellOrder = {};
@@ -23,8 +23,8 @@ function storeRate(asset, rate) {
         .then(_ => null).catch(error => console.error(error))
 }
 setInterval(() => {
-    for (let asset in cur_rate)
-        storeRate(asset, cur_rate[asset]);
+    for (let asset in currentRate)
+        storeRate(asset, currentRate[asset]);
 }, REC_HISTORY_INTERVAL)
 
 function getPastRate(asset, hrs = 24) {
@@ -37,15 +37,15 @@ function getPastRate(asset, hrs = 24) {
 
 function loadRate(asset) {
     return new Promise((resolve, reject) => {
-        if (typeof cur_rate[asset] !== "undefined")
-            return resolve(cur_rate[asset]);
+        if (typeof currentRate[asset] !== "undefined")
+            return resolve(currentRate[asset]);
         updateLastTime(asset);
         DB.query("SELECT rate FROM PriceHistory WHERE asset=? ORDER BY rec_time DESC LIMIT 1", [asset]).then(result => {
             if (result.length)
-                resolve(cur_rate[asset] = result[0].rate);
+                resolve(currentRate[asset] = result[0].rate);
             else
                 DB.query("SELECT initialPrice FROM AssetList WHERE asset=?", [asset])
-                .then(result => resolve(result[0].initialPrice))
+                .then(result => resolve(currentRate[asset] = result[0].initialPrice))
                 .catch(error => reject(error))
         }).catch(error => reject(error));
     })
@@ -95,41 +95,41 @@ fetchRates.USD_INR = function() {
 function getRates(asset) {
     return new Promise((resolve, reject) => {
         loadRate(asset).then(_ => {
-            console.debug(cur_rate[asset]);
+            console.debug(asset, currentRate[asset]);
             let cur_time = Date.now();
             if (cur_time - lastTime[asset] < MIN_TIME) //Minimum time to update not crossed: No update required
-                resolve(cur_rate[asset]);
+                resolve(currentRate[asset]);
             else if (noBuyOrder[asset] && noSellOrder[asset]) //Both are not available: No update required
-                resolve(cur_rate[asset]);
+                resolve(currentRate[asset]);
             else if (noBuyOrder[asset] === null || noSellOrder[asset] === null) //An error has occured during last process: No update (might cause price to crash/jump)
-                resolve(cur_rate[asset]);
+                resolve(currentRate[asset]);
             else
                 getPastRate(asset).then(ratePast24hr => {
                     if (noBuyOrder[asset]) {
                         //No Buy, But Sell available: Decrease the price
-                        let tmp_val = cur_rate[asset] * (1 - DOWN_RATE);
+                        let tmp_val = currentRate[asset] * (1 - DOWN_RATE);
                         if (tmp_val >= ratePast24hr * (1 - MAX_DOWN_PER_DAY)) {
-                            cur_rate[asset] = tmp_val;
+                            currentRate[asset] = tmp_val;
                             updateLastTime(asset);
                         } else
                             console.debug("Max Price down for the day has reached");
-                        resolve(cur_rate[asset]);
+                        resolve(currentRate[asset]);
                     } else if (noSellOrder[asset]) {
                         //No Sell, But Buy available: Increase the price
                         checkForRatedSellers().then(result => {
                             if (result) {
-                                let tmp_val = cur_rate[asset] * (1 + UP_RATE);
+                                let tmp_val = currentRate[asset] * (1 + UP_RATE);
                                 if (tmp_val <= ratePast24hr * (1 + MAX_UP_PER_DAY)) {
-                                    cur_rate[asset] = tmp_val;
+                                    currentRate[asset] = tmp_val;
                                     updateLastTime(asset);
                                 } else
                                     console.debug("Max Price up for the day has reached");
                             }
-                        }).catch(error => console.error(error)).finally(_ => resolve(cur_rate[asset]));
+                        }).catch(error => console.error(error)).finally(_ => resolve(currentRate[asset]));
                     }
                 }).catch(error => {
                     console.error(error);
-                    resolve(cur_rate[asset]);
+                    resolve(currentRate[asset]);
                 });
         }).catch(error => reject(error));
     })
@@ -160,6 +160,6 @@ module.exports = {
         DB = db;
     },
     get currentRates() {
-        return Object.assign({}, cur_rate);
+        return Object.assign({}, currentRate);
     }
 }

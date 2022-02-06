@@ -132,7 +132,7 @@ loadDataFromDB.assetList = function() {
             //update dependents
             backup.assetList = assets;
             app.assetList = assets;
-            resolve(nodes);
+            resolve(assets);
         }).catch(error => reject(error))
     })
 }
