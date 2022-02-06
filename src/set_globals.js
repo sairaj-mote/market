@@ -12,3 +12,12 @@ try {
     for (let p in param)
         global[p] = param[p];
 }
+
+/*
+//Trace the debug logs in node js
+var debug = console.debug;
+console.debug = function() {
+    debug.apply(console, arguments);
+    console.trace();
+};
+*/

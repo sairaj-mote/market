@@ -32,6 +32,7 @@ function stopSlaveProcess() {
     if (masterWS !== null) {
         masterWS.onclose = () => null;
         masterWS.close();
+        requestInstance.close();
         masterWS = null;
     }
     if (intervalID !== null) {
@@ -45,8 +46,8 @@ function requestBackupSync(ws) {
         const tables = {
             Users: "created",
             Request_Log: "request_time",
-            Transactions: "tx_time",
-            //priceHistory: "rec_time",
+            TransactionHistory: "tx_time",
+            //PriceHistory: "rec_time",
             _backup: "timestamp"
         };
         let subs = [];
@@ -161,6 +162,9 @@ function sendSinkShare() {
 }
 
 function processBackupData(response) {
+    //TODO: Sync improvements needed. (2 types)
+    //1. Either sync has to be completed or rollback all
+    //2. Each table/data should be treated as independent chunks
     const self = requestInstance;
     self.last_response_time = Date.now();
     switch (response.command) {

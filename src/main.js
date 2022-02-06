@@ -25,7 +25,7 @@ function refreshData(startup = false) {
 
 function refreshDataFromBlockchain() {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT num FROM lastTx WHERE floID=?", [floGlobals.adminID]).then(result => {
+        DB.query("SELECT num FROM LastTx WHERE floID=?", [floGlobals.adminID]).then(result => {
             let lastTx = result.length ? result[0].num : 0;
             floBlockchainAPI.readData(floGlobals.adminID, {
                 ignoreOld: lastTx,
@@ -34,6 +34,7 @@ function refreshDataFromBlockchain() {
             }).then(result => {
                 let promises = [],
                     nodes_change = false,
+                    assets_change = false,
                     trusted_change = false;
                 result.data.reverse().forEach(data => {
                     var content = JSON.parse(data)[floGlobals.application];
@@ -42,20 +43,26 @@ function refreshDataFromBlockchain() {
                         nodes_change = true;
                         if (content.Nodes.remove)
                             for (let n of content.Nodes.remove)
-                                promises.push(DB.query("DELETE FROM nodeList WHERE floID=?", [n]));
+                                promises.push(DB.query("DELETE FROM NodeList WHERE floID=?", [n]));
                         if (content.Nodes.add)
                             for (let n in content.Nodes.add)
-                                promises.push(DB.query("INSERT INTO nodeList (floID, uri) VALUE (?,?) AS new ON DUPLICATE KEY UPDATE uri=new.uri", [n, content.Nodes.add[n]]));
+                                promises.push(DB.query("INSERT INTO NodeList (floID, uri) VALUE (?,?) AS new ON DUPLICATE KEY UPDATE uri=new.uri", [n, content.Nodes.add[n]]));
+                    }
+                    //Asset List
+                    if (content.Assets) {
+                        assets_change = true;
+                        for (let a in content.Assets)
+                            promises.push(DB.query("INSERT INTO AssetList (asset, initialPrice) VALUE (?,?) AS new ON DUPLICATE KEY UPDATE initialPrice=new.initialPrice", [a, content.Assets[a]]));
                     }
                     //Trusted List
                     if (content.Trusted) {
                         trusted_change = true;
                         if (content.Trusted.remove)
                             for (let id of content.Trusted.remove)
-                                promises.push(DB.query("DELETE FROM trustedList WHERE floID=?", [id]));
+                                promises.push(DB.query("DELETE FROM TrustedList WHERE floID=?", [id]));
                         if (content.Trusted.add)
                             for (let id of content.Trusted.add)
-                                promises.push(DB.query("INSERT INTO trustedList (floID) VALUE (?) AS new ON DUPLICATE KEY UPDATE floID=new.floID", [id]));
+                                promises.push(DB.query("INSERT INTO TrustedList (floID) VALUE (?) AS new ON DUPLICATE KEY UPDATE floID=new.floID", [id]));
                     }
                     //Tag List with priority and API
                     if (content.Tag) {
@@ -71,7 +78,7 @@ function refreshDataFromBlockchain() {
                                     promises.push(`UPDATE TagList WHERE tag=? SET ${a}=?`, [t, content.Tag.update[t][a]]);
                     }
                 });
-                promises.push(DB.query("INSERT INTO lastTx (floID, num) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE num=new.num", [floGlobals.adminID, result.totalTxs]));
+                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE num=new.num", [floGlobals.adminID, result.totalTxs]));
                 //Check if all save process were successful
                 Promise.allSettled(promises).then(results => {
                     console.debug(results.filter(r => r.status === "rejected"));
@@ -80,6 +87,7 @@ function refreshDataFromBlockchain() {
                 });
                 resolve({
                     nodes: nodes_change,
+                    assets: assets_change,
                     trusted: trusted_change
                 });
             }).catch(error => reject(error));
@@ -92,6 +100,8 @@ function loadDataFromDB(changes, startup) {
         let promises = [];
         if (startup || changes.nodes)
             promises.push(loadDataFromDB.nodeList());
+        if (startup || changes.assets)
+            promises.push(loadDataFromDB.assetList());
         if (startup || changes.trusted)
             promises.push(loadDataFromDB.trustedIDs());
         Promise.all(promises)
@@ -102,7 +112,7 @@ function loadDataFromDB(changes, startup) {
 
 loadDataFromDB.nodeList = function() {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM nodeList").then(result => {
+        DB.query("SELECT floID, uri FROM NodeList").then(result => {
             let nodes = {}
             for (let i in result)
                 nodes[result[i].floID] = result[i].uri;
@@ -113,9 +123,23 @@ loadDataFromDB.nodeList = function() {
     })
 }
 
+loadDataFromDB.assetList = function() {
+    return new Promise((resolve, reject) => {
+        DB.query("SELECT asset FROM AssetList").then(result => {
+            let assets = [];
+            for (let i in result)
+                assets.push(result[i].asset);
+            //update dependents
+            backup.assetList = assets;
+            app.assetList = assets;
+            resolve(assets);
+        }).catch(error => reject(error))
+    })
+}
+
 loadDataFromDB.trustedIDs = function() {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM trustedList").then(result => {
+        DB.query("SELECT * FROM TrustedList").then(result => {
             let trustedIDs = [];
             for (let i in result)
                 trustedIDs.push(result[i].floID);

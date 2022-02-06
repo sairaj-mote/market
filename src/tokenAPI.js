@@ -14,7 +14,7 @@
                 }).catch(error => reject(error))
             })
         },
-        getBalance: function(floID, token = floGlobals.token) {
+        getBalance: function(floID, token = floGlobals.currency) {
             return new Promise((resolve, reject) => {
                 this.fetch_api(`api/v1.0/getFloAddressBalance?token=${token}&floAddress=${floID}`)
                     .then(result => resolve(result.balance || 0))
@@ -35,7 +35,7 @@
                 }).catch(error => reject(error))
             })
         },
-        sendToken: function(privKey, amount, message = "", receiverID = floGlobals.adminID, token = floGlobals.token) {
+        sendToken: function(privKey, amount, receiverID, message = "", token = floGlobals.currency) {
             return new Promise((resolve, reject) => {
                 let senderID = floCrypto.getFloID(privKey);
                 if (typeof amount !== "number" || amount <= 0)

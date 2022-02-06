@@ -13,7 +13,7 @@ const floGlobals = {
     sendAmt: 0.001,
     fee: 0.0005,
     tokenURL: "https://ranchimallflo.duckdns.org/",
-    token: "rupee"
+    currency: "rupee"
 };
 
 (typeof global !== "undefined" ? global : window).cryptocoin = floGlobals.blockchain;

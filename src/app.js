@@ -4,7 +4,7 @@ const express = require('express');
 //const sessions = require('express-session');
 const Request = require('./request');
 
-const REFRESH_INTERVAL = 5 * 1000; //10 * 60 * 1000;
+const REFRESH_INTERVAL = 1 * 60 * 1000;
 
 module.exports = function App(secret, DB) {
 
@@ -72,7 +72,7 @@ module.exports = function App(secret, DB) {
 
     //list all process transactions and rate
     app.get('/list-transactions', Request.ListTransactions);
-    app.get('/get-rate', Request.getRate)
+    app.get('/get-rates', Request.getRates)
 
     //get account details
     app.post('/account', Request.Account);
@@ -80,8 +80,8 @@ module.exports = function App(secret, DB) {
     //withdraw and deposit request
     app.post('/deposit-flo', Request.DepositFLO);
     app.post('/withdraw-flo', Request.WithdrawFLO);
-    app.post('/deposit-rupee', Request.DepositRupee);
-    app.post('/withdraw-rupee', Request.WithdrawRupee);
+    app.post('/deposit-token', Request.DepositToken);
+    app.post('/withdraw-token', Request.WithdrawToken);
 
     //Manage user tags (Access to trusted IDs only)
 
@@ -106,6 +106,10 @@ module.exports = function App(secret, DB) {
     //set trustedID for subAdmin requests
     Object.defineProperty(self, "trustedIDs", {
         set: (ids) => Request.trustedIDs = ids
+    });
+
+    Object.defineProperty(self, "assetList", {
+        set: (assets) => Request.assetList = assets
     });
 
     //Start (or) Stop servers

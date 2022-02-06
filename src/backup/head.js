@@ -5,7 +5,7 @@ const slave = require('./slave');
 const WebSocket = require('ws');
 const shareThreshold = 50 / 100;
 
-var DB, app, wss; //Container for database and app
+var DB, app, wss, tokenList; //Container for database and app
 var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
 var nodeShares = null,
     nodeSinkID = null,
@@ -104,8 +104,8 @@ function send_dataImmutable(timestamp, ws) {
     const immutable_tables = {
         Users: "created",
         Request_Log: "request_time",
-        Transactions: "tx_time",
-        priceHistory: "rec_time"
+        TransactionHistory: "tx_time",
+        PriceHistory: "rec_time"
     };
     const sendTable = (table, timeCol) => new Promise((res, rej) => {
         DB.query(`SELECT * FROM ${table} WHERE ${timeCol} > ?`, [timestamp])
@@ -175,16 +175,36 @@ function storeSink(sinkID, sinkPrivKey) {
         .catch(error => console.error(error));
 }
 
-function transferMoneyToNewSink(oldSinkID, oldSinkKey) {
+function transferMoneyToNewSink(oldSinkID, oldSinkKey, newSink) {
+    const transferToken = token => new Promise((resolve, reject) => {
+        tokenAPI.getBalance(oldSinkID, token).then(tokenBalance => {
+            floBlockchainAPI.writeData(oldSinkID, `send ${tokenBalance} ${token}# |Exchange-market New sink`, oldSinkKey, newSink.floID, false)
+                .then(txid => resolve(txid))
+                .catch(error => reject(error))
+        })
+    });
     return new Promise((resolve, reject) => {
-        let newSink = generateNewSink();
-        floBlockchainAPI.getBalance(oldSinkID).then(balFLO => {
-            tokenAPI.getBalance(oldSinkID).then(balRupee => {
-                floBlockchainAPI.sendTx(oldSinkID, newSink.floID, balFLO - floGlobals.fee, oldSinkKey, `send ${balRupee} ${floGlobals.token}# |Exchange-market New sink`)
-                    .then(result => resolve(newSink))
-                    .catch(error => reject(error))
-            }).catch(error => reject(error));
-        }).catch(error => reject(error))
+        console.debug("Transferring tokens to new Sink:", newSink.floID)
+        Promise.allSettled(tokenList.map(token => transferToken(token))).then(result => {
+            let failedFlag = false;
+            tokenList.forEach((token, i) => {
+                if (result[i].status === "fulfilled")
+                    console.log(token, result[i].value);
+                else {
+                    failedFlag = true;
+                    console.error(token, result[i].reason);
+                }
+            });
+            if (failedFlag)
+                return reject("Some token transfer has failed");
+            floBlockchainAPI.getBalance(oldSinkID).then(floBalance => {
+                tokenAPI.getBalance(oldSinkID).then(cashBalance => {
+                    floBlockchainAPI.sendTx(oldSinkID, newSink.floID, floBalance - floGlobals.fee, oldSinkKey, `send ${cashBalance} ${floGlobals.currency}# |Exchange-market New sink`)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error));
+            }).catch(error => reject(error))
+        });
     })
 }
 
@@ -196,15 +216,17 @@ function collectShares(floID, sinkID, share) {
         return console.error("Something is wrong! Slaves are sending different sinkID");
     collectShares.shares[floID] = share;
     try {
-        let privKey = floCrypto.retrieveShamirSecret(Object.values(collectShares.shares));
-        if (floCrypto.verifyPrivKey(privKey, collectShares.sinkID)) {
-            transferMoneyToNewSink(collectShares.sinkID, privKey).then(newSink => {
-                delete collectShares.sinkID;
-                delete collectShares.shares;
-                collectShares.active = false;
-                storeSink(newSink.floID, newSink.privKey);
-                sendSharesToNodes(newSink.floID, newSink.shares);
-            }).catch(error => console.error(error));
+        let oldSinkKey = floCrypto.retrieveShamirSecret(Object.values(collectShares.shares));
+        if (floCrypto.verifyPrivKey(oldSinkKey, collectShares.sinkID)) {
+            let newSink = generateNewSink();
+            transferMoneyToNewSink(collectShares.sinkID, oldSinkKey, newSink).then(result => {
+                    console.log("Money transfer successful", result);
+                    delete collectShares.sinkID;
+                    delete collectShares.shares;
+                    collectShares.active = false;
+                    sendSharesToNodes(newSink.floID, newSink.shares);
+                }).catch(error => console.error(error))
+                .finally(_ => storeSink(newSink.floID, newSink.privKey));
         }
     } catch (error) {
         //Unable to retrive sink private key. Waiting for more shares! Do nothing for now
@@ -390,6 +412,9 @@ module.exports = {
         nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
         nodeList = nodeKBucket.order;
         console.debug(nodeList);
+    },
+    set assetList(assets) {
+        tokenList = assets.filter(a => a.toUpperCase() !== "FLO");
     },
     set DB(db) {
         DB = db;
