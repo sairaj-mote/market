@@ -371,6 +371,7 @@ function cancelOrder(type, id, floID, proxySecret) {
     })
 }
 
+/* Disabled for Beta-testing
 function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
@@ -488,6 +489,7 @@ function withdrawToken(token, quantity, floID, proxySecret) {
             .catch(error => reject(error))
     })
 }
+*/
 
 function addUserTag(tag_user, tag, floID, proxySecret) {
     return new Promise((resolve, reject) => {

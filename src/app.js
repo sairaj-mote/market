@@ -78,10 +78,12 @@ module.exports = function App(secret, DB) {
     app.post('/account', Request.Account);
 
     //withdraw and deposit request
+    /* Disabled for Beta-testing
     app.post('/deposit-flo', Request.DepositFLO);
     app.post('/withdraw-flo', Request.WithdrawFLO);
     app.post('/deposit-token', Request.DepositToken);
     app.post('/withdraw-token', Request.WithdrawToken);
+    */
 
     //Manage user tags (Access to trusted IDs only)
 

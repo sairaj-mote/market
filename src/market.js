@@ -430,7 +430,9 @@ function confirmWithdrawalToken() {
 }
 
 function periodicProcess() {
+    /* Disabled for Beta-testing
     blockchainReCheck();
+    */
     assetList.forEach(asset => coupling.initiate(asset));
 }
 
