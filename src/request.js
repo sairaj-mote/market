@@ -91,8 +91,8 @@ function SignUp(req, res) {
     txQueries.push(["INSERT INTO Users(floID, pubKey) VALUES (?, ?)", [data.floID, data.pubKey]]);
     // --- BEGIN Edits for Beta testing: give dummy FLOs and rupee# on signup
     //txQueries.push(["INSERT INTO Cash (floID) Values (?)", data.floID]);
-    txQueries.push(["INSERT INTO Cash (floID, rupeeBalance) Values (?, ?)", [data.floID, 1000]]);
-    txQueries.push(["INSERT INTO Vault (floID, quantity) Values (?, ?)", [data.floID, 100]]);
+    txQueries.push(["INSERT INTO Cash (floID, balance) Values (?, ?)", [data.floID, 1000]]);
+    txQueries.push(["INSERT INTO Vault (floID, asset, quantity) Values (?, ?, ?)", [data.floID, "FLO", 100]]);
     // --- END Edit
     DB.transaction(txQueries).then(_ => {
         storeRequest(data.floID, req_str, data.sign);
