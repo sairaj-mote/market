@@ -12,27 +12,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-    <script id="floGlobals">
-        /* Constants for FLO blockchain operations !!Make sure to add this at beginning!! */
-        const floGlobals = {
-
-            //Required for all
-            blockchain: "FLO",
-
-            //Required for blockchain API operators
-            apiURL: {
-                FLO: ['https://livenet.flocha.in/', 'https://flosight.duckdns.org/'],
-                FLO_TEST: ['https://testnet-flosight.duckdns.org/', 'https://testnet.flocha.in/']
-            },
-            tokenURL: "https://ranchimallflo.duckdns.org/",
-            token: "rupee",
-            adminID: "FKAEdnPfjXLHSYwrXQu377ugN4tXU7VGdf",
-            sendAmt: 0.001,
-            fee: 0.0005,
-        }
-    </script>
+    <script src="floGlobals.js"></script>
     <script src="https://sairajzero.github.io/Standard_Operations/cdn/floCrypto.js"></script>
     <script src="https://github.com/sairajzero/Standard_Operations/releases/download/test/floBlockchainAPI.js"></script>
+    <script src="KBucket.js"></script>
     <script src="fn.js"></script>
 </head>
 
@@ -96,7 +79,8 @@
                         Remember me
                     </span>
                 </sm-checkbox>
-                <input type="text" id="sign_in_id" style="display: none;" hidden />
+                <input type="text" id="sign_in_code" style="display: none;" hidden />
+                <input type="text" id="sign_in_hash" style="display: none;" hidden />
                 <div id="login_button_wrapper" class="stateful-button-wrapper">
                     <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
                 </div>
@@ -118,6 +102,7 @@
                         <strip-option value="sell">Sell</strip-option>
                     </strip-select>
                 </div>
+                <select id="get_asset"></select>
                 <sm-input id="get_price" variant="outlined" placeholder="Max price (₹)" type="number" step="0.01"
                     required hiderequired animate>
                 </sm-input>
@@ -398,6 +383,7 @@
             <h4 id="wallet_popup__title" class="capitalize"></h4>
         </header>
         <sm-form id="wallet_form">
+            <input type="text" id="sink_id" style="display: none;" hidden />
             <sm-input id="get_user_amount" variant="outlined" placeholder="Quantity" type="number" min="0.01"
                 step="0.00001" required hiderequired animate>
             </sm-input>
@@ -854,7 +840,7 @@
             let pageId
             let params
             if (targetPage === '') {
-                if (typeof myFloID === "undefined") {
+                if (typeof proxy.userID === "undefined") {
                     pageId = 'landing'
                 } else {
                     pageId = 'home'
@@ -991,23 +977,23 @@
         }
         const render = {
             orderCard(orderDetails = {}) {
-                const { id, quantity, price, time, type } = orderDetails
+                const { id, asset, quantity, price, time, type } = orderDetails
                 const card = getRef('order_template').content.cloneNode(true).firstElementChild
                 card.dataset.id = id
                 card.dataset.type = type
                 card.querySelector('.order-card__type').textContent = type
-                card.querySelector('.order-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.order-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Max price' : 'Min price'
                 card.querySelector('.order-card__price').textContent = formatAmount(price)
                 card.querySelector('.order-card__time').textContent = getFormattedTime(time, true)
                 return card
             },
             transactionCard(transactionDetails = {}) {
-                const { buyer, seller, type, other, quantity, unitValue, time } = transactionDetails
+                const { buyer, seller, type, other, asset, quantity, unitValue, time } = transactionDetails
                 const card = getRef('transaction_template').content.cloneNode(true).firstElementChild
                 card.dataset.type = type
                 card.querySelector('.transaction-card__type').textContent = type
-                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
                 card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
                 card.querySelector('.more-info').dataset.buyer = buyer
@@ -1017,12 +1003,12 @@
                 return card
             },
             marketOrderCard(orderDetails = {}) {
-                const { floID, quantity, unitValue, time, type } = orderDetails
+                const { floID, asset, quantity, unitValue, time, type } = orderDetails
                 const card = getRef('market_order_template').content.cloneNode(true).firstElementChild
                 card.dataset.type = type
                 card.classList.add(`transaction-card--${type}`)
                 card.querySelector('.transaction-card__type').textContent = type
-                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
                 card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
                 card.querySelector('.more-info').dataset.time = time
@@ -1032,9 +1018,9 @@
                 return card
             },
             marketTransactionCard(transactionDetails = {}) {
-                const { buyer, seller, quantity, unitValue, time } = transactionDetails
+                const { buyer, seller, asset, quantity, unitValue, time } = transactionDetails
                 const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
-                card.querySelector('.transaction-card__quantity').textContent = `${quantity} FLO`
+                card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
                 card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
                 card.querySelector('.more-info').dataset.time = time
@@ -1062,14 +1048,15 @@
             getRef('quantity_type').textContent = tradeType === 'buy' ? `Rupee` : `FLO`
         })
         async function tradeFlo() {
+            const asset = getRef('get_asset').value;
             const quantity = parseFloat(getRef('get_quantity').value)
             const price = parseFloat(getRef('get_price').value)
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
-                    await buy(quantity, price, await proxy.secret)
+                    await buy(asset, quantity, price, proxy.userID, await proxy.secret)    //TODO: asset_name
                 } else {
-                    await sell(quantity, price, await proxy.secret)
+                    await sell(asset, quantity, price, proxy.userID, await proxy.secret)   //TODO: asset_name
                 }
                 getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
@@ -1206,20 +1193,20 @@
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
                 showProcess('wallet_popup__cta_wrapper')
-                const proxySecret = await proxy.secret
+                const proxySecret = await proxy.secret;
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, userID, privKey, proxySecret)
+                        await depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     } else {
-                        await depositRupee(quantity, userID, privKey, proxySecret)
+                        await depositToken(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)  //TODO: token_name
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
-                        await withdrawFLO(quantity, proxySecret)
+                        await withdrawFLO(quantity, proxy.userID, proxySecret)
                     } else {
-                        await withdrawRupee(quantity, proxySecret)
+                        await withdrawToken(quantity, proxy.userID, proxySecret)    //TODO: token_name
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1362,7 +1349,7 @@
                         const target = e.target.closest('.order-card')
                         const id = target.dataset.id
                         const type = target.dataset.type
-                        cancelOrder(type, id, await proxy.secret)
+                        cancelOrder(type, id, proxy.userID, await proxy.secret)
                             .then(() => {
                                 notify('Order cancelled', 'success')
                                 target.animate([
@@ -1414,7 +1401,7 @@
                 if (res) {
                     try {
                         const proxy_secret = await proxy.secret;
-                        const promises = [...selectedOrders].map(([id, type]) => cancelOrder(type, id, proxy_secret))
+                        const promises = [...selectedOrders].map(([id, type]) => cancelOrder(type, id, proxy.userID, proxy_secret))
                         await Promise.all(promises)
                         selectedOrders.clear()
                         hideMyOrdersOptions()
@@ -1437,9 +1424,10 @@
             if (ordersType === 'open') {
                 const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
                 allOpenOrders.forEach(order => {
-                    const { id, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                    const { id, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
                     const orderDetails = {
                         id,
+                        asset,
                         quantity,
                         type: minPrice ? 'sell' : 'buy',
                         price: minPrice || maxPrice,
@@ -1449,12 +1437,12 @@
                 })
             } else {
                 transactions.forEach(transaction => {
-                    const { quantity, unitValue, tx_time, buyer, seller } = transaction
+                    const {asset, quantity, unitValue, tx_time, buyer, seller } = transaction
                     let type, other;
-                    if (seller === userID) {
+                    if (seller === proxy.userID) {
                         type = 'Sold';
-                        other = buyer === userID ? 'MySelf' : buyer;
-                    } else if (buyer === userID) {
+                        other = buyer === proxy.userID ? 'MySelf' : buyer;
+                    } else if (buyer === proxy.userID) {
                         type = 'Bought';
                         other = seller;
                     } else
@@ -1464,6 +1452,7 @@
                         seller,
                         type,
                         other,
+                        asset,
                         quantity,
                         unitValue,
                         time: tx_time
@@ -1485,9 +1474,10 @@
                     const [buyOrders, sellOrders] = await Promise.all([getBuyList(), getSellList()])
                     const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
                     allOpenOrders.forEach(order => {
-                        const { floID, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                        const { floID, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
                         const orderDetails = {
                             floID,
+                            asset,
                             quantity,
                             type: minPrice ? 'sell' : 'buy',
                             unitValue: minPrice || maxPrice,
@@ -1503,10 +1493,11 @@
                 try {
                     const marketTransactions = await getTransactionList()
                     marketTransactions.forEach(transaction => {
-                        const { seller, buyer, quantity, unitValue, tx_time } = transaction
+                        const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
                         const transactionDetails = {
                             buyer,
                             seller,
+                            asset,
                             quantity,
                             unitValue,
                             time: tx_time
@@ -1551,9 +1542,9 @@
 
     </script>
     <script>
-        let userID; //container for user ID and proxy private-key
-
+        //container for user ID and proxy private-key
         const proxy = {
+            user: null,
             private: null,
             public: null,
             async lock() {
@@ -1569,18 +1560,35 @@
                         notify("Password minimum length is 4", 'error');
                     else {
                         let tmp = Crypto.AES.encrypt(this.private, pwd);
-                        localStorage.setItem("proxy_secret", "?" + tmp);
+                        localStorage.setItem("exchange-proxy_secret", "?" + tmp);
                         notify("Successfully locked with Password", 'success');
                     }
                 }).catch(_ => null);
             },
             clear() {
-                localStorage.removeItem("proxy_secret");
+                localStorage.removeItem("exchange-proxy_secret");
+                localStorage.removeItem("exchange-user_ID");
+                this.user = null;
                 this.private = null;
                 this.public = null;
             },
+            get sinkID(){
+                return getRef("sink_id").value;
+            },
+            set userID(id){
+                localStorage.setItem("exchange-user_ID", id);
+                this.user = id;
+            },
+            get userID(){
+                if(this.user)
+                    return this.user;
+                else{
+                    let id = localStorage.getItem('exchange-user_ID');
+                    return id ? this.user = id : undefined;
+                }  
+            },
             set secret(key) {
-                localStorage.setItem("proxy_secret", key);
+                localStorage.setItem("exchange-proxy_secret", key);
                 this.private = key;
                 this.public = floCrypto.getPubKeyHex(key);
             },
@@ -1603,7 +1611,7 @@
                             Reject("Unable to fetch Proxy secret");
                         }
                     };
-                    let tmp = localStorage.getItem("proxy_secret");
+                    let tmp = localStorage.getItem("exchange-proxy_secret");
                     if (typeof tmp !== "string")
                         Reject("Unable to fetch Proxy secret");
                     else if (tmp.startsWith("?")) {
@@ -1627,22 +1635,43 @@
         }
 
         let floExchangeRate = 0
-        function updateRate() {
-            getRate().then(rate => {
-                floExchangeRate = parseFloat(rate)
-                getRef('flo_rate').textContent = formatAmount(parseFloat(rate))
-                getRef('get_price').value = parseFloat(parseFloat(rate).toFixed(2))
+        function updateRate(init = false) {
+            getRates().then(rates => {
+                console.debug(rates);
+                if(init){
+                    let assetList = getRef('get_asset');
+                    for(let asset in rates){
+                        let e = document.createElement('option');
+                        e.innerText = asset;
+                        assetList.appendChild(e);
+                    }
+                }
+                let flo_rate = rates["FLO"];
+                floExchangeRate = parseFloat(flo_rate)
+                getRef('flo_rate').textContent = formatAmount(parseFloat(flo_rate))
+                getRef('get_price').value = parseFloat(parseFloat(flo_rate).toFixed(2))
             }).catch(error => console.error(error))
         }
 
         function refresh(init = false) {
-            if (init)
+            if (init){
                 console.info("init");
-            else
+                if(!proxy.userID){
+                    getRef('home').classList.remove('signed-in');
+                    getLoginCode().then(response => {
+                        getRef("login_form").classList.remove('hide-completely');
+                        document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
+                        getRef('sign_in_code').value = response.code;
+                        getRef('sign_in_hash').value = response.hash;
+                        proxy.clear();
+                    }).catch(error => console.error(error))
+                }
+            } else
                 console.info("refresh");
-            updateRate()
-            renderMarketOrders()
-            account();
+            updateRate(init);
+            renderMarketOrders();
+            if(proxy.userID)
+                account();
         }
 
         function showBalance(type, availableBalance = 0, lockedBalance = 0) {
@@ -1661,8 +1690,8 @@
         const balance = {}
 
         let accountDetails = {}
-        function account() {
-            getAccount().then(acc => {
+        async function account() {
+            getAccount(proxy.userID, await proxy.secret).then(acc => {
                 getRef("login_form").classList.add('hide-completely')
                 getRef('home').classList.add('signed-in')
                 accountDetails = acc
@@ -1671,9 +1700,10 @@
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide-completely'))
                 getRef('trade_form').classList.remove('hide-completely')
                 getRef("user_id").value = acc.floID;
-                userID = acc.floID;
+                getRef("sink_id").value = acc.sinkID;
                 //FLO Balance
-                let flo_total = acc.coins.reduce((a, x) => a + x.quantity, 0);
+                console.debug(acc.vault);
+                let flo_total = acc.vault.reduce((a, x) => a + (x.asset === "FLO" ? x.quantity : 0), 0);
                 let flo_locked = acc.sellOrders.reduce((a, x) => a + x.quantity, 0);
                 let flo_net = flo_total - flo_locked;
                 console.debug("FLO", flo_total, flo_locked, flo_net);
@@ -1681,7 +1711,7 @@
 
                 showBalance("flo", flo_net, flo_locked,)
                 //Rupee Balance
-                let rupee_total = acc.rupee_total;
+                let rupee_total = acc.cash;
                 let rupee_locked = acc.buyOrders.reduce((a, x) => a + x.quantity * x.maxPrice, 0);
                 let rupee_net = rupee_total - rupee_locked;
                 console.debug("RUPEE", rupee_total, rupee_locked, rupee_net);
@@ -1690,28 +1720,17 @@
                 //My orders
                 renderUserOrders();
                 proxy.secret.then(_ => null).catch(_ => null);
-            }).catch(error => {
-                getRef('home').classList.remove('signed-in')
-                if (error instanceof ResponseError) {
-                    let response = JSON.parse(error.data)
-                    console.log(error);
-                    console.log(response);
-                    getRef("login_form").classList.remove('hide-completely')
-                    document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
-                    getRef('sign_in_id').value = response.sid;
-                    proxy.clear();
-                } else
-                    console.error(error);
-            })
+            }).catch(error => console.error(error))
         };
 
         const UI_evt = {
             signup(privKey) {
-                let sid = getRef('sign_in_id').value;
+                let code = getRef('sign_in_code').value, 
+                    hash = getRef('sign_in_hash').value;
                 if (!privKey)
                     privKey = getRef('get_registration_key').value.trim()
                 if (privKey !== '') {
-                    signUp(privKey, sid).then(result => {
+                    signUp(privKey, code, hash).then(result => {
                         console.info(result);
                         notify("Account registered!", 'success')
                         hidePopup()
@@ -1722,9 +1741,9 @@
             },
 
             logout() {
-                getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(res => {
+                getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(async res => {
                     if (res) {
-                        logout().then(result => {
+                        logout(proxy.userID, await proxy.secret).then(result => {
                             console.warn(result);
                             proxy.clear();
                             location.reload();
@@ -1736,12 +1755,16 @@
             login() {
                 showProcess('login_button_wrapper')
                 let privKey = getRef('login_form__priv_key').value;
-                let sid = getRef('sign_in_id').value;
+                let code = getRef('sign_in_code').value, 
+                    hash = getRef('sign_in_hash').value;
                 let rememberMe = getRef('remember_me').checked;
                 let tmpKey = floCrypto.generateNewID();
-                login(privKey, tmpKey.pubKey, sid, rememberMe).then(result => {
+                login(privKey, tmpKey.pubKey, code, hash).then(result => {
                     console.log(result);
                     proxy.secret = tmpKey.privKey;
+                    proxy.userID = floCrypto.getFloID(privKey);
+                    getRef('sign_in_code').value = null;
+                    getRef('sign_in_hash').value = null;
                     account();
                 }).catch(error => notify(error.data, 'error'))
                     .finally(() => {
@@ -1757,7 +1780,10 @@
         }
 
         window.addEventListener('load', e => {
-            refresh(true);
+            refreshDataFromBlockchain().then(nodes => {
+                console.log(nodes);
+                refresh(true);
+            }).catch(error => console.error(error))
         })
     </script>
 </body>

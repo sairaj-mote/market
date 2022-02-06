@@ -10,10 +10,15 @@ console.log(__dirname);
 
 function validateKey(privKey) {
     return new Promise((resolve, reject) => {
-        if (floCrypto.verifyPrivKey(privKey, floGlobals.adminID))
+        try {
+            if (!privKey || privKey === "")
+                throw 'Private Key cannot be empty!';
+            let floID = floCrypto.getFloID(privKey);
+            if (!floID || !floCrypto.verifyPrivKey(privKey, floID))
+                throw 'Invalid Private Key!';
             return resolve(privKey);
-        else {
-            getInput.Text('Incorrect Private Key! Re-Enter: (Cancel)', 'Cancel').then(value => {
+        } catch (error) {
+            getInput.Text(error + ' Re-Enter: (Cancel)', 'Cancel').then(value => {
                 if (value === 'Cancel')
                     return reject(true);
                 validateKey(value)
@@ -41,7 +46,7 @@ function getPassword() {
                         getPassword()
                             .then(result => resolve(result))
                             .catch(error => reject(error))
-                    } else 
+                    } else
                         resolve(value1);
                 })
             }
@@ -51,13 +56,13 @@ function getPassword() {
 
 function resetPassword() {
     return new Promise((resolve, reject) => {
-        getInput.Text(`Enter private key for adminID (${floGlobals.adminID})`).then(value => {
+        getInput.Text(`Enter private key`).then(value => {
             validateKey(value).then(privKey => {
                 getPassword().then(password => {
                     let encrypted = Crypto.AES.encrypt(privKey, password);
                     let randNum = floCrypto.randInt(10, 15);
                     let splitShares = floCrypto.createShamirsSecretShares(encrypted, randNum, randNum);
-                    fs.writeFile(__dirname + '/../args/keys.json', JSON.stringify(splitShares), 'utf8', (err) => {
+                    fs.writeFile(__dirname + `/../args/keys${process.env.I || ""}.json`, JSON.stringify(splitShares), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);

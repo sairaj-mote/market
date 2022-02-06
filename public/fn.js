@@ -1,4 +1,24 @@
 //console.log(document.cookie.toString());
+const INVALID_SERVER_MSG = "INCORRECT_SERVER_ERROR";
+var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
+
+function exchangeAPI(api, options) {
+    return new Promise((resolve, reject) => {
+        let curPos = exchangeAPI.curPos || 0;
+        if (curPos >= nodeList.length)
+            return resolve('No Nodes online');
+        let url = "http://" + nodeURL[nodeList[curPos]];
+        (options ? fetch(url + api, options) : fetch(url + api))
+        .then(result => resolve(result)).catch(error => {
+            console.warn(nodeList[curPos], 'is offline');
+            //try next node
+            exchangeAPI.curPos = curPos + 1;
+            exchangeAPI(api, options)
+                .then(result => resolve(result))
+                .catch(error => reject(error))
+        });
+    })
+}
 
 const tokenAPI = {
     fetch_api: function(apicall) {
@@ -33,7 +53,7 @@ const tokenAPI = {
             }).catch(error => reject(error))
         })
     },
-    sendToken: function(privKey, amount, message = "", receiverID = floGlobals.adminID, token = 'rupee') {
+    sendToken: function(privKey, amount, receiverID, message = "", token = floGlobals.currency) {
         return new Promise((resolve, reject) => {
             let senderID = floCrypto.getFloID(privKey);
             if (typeof amount !== "number" || amount <= 0)
@@ -50,7 +70,9 @@ const tokenAPI = {
 }
 
 function ResponseError(status, data) {
-    if (this instanceof ResponseError) {
+    if (data === INVALID_SERVER_MSG)
+        location.reload();
+    else if (this instanceof ResponseError) {
         this.data = data;
         this.status = status;
     } else
@@ -74,10 +96,25 @@ function responseParse(response, json_ = true) {
     });
 }
 
-function getAccount() {
+function getAccount(floID, proxySecret) {
     return new Promise((resolve, reject) => {
-        fetch('/account')
-            .then(result => responseParse(result)
+        let request = {
+            floID: floID,
+            timestamp: Date.now()
+        };
+        request.sign = signRequest({
+            type: "get_account",
+            timestamp: request.timestamp
+        }, proxySecret);
+        console.debug(request);
+
+        exchangeAPI('/account', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
             .catch(error => reject(error));
@@ -86,7 +123,7 @@ function getAccount() {
 
 function getBuyList() {
     return new Promise((resolve, reject) => {
-        fetch('/list-buyorders')
+        exchangeAPI('/list-buyorders')
             .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
@@ -96,7 +133,7 @@ function getBuyList() {
 
 function getSellList() {
     return new Promise((resolve, reject) => {
-        fetch('/list-sellorders')
+        exchangeAPI('/list-sellorders')
             .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
@@ -106,7 +143,7 @@ function getSellList() {
 
 function getTransactionList() {
     return new Promise((resolve, reject) => {
-        fetch('/list-transactions')
+        exchangeAPI('/list-transactions')
             .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
@@ -114,10 +151,10 @@ function getTransactionList() {
     });
 }
 
-function getRate() {
+function getRates() {
     return new Promise((resolve, reject) => {
-        fetch('/get-rate')
-            .then(result => responseParse(result, false)
+        exchangeAPI('/get-rates')
+            .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
             .catch(error => reject(error));
@@ -131,21 +168,35 @@ function signRequest(request, privKey) {
     return floCrypto.signData(req_str, privKey);
 }
 
-function signUp(privKey, sid) {
+function getLoginCode() {
     return new Promise((resolve, reject) => {
+        exchangeAPI('/get-login-code')
+            .then(result => responseParse(result)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error));
+    })
+}
+
+function signUp(privKey, code, hash) {
+    return new Promise((resolve, reject) => {
+        if (!code || !hash)
+            return reject("Login Code missing")
         let request = {
             pubKey: floCrypto.getPubKeyHex(privKey),
             floID: floCrypto.getFloID(privKey),
+            code: code,
+            hash: hash,
             timestamp: Date.now()
         };
         request.sign = signRequest({
             type: "create_account",
-            random: sid,
+            random: code,
             timestamp: request.timestamp
         }, privKey);
         console.debug(request);
 
-        fetch("/signup", {
+        exchangeAPI("/signup", {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -158,25 +209,28 @@ function signUp(privKey, sid) {
     });
 }
 
-function login(privKey, proxyKey, sid, rememberMe = false) {
+function login(privKey, proxyKey, code, hash) {
     return new Promise((resolve, reject) => {
+        if (!code || !hash)
+            return reject("Login Code missing")
         let request = {
             proxyKey: proxyKey,
             floID: floCrypto.getFloID(privKey),
             timestamp: Date.now(),
-            saveSession: rememberMe
+            code: code,
+            hash: hash
         };
         if (!privKey || !request.floID)
             return reject("Invalid Private key");
         request.sign = signRequest({
             type: "login",
-            random: sid,
-            proxyKey: request.proxyKey,
+            random: code,
+            proxyKey: proxyKey,
             timestamp: request.timestamp
         }, privKey);
         console.debug(request);
 
-        fetch("/login", {
+        exchangeAPI("/login", {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -189,36 +243,54 @@ function login(privKey, proxyKey, sid, rememberMe = false) {
     })
 }
 
-function logout() {
+function logout(floID, proxySecret) {
     return new Promise((resolve, reject) => {
-        fetch("/logout")
-            .then(result => responseParse(result, false)
+        let request = {
+            floID: floID,
+            timestamp: Date.now()
+        };
+        request.sign = signRequest({
+            type: "logout",
+            timestamp: request.timestamp
+        }, proxySecret);
+        console.debug(request);
+
+        exchangeAPI("/logout", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
             .catch(error => reject(error))
     })
 }
 
-function buy(quantity, max_price, proxySecret) {
+function buy(asset, quantity, max_price, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= 0)
             return reject(`Invalid quantity (${quantity})`);
         else if (typeof max_price !== "number" || max_price <= 0)
             return reject(`Invalid max_price (${max_price})`);
         let request = {
+            floID: floID,
+            asset: asset,
             quantity: quantity,
             max_price: max_price,
             timestamp: Date.now()
         };
         request.sign = signRequest({
             type: "buy_order",
+            asset: asset,
             quantity: quantity,
             max_price: max_price,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        fetch('/buy', {
+        exchangeAPI('/buy', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -232,13 +304,15 @@ function buy(quantity, max_price, proxySecret) {
 
 }
 
-function sell(quantity, min_price, proxySecret) {
+function sell(asset, quantity, min_price, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= 0)
             return reject(`Invalid quantity (${quantity})`);
         else if (typeof min_price !== "number" || min_price <= 0)
             return reject(`Invalid min_price (${min_price})`);
         let request = {
+            floID: floID,
+            asset: asset,
             quantity: quantity,
             min_price: min_price,
             timestamp: Date.now()
@@ -246,12 +320,13 @@ function sell(quantity, min_price, proxySecret) {
         request.sign = signRequest({
             type: "sell_order",
             quantity: quantity,
+            asset: asset,
             min_price: min_price,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        fetch('/sell', {
+        exchangeAPI('/sell', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -265,11 +340,12 @@ function sell(quantity, min_price, proxySecret) {
 
 }
 
-function cancelOrder(type, id, proxySecret) {
+function cancelOrder(type, id, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         if (type !== "buy" && type !== "sell")
             return reject(`Invalid type (${type}): type should be sell (or) buy`);
         let request = {
+            floID: floID,
             orderType: type,
             orderID: id,
             timestamp: Date.now()
@@ -282,7 +358,7 @@ function cancelOrder(type, id, proxySecret) {
         }, proxySecret);
         console.debug(request);
 
-        fetch('/cancel', {
+        exchangeAPI('/cancel', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -296,23 +372,24 @@ function cancelOrder(type, id, proxySecret) {
 }
 
 /* Disabled for Beta-testing
-function depositFLO(quantity, userID, privKey, proxySecret) {
+function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
             return reject(`Invalid quantity (${quantity})`);
-        floBlockchainAPI.sendTx(userID, floGlobals.adminID, quantity, privKey, 'Deposit FLO in market').then(txid => {
+        floBlockchainAPI.sendTx(floID, sinkID, quantity, privKey, 'Deposit FLO in market').then(txid => {
             let request = {
+                floID: floID,
                 txid: txid,
                 timestamp: Date.now()
             };
             request.sign = signRequest({
                 type: "deposit_FLO",
-                txid: request.txid,
+                txid: txid,
                 timestamp: request.timestamp
             }, proxySecret);
             console.debug(request);
 
-            fetch('/deposit-flo', {
+            exchangeAPI('/deposit-flo', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'
@@ -326,20 +403,21 @@ function depositFLO(quantity, userID, privKey, proxySecret) {
     })
 }
 
-function withdrawFLO(quantity, proxySecret) {
+function withdrawFLO(quantity, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         let request = {
+            floID: floID,
             amount: quantity,
             timestamp: Date.now()
         };
         request.sign = signRequest({
             type: "withdraw_FLO",
-            amount: request.amount,
+            amount: quantity,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        fetch('/withdraw-flo', {
+        exchangeAPI('/withdraw-flo', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -352,23 +430,24 @@ function withdrawFLO(quantity, proxySecret) {
     })
 }
 
-function depositRupee(quantity, userID, privKey, proxySecret) {
+function depositToken(token, quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
-        if (!floCrypto.verifyPrivKey(privKey, userID))
+        if (!floCrypto.verifyPrivKey(privKey, floID))
             return reject("Invalid Private Key");
-        tokenAPI.sendToken(privKey, quantity, 'Deposit Rupee in market').then(txid => {
+        tokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market', token).then(txid => {
             let request = {
+                floID: floID,
                 txid: txid,
                 timestamp: Date.now()
             };
             request.sign = signRequest({
-                type: "deposit_Rupee",
-                txid: request.txid,
+                type: "deposit_Token",
+                txid: txid,
                 timestamp: request.timestamp
             }, proxySecret);
             console.debug(request);
 
-            fetch('/deposit-rupee', {
+            exchangeAPI('/deposit-token', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'
@@ -382,20 +461,23 @@ function depositRupee(quantity, userID, privKey, proxySecret) {
     })
 }
 
-function withdrawRupee(quantity, proxySecret) {
+function withdrawToken(token, quantity, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         let request = {
+            floID: floID,
+            token: token,
             amount: quantity,
             timestamp: Date.now()
         };
         request.sign = signRequest({
-            type: "withdraw_Rupee",
-            amount: request.amount,
+            type: "withdraw_Token",
+            token: token,
+            amount: quantity,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        fetch('/withdraw-rupee', {
+        exchangeAPI('/withdraw-token', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -409,22 +491,23 @@ function withdrawRupee(quantity, proxySecret) {
 }
 */
 
-function addUserTag(floID, tag, proxySecret) {
+function addUserTag(tag_user, tag, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         let request = {
-            user: floID,
+            floID: floID,
+            user: tag_user,
             tag: tag,
             timestamp: Date.now()
         };
         request.sign = signRequest({
             command: "add_Tag",
-            user: request.user,
-            tag: request.tag,
+            user: tag_user,
+            tag: tag,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        fetch('/add-tag', {
+        exchangeAPI('/add-tag', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -437,22 +520,23 @@ function addUserTag(floID, tag, proxySecret) {
     })
 }
 
-function removeUserTag(floID, tag, proxySecret) {
+function removeUserTag(tag_user, tag, floID, proxySecret) {
     return new Promise((resolve, reject) => {
         let request = {
-            user: floID,
+            floID: floID,
+            user: tag_user,
             tag: tag,
             timestamp: Date.now()
         };
         request.sign = signRequest({
             command: "remove_Tag",
-            user: request.user,
-            tag: request.tag,
+            user: tag_user,
+            tag: tag,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
 
-        fetch('/remove-tag', {
+        exchangeAPI('/remove-tag', {
                 method: "POST",
                 headers: {
                     'Content-Type': 'application/json'
@@ -462,5 +546,45 @@ function removeUserTag(floID, tag, proxySecret) {
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
             .catch(error => reject(error))
+    })
+}
+
+function refreshDataFromBlockchain() {
+    return new Promise((resolve, reject) => {
+        let nodes, lastTx;
+        try {
+            nodes = JSON.parse(localStorage.getItem('exchange-nodes'));
+            if (typeof nodes !== 'object' || nodes === null)
+                throw Error('nodes must be an object')
+            else
+                lastTx = parseInt(localStorage.getItem('exchange-lastTx')) || 0;
+        } catch (error) {
+            nodes = {};
+            lastTx = 0;
+        }
+        floBlockchainAPI.readData(floGlobals.adminID, {
+            ignoreOld: lastTx,
+            sentOnly: true,
+            pattern: floGlobals.application
+        }).then(result => {
+            result.data.reverse().forEach(data => {
+                var content = JSON.parse(data)[floGlobals.application];
+                //Node List
+                if (content.Nodes) {
+                    if (content.Nodes.remove)
+                        for (let n of content.Nodes.remove)
+                            delete nodes[n];
+                    if (content.Nodes.add)
+                        for (let n in content.Nodes.add)
+                            nodes[n] = content.Nodes.add[n];
+                }
+            });
+            localStorage.setItem('exchange-lastTx', result.totalTxs);
+            localStorage.setItem('exchange-nodes', JSON.stringify(nodes));
+            nodeURL = nodes;
+            nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
+            nodeList = nodeKBucket.order;
+            resolve(nodes);
+        }).catch(error => reject(error));
     })
 }

@@ -1,7 +1,7 @@
 'use strict';
 
 const market = require("./market");
-var DB, trustedIDs; //container for database
+var DB, trustedIDs, secret; //container for database
 
 global.INVALID = function(message) {
     if (!(this instanceof INVALID))
@@ -21,11 +21,20 @@ INTERNAL.e_code = 500;
 const oneDay = 1000 * 60 * 60 * 24;
 const maxSessionTimeout = 60 * oneDay;
 
+var serving;
+const INVALID_SERVER_MSG = "INCORRECT_SERVER_ERROR";
+
 function validateRequestFromFloID(request, sign, floID, proxy = true) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT " + (proxy ? "proxyKey AS pubKey FROM Sessions" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
+        if (!serving)
+            return reject(INVALID(INVALID_SERVER_MSG));
+        else if (!floCrypto.validateAddr(floID))
+            return reject(INVALID("Invalid floID"));
+        DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM UserSession" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
+            if (proxy && result[0].session_time + maxSessionTimeout < Date.now())
+                return reject(INVALID("Session Expired! Re-login required"));
             let req_str = validateRequest(request, sign, result[0].pubKey);
             req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
         }).catch(error => reject(error));
@@ -52,16 +61,28 @@ function storeRequest(floID, req_str, sign) {
         .then(_ => null).catch(error => console.error(error));
 }
 
+function getLoginCode(req, res) {
+    if (!serving)
+        return res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    let randID = floCrypto.randString(8, true) + Math.round(Date.now() / 1000);
+    let hash = Crypto.SHA1(randID + secret);
+    res.send({
+        code: randID,
+        hash: hash
+    });
+}
+
 function SignUp(req, res) {
-    let data = req.body,
-        session = req.session;
+    if (!serving)
+        return res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    let data = req.body;
     if (floCrypto.getFloID(data.pubKey) !== data.floID)
         return res.status(INVALID.e_code).send("Invalid Public Key");
-    if (!session.random)
-        return res.status(INVALID.e_code).send("Invalid Session");
+    if (!data.code || data.hash != Crypto.SHA1(data.code + secret))
+        return res.status(INVALID.e_code).send("Invalid Code");
     let req_str = validateRequest({
         type: "create_account",
-        random: session.random,
+        random: data.code,
         timestamp: data.timestamp
     }, data.sign, data.pubKey);
     if (req_str instanceof INVALID)
@@ -87,22 +108,18 @@ function SignUp(req, res) {
 }
 
 function Login(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.random)
-        return res.status(INVALID.e_code).send("Invalid Session");
+    let data = req.body;
+    if (!data.code || data.hash != Crypto.SHA1(data.code + secret))
+        return res.status(INVALID.e_code).send("Invalid Code");
     validateRequestFromFloID({
         type: "login",
-        random: session.random,
+        random: data.code,
         proxyKey: data.proxyKey,
         timestamp: data.timestamp
     }, data.sign, data.floID, false).then(req_str => {
-        DB.query("INSERT INTO Sessions (floID, session_id, proxyKey) VALUES (?, ?, ?) " +
-            "ON DUPLICATE KEY UPDATE session_id=?, session_time=DEFAULT, proxyKey=?",
-            [data.floID, req.sessionID, data.proxyKey, req.sessionID, data.proxyKey]).then(_ => {
-            if (data.saveSession)
-                session.cookie.maxAge = maxSessionTimeout;
-            session.user_id = data.floID;
+        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?, ?) AS new " +
+            "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=new.proxyKey",
+            [data.floID, data.proxyKey]).then(_ => {
             storeRequest(data.floID, req_str, data.sign);
             res.send("Login Successful");
         }).catch(error => {
@@ -120,32 +137,40 @@ function Login(req, res) {
 }
 
 function Logout(req, res) {
-    let session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("No logged in user found in this session");
-    DB.query("DELETE FROM Sessions WHERE floID=?", [session.user_id]).then(_ => {
-        session.destroy();
-        res.send('Logout successful');
+    let data = req.body;
+    validateRequestFromFloID({
+        type: "logout",
+        timestamp: data.timestamp
+    }, data.sign, data.floID).then(req_str => {
+        DB.query("DELETE FROM UserSession WHERE floID=?", [data.floID]).then(_ => {
+            storeRequest(data.floID, req_str, data.sign);
+            res.send('Logout successful');
+        }).catch(error => {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Logout failed! Try again later! Contact support if this error occurs frequently");
+        });
     }).catch(error => {
-        console.error(error);
-        res.status(INTERNAL.e_code).send("Logout failed! Try again later! Contact support if this error occurs frequently");
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
     });
 }
 
 function PlaceSellOrder(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+    let data = req.body;
     validateRequestFromFloID({
         type: "sell_order",
+        asset: data.asset,
         quantity: data.quantity,
         min_price: data.min_price,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.addSellOrder(session.user_id, data.quantity, data.min_price)
+    }, data.sign, data.floID).then(req_str => {
+        market.addSellOrder(data.floID, data.asset, data.quantity, data.min_price)
             .then(result => {
-                storeRequest(session.user_id, req_str, data.sign);
+                storeRequest(data.floID, req_str, data.sign);
                 res.send('Sell Order placed successfully');
             }).catch(error => {
                 if (error instanceof INVALID)
@@ -166,19 +191,17 @@ function PlaceSellOrder(req, res) {
 }
 
 function PlaceBuyOrder(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+    let data = req.body;
     validateRequestFromFloID({
         type: "buy_order",
+        asset: data.asset,
         quantity: data.quantity,
         max_price: data.max_price,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.addBuyOrder(session.user_id, data.quantity, data.max_price)
+    }, data.sign, data.floID).then(req_str => {
+        market.addBuyOrder(data.floID, data.asset, data.quantity, data.max_price)
             .then(result => {
-                storeRequest(session.user_id, req_str, data.sign);
+                storeRequest(data.floID, req_str, data.sign);
                 res.send('Buy Order placed successfully');
             }).catch(error => {
                 if (error instanceof INVALID)
@@ -199,19 +222,16 @@ function PlaceBuyOrder(req, res) {
 }
 
 function CancelOrder(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+    let data = req.body;
     validateRequestFromFloID({
         type: "cancel_order",
         order: data.orderType,
         id: data.orderID,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.cancelOrder(data.orderType, data.orderID, session.user_id)
+    }, data.sign, data.floID).then(req_str => {
+        market.cancelOrder(data.orderType, data.orderID, data.floID)
             .then(result => {
-                storeRequest(session.user_id, req_str, data.sign);
+                storeRequest(data.floID, req_str, data.sign);
                 res.send(result);
             }).catch(error => {
                 if (error instanceof INVALID)
@@ -247,63 +267,49 @@ function ListBuyOrders(req, res) {
 
 function ListTransactions(req, res) {
     //TODO: Limit size (recent)
-    DB.query("SELECT * FROM Transactions ORDER BY tx_time DESC")
+    DB.query("SELECT * FROM TransactionHistory ORDER BY tx_time DESC")
         .then(result => res.send(result))
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
 
-function getRate(req, res) {
-    let rate = market.returnRates();
-    res.send(`${rate}`);
+function getRates(req, res) {
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else
+        res.send(market.rates);
 }
 
 function Account(req, res) {
-    const setLogin = function(message) {
-        let randID = floCrypto.randString(16, true);
-        req.session.random = randID;
-        res.status(INVALID.e_code).send({
-            message,
-            sid: randID
+    let data = req.body;
+    validateRequestFromFloID({
+        type: "get_account",
+        timestamp: data.timestamp
+    }, data.sign, data.floID).then(req_str => {
+        market.getAccountDetails(data.floID).then(result => {
+            result.sinkID = global.sinkID;
+            if (trustedIDs.includes(data.floID))
+                result.subAdmin = true;
+            res.send(result);
         });
-    }
-    if (!req.session.user_id)
-        setLogin("Login required");
-    else {
-        DB.query("SELECT session_id, session_time FROM Sessions WHERE floID=?", [req.session.user_id]).then(result => {
-            if (result.length < 1) {
-                res.status(INVALID.e_code).send("floID not registered");
-                return;
-            }
-            let {
-                session_id,
-                session_time
-            } = result.pop();
-            if (!session_id || session_id != req.sessionID || session_time + maxSessionTimeout < Date.now())
-                setLogin("Session Expired! Re-login required");
-            else {
-                let floID = req.session.user_id;
-                market.getAccountDetails(floID).then(result => {
-                    if (trustedIDs.includes(floID))
-                        result.subAdmin = true;
-                    res.send(result)
-                });
-            }
-        }).catch(_ => res.status(INTERNAL.e_code).send("Try again later!"));
-    }
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
 }
 
 function DepositFLO(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+    let data = req.body;
     validateRequestFromFloID({
         type: "deposit_FLO",
         txid: data.txid,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.depositFLO(session.user_id, data.txid).then(result => {
-            storeRequest(session.user_id, req_str, data.sign);
+    }, data.sign, data.floID).then(req_str => {
+        market.depositFLO(data.floID, data.txid).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
@@ -324,17 +330,14 @@ function DepositFLO(req, res) {
 }
 
 function WithdrawFLO(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+    let data = req.body;
     validateRequestFromFloID({
         type: "withdraw_FLO",
         amount: data.amount,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.withdrawFLO(session.user_id, data.amount).then(result => {
-            storeRequest(session.user_id, req_str, data.sign);
+    }, data.sign, data.floID).then(req_str => {
+        market.withdrawFLO(data.floID, data.amount).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
@@ -354,18 +357,15 @@ function WithdrawFLO(req, res) {
     });
 }
 
-function DepositRupee(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+function DepositToken(req, res) {
+    let data = req.body;
     validateRequestFromFloID({
-        type: "deposit_Rupee",
+        type: "deposit_Token",
         txid: data.txid,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.depositRupee(session.user_id, data.txid).then(result => {
-            storeRequest(session.user_id, req_str, data.sign);
+    }, data.sign, data.floID).then(req_str => {
+        market.depositToken(data.floID, data.txid).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
@@ -385,18 +385,16 @@ function DepositRupee(req, res) {
     });
 }
 
-function WithdrawRupee(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
+function WithdrawToken(req, res) {
+    let data = req.body;
     validateRequestFromFloID({
-        type: "withdraw_Rupee",
+        type: "withdraw_Token",
+        token: data.token,
         amount: data.amount,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
-        market.withdrawRupee(session.user_id, data.amount).then(result => {
-            storeRequest(session.user_id, req_str, data.sign);
+    }, data.sign, data.floID).then(req_str => {
+        market.withdrawToken(data.floID, data.token, data.amount).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
@@ -417,20 +415,17 @@ function WithdrawRupee(req, res) {
 }
 
 function addUserTag(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
-    else if (!trustedIDs.includes(session.user_id))
+    let data = req.body;
+    if (!trustedIDs.includes(data.floID))
         return res.status(INVALID.e_code).send("Access Denied");
     validateRequestFromFloID({
         command: "add_Tag",
         user: data.user,
         tag: data.tag,
         timestamp: data.timestamp
-    }, data.sign, session.user_id).then(req_str => {
+    }, data.sign, data.floID).then(req_str => {
         market.group.addTag(data.user, data.tag).then(result => {
-            storeRequest(session.user_id, req_str, data.sign);
+            storeRequest(data.floID, req_str, data.sign);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
@@ -451,11 +446,8 @@ function addUserTag(req, res) {
 }
 
 function removeUserTag(req, res) {
-    let data = req.body,
-        session = req.session;
-    if (!session.user_id)
-        return res.status(INVALID.e_code).send("Login required");
-    else if (!trustedIDs.includes(session.user_id))
+    let data = req.body;
+    if (!trustedIDs.includes(data.floID))
         return res.status(INVALID.e_code).send("Access Denied");
     else
         validateRequestFromFloID({
@@ -463,9 +455,9 @@ function removeUserTag(req, res) {
             user: data.user,
             tag: data.tag,
             timestamp: data.timestamp
-        }, data.sign, session.user_id).then(req_str => {
+        }, data.sign, data.floID).then(req_str => {
             market.group.removeTag(data.user, data.tag).then(result => {
-                storeRequest(session.user_id, req_str, data.sign);
+                storeRequest(data.floID, req_str, data.sign);
                 res.send(result);
             }).catch(error => {
                 if (error instanceof INVALID)
@@ -486,6 +478,7 @@ function removeUserTag(req, res) {
 }
 
 module.exports = {
+    getLoginCode,
     SignUp,
     Login,
     Logout,
@@ -495,20 +488,32 @@ module.exports = {
     ListSellOrders,
     ListBuyOrders,
     ListTransactions,
-    getRate,
+    getRates,
     Account,
     DepositFLO,
     WithdrawFLO,
-    DepositRupee,
-    WithdrawRupee,
+    DepositToken,
+    WithdrawToken,
     periodicProcess: market.periodicProcess,
     addUserTag,
     removeUserTag,
     set trustedIDs(ids) {
         trustedIDs = ids;
     },
+    set assetList(assets){
+        market.assetList = assets;
+    },
     set DB(db) {
         DB = db;
         market.DB = db;
+    },
+    set secret(s) {
+        secret = s;
+    },
+    pause() {
+        serving = false;
+    },
+    resume() {
+        serving = true;
     }
 };

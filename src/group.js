@@ -4,7 +4,7 @@ var DB; //container for database
 
 function addTag(floID, tag) {
     return new Promise((resolve, reject) => {
-        DB.query("INSERT INTO Tags (floID, tag) VALUE (?,?)", [floID, tag])
+        DB.query("INSERT INTO UserTag (floID, tag) VALUE (?,?)", [floID, tag])
             .then(result => resolve(`Added ${floID} to ${tag}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
@@ -19,28 +19,31 @@ function addTag(floID, tag) {
 
 function removeTag(floID, tag) {
     return new Promise((resolve, reject) => {
-        DB.query("DELETE FROM Tags WHERE floID=? AND tag=?", [floID, tag])
+        DB.query("DELETE FROM UserTag WHERE floID=? AND tag=?", [floID, tag])
             .then(result => resolve(`Removed ${floID} from ${tag}`))
             .catch(error => reject(error));
     })
 }
 
-function getBestPairs(currentRate) {
+function getBestPairs(asset, cur_rate) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT tag, sellPriority, buyPriority FROM TagList").then(result => {
             //Sorted in Ascending (ie, stack; pop for highest)
             let tags_buy = result.sort((a, b) => a.buyPriority > b.buyPriority ? 1 : -1).map(r => r.tag);
             let tags_sell = result.sort((a, b) => a.sellPriority > b.sellPriority ? 1 : -1).map(r => r.tag);
-            resolve(new bestPair(currentRate, tags_buy, tags_sell));
+            resolve(new bestPair(asset, cur_rate, tags_buy, tags_sell));
         }).catch(error => reject(error))
     })
 }
 
-const bestPair = function(cur_rate, tags_buy, tags_sell) {
-    const currentRate = cur_rate;
+const bestPair = function(asset, cur_rate, tags_buy, tags_sell) {
+
+    Object.defineProperty(this, 'asset', {
+        get: () => asset
+    });
 
     Object.defineProperty(this, 'cur_rate', {
-        get: () => currentRate
+        get: () => cur_rate,
     });
 
     this.get = () => new Promise((resolve, reject) => {
@@ -59,7 +62,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
         }).catch(error => reject(error))
     });
 
-    this.next = (tx_quantity, incomplete_sell, flag_sell) => {
+    this.next = (tx_quantity, incomplete_sell) => {
         let buy = getBuyOrder.cache,
             sell = getSellOrder.cache;
         if (buy.cur_order && sell.cur_order) {
@@ -74,7 +77,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
             if (tx_quantity < sell.cur_order.quantity) {
                 sell.cur_order.quantity -= tx_quantity;
                 if (incomplete_sell) {
-                    if (!sell.mode_null && flag_sell)
+                    if (!sell.mode_null)
                         sell.null_queue.push(sell.cur_order);
                     sell.cur_order = null;
                 }
@@ -89,7 +92,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
     const getSellOrder = () => new Promise((resolve, reject) => {
         let cache = getSellOrder.cache;
         if (cache.cur_order) { //If cache already has a pending order
-            verifySellOrder(cache.cur_order, currentRate, cache.mode_null).then(result => {
+            verifySellOrder(cache.cur_order, asset, cur_rate, cache.mode_null).then(result => {
                 cache.cur_order = result;
                 resolve(result);
             }).catch(error => {
@@ -102,7 +105,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
                     .catch(error => reject(error))
             })
         } else if (cache.orders && cache.orders.length) { //If cache already has orders in priority
-            getTopValidSellOrder(cache.orders, currentRate, cache.mode_null).then(result => {
+            getTopValidSellOrder(cache.orders, asset, cur_rate, cache.mode_null).then(result => {
                 cache.cur_order = result;
                 resolve(result);
             }).catch(error => {
@@ -116,14 +119,14 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
             })
         } else if (cache.tags.length) { //If cache has remaining tags
             cache.cur_tag = cache.tags.pop();
-            getSellOrdersInTag(cache.cur_tag, currentRate).then(orders => {
+            getSellOrdersInTag(cache.cur_tag, asset, cur_rate).then(orders => {
                 cache.orders = orders;
                 getSellOrder()
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error));
         } else if (!cache.end) { //Un-tagged floID's orders  (do only once)
-            getUntaggedSellOrders(currentRate).then(orders => {
+            getUntaggedSellOrders(asset, cur_rate).then(orders => {
                 cache.orders = orders;
                 cache.cur_tag = null;
                 cache.end = true;
@@ -131,7 +134,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error));
-        } else if (!cache.mode_null) { //Lowest priority Coins (FLO Brought from other sources)
+        } else if (!cache.mode_null) { //Lowest priority Assets (Brought from other sources)
             cache.orders = cache.null_queue.reverse(); //Reverse it so that we can pop the highest priority
             cache.mode_null = true;
             cache.null_queue = null;
@@ -150,7 +153,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
     const getBuyOrder = () => new Promise((resolve, reject) => {
         let cache = getBuyOrder.cache;
         if (cache.cur_order) { //If cache already has a pending order
-            verifyBuyOrder(cache.cur_order, currentRate).then(result => {
+            verifyBuyOrder(cache.cur_order, cur_rate).then(result => {
                 cache.cur_order = result;
                 resolve(result);
             }).catch(error => {
@@ -163,7 +166,7 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
                     .catch(error => reject(error))
             })
         } else if (cache.orders && cache.orders.length) { //If cache already has orders in priority
-            getTopValidBuyOrder(cache.orders, currentRate).then(result => {
+            getTopValidBuyOrder(cache.orders, cur_rate).then(result => {
                 cache.cur_order = result;
                 resolve(result);
             }).catch(error => {
@@ -177,14 +180,14 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
             })
         } else if (cache.tags.length) { //If cache has remaining tags
             cache.cur_tag = cache.tags.pop();
-            getBuyOrdersInTag(cache.cur_tag, currentRate).then(orders => {
+            getBuyOrdersInTag(cache.cur_tag, asset, cur_rate).then(orders => {
                 cache.orders = orders;
                 getBuyOrder()
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error));
         } else if (!cache.end) { //Un-tagged floID's orders  (do only once)
-            getUntaggedBuyOrders(currentRate).then(orders => {
+            getUntaggedBuyOrders(asset, cur_rate).then(orders => {
                 cache.orders = orders;
                 cache.cur_tag = null;
                 cache.end = true;
@@ -200,31 +203,34 @@ const bestPair = function(cur_rate, tags_buy, tags_sell) {
     };
 }
 
-function getUntaggedSellOrders(cur_price) {
+function getUntaggedSellOrders(asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
-                " LEFT JOIN Tags ON Tags.floID = SellOrder.floID" +
-                " WHERE Tags.floID IS NULL AND SellOrder.minPrice <=? ORDER BY SellOrder.time_placed DESC", [cur_price])
+                " LEFT JOIN UserTag ON UserTag.floID = SellOrder.floID" +
+                " WHERE UserTag.floID IS NULL AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
+                " ORDER BY SellOrder.time_placed DESC", [asset, cur_price])
             .then(orders => resolve(orders))
             .catch(error => reject(error))
     })
 }
 
-function getUntaggedBuyOrders(cur_price) {
+function getUntaggedBuyOrders(asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
-                " LEFT JOIN Tags ON Tags.floID = BuyOrder.floID" +
-                " WHERE Tags.floID IS NULL AND BuyOrder.maxPrice >=? ORDER BY BuyOrder.time_placed DESC", [cur_price])
+                " LEFT JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
+                " WHERE UserTag.floID IS NULL AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=? " +
+                " ORDER BY BuyOrder.time_placed DESC", [asset, cur_price])
             .then(orders => resolve(orders))
             .catch(error => reject(error))
     })
 }
 
-function getSellOrdersInTag(tag, cur_price) {
+function getSellOrdersInTag(tag, asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
-            " INNER JOIN Tags ON Tags.floID = SellOrder.floID" +
-            " WHERE Tags.tag = ? AND SellOrder.minPrice <=? ORDER BY SellOrder.time_placed DESC", [tag, cur_price]).then(orders => {
+            " INNER JOIN UserTag ON UserTag.floID = SellOrder.floID" +
+            " WHERE UserTag.tag = ? AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
+            " ORDER BY SellOrder.time_placed DESC", [tag, asset, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);
             else
@@ -238,11 +244,12 @@ function getSellOrdersInTag(tag, cur_price) {
     });
 }
 
-function getBuyOrdersInTag(tag, cur_price) {
+function getBuyOrdersInTag(tag, asset, cur_price) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
-            " INNER JOIN Tags ON Tags.floID = BuyOrder.floID" +
-            " WHERE Tags.tag = ? AND BuyOrder.maxPrice >=? ORDER BY BuyOrder.time_placed DESC", [tag, cur_price]).then(orders => {
+            " INNER JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
+            " WHERE UserTag.tag = ? AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=?" +
+            " ORDER BY BuyOrder.time_placed DESC", [tag, asset, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);
             else
@@ -287,26 +294,26 @@ function fetch_api(api, id) {
     })
 }
 
-function getTopValidSellOrder(orders, cur_price, mode_null) {
+function getTopValidSellOrder(orders, asset, cur_price, mode_null) {
     return new Promise((resolve, reject) => {
         if (!orders.length)
             return reject(false)
-        verifySellOrder(orders.pop(), cur_price, mode_null) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
+        verifySellOrder(orders.pop(), asset, cur_price, mode_null) //pop: as the orders are sorted in ascending (highest point should be checked 1st)
             .then(result => resolve(result))
             .catch(error => {
                 if (error !== false)
                     return reject(error);
-                getTopValidSellOrder(orders, cur_price, mode_null)
+                getTopValidSellOrder(orders, asset, cur_price, mode_null)
                     .then(result => resolve(result))
                     .catch(error => reject(error));
             });
     });
 }
 
-function verifySellOrder(sellOrder, cur_price, mode_null) {
+function verifySellOrder(sellOrder, asset, cur_price, mode_null) {
     return new Promise((resolve, reject) => {
         if (!mode_null)
-            DB.query("SELECT quantity, base FROM Vault WHERE floID=? AND base IS NOT NULL ORDER BY base", [sellOrder.floID]).then(result => {
+            DB.query("SELECT quantity, base FROM Vault WHERE floID=? AND asset=? AND base IS NOT NULL ORDER BY base", [sellOrder.floID, asset]).then(result => {
                 let rem = sellOrder.quantity,
                     sell_base = 0,
                     base_quantity = 0;
@@ -329,10 +336,10 @@ function verifySellOrder(sellOrder, cur_price, mode_null) {
                     resolve(sellOrder);
             }).catch(error => reject(error));
         else if (mode_null)
-            DB.query("SELECT SUM(quantity) as total FROM Vault WHERE floID=?", [sellOrder.floID]).then(result => {
-                if (result.total < sellOrder.quantity)
-                    console.warn(`Sell Order ${sellOrder.id} was made without enough FLO. This should not happen`);
-                if (result.total > 0)
+            DB.query("SELECT SUM(quantity) as total FROM Vault WHERE floID=? AND asset=?", [sellOrder.floID, asset]).then(result => {
+                if (result[0].total < sellOrder.quantity)
+                    console.warn(`Sell Order ${sellOrder.id} was made without enough Assets. This should not happen`);
+                if (result[0].total > 0)
                     resolve(sellOrder);
                 else
                     reject(false);
@@ -358,10 +365,10 @@ function getTopValidBuyOrder(orders, cur_price) {
 
 function verifyBuyOrder(buyOrder, cur_price) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT rupeeBalance AS bal FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
+        DB.query("SELECT balance AS bal FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
             if (result[0].bal < cur_price * buyOrder.quantity) {
-                //This should not happen unless a buy order is placed when user doesnt have enough rupee balance
-                console.warn(`Buy order ${buyOrder.id} is active, but rupee# is insufficient`);
+                //This should not happen unless a buy order is placed when user doesnt have enough cash balance
+                console.warn(`Buy order ${buyOrder.id} is active, but Cash is insufficient`);
                 reject(false);
             } else
                 resolve(buyOrder);
