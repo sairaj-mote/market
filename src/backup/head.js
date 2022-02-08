@@ -21,8 +21,7 @@ function sendBackup(timestamp, ws) {
         timestamp = timestamp.substring(0, timestamp.length - 1);
     let promises = [
         send_dataSync(timestamp, ws),
-        send_deleteSync(timestamp, ws),
-        send_dataImmutable(timestamp, ws)
+        send_deleteSync(timestamp, ws)
     ];
     Promise.allSettled(promises).then(result => {
         let failedSync = [];
@@ -65,7 +64,7 @@ function send_dataSync(timestamp, ws) {
             .then(data => {
                 ws.send(JSON.stringify({
                     table,
-                    command: "SYNC_ADD_UPDATE",
+                    command: "SYNC_UPDATE",
                     data
                 }));
                 res(table);
@@ -79,7 +78,7 @@ function send_dataSync(timestamp, ws) {
             let sync_needed = {};
             result.forEach(r => r.t_name in sync_needed ? sync_needed[r.t_name].push(r.id) : sync_needed[r.t_name] = [r.id]);
             ws.send(JSON.stringify({
-                command: "SYNC_ADD_UPDATE_HEADER",
+                command: "SYNC_HEADER",
                 add_data: result
             }));
             let promises = [];
@@ -98,43 +97,6 @@ function send_dataSync(timestamp, ws) {
             reject("dataSync");
         });
     });
-}
-
-function send_dataImmutable(timestamp, ws) {
-    const immutable_tables = {
-        Users: "created",
-        Request_Log: "request_time",
-        TransactionHistory: "tx_time",
-        PriceHistory: "rec_time"
-    };
-    const sendTable = (table, timeCol) => new Promise((res, rej) => {
-        DB.query(`SELECT * FROM ${table} WHERE ${timeCol} > ?`, [timestamp])
-            .then(data => {
-                ws.send(JSON.stringify({
-                    table,
-                    command: "SYNC_ADD_IMMUTABLE",
-                    data
-                }));
-                res(table);
-            }).catch(error => {
-                console.error(error);
-                rej(table);
-            });
-    });
-
-    return new Promise((resolve, reject) => {
-        let promises = [];
-        for (let table in immutable_tables)
-            promises.push(sendTable(table, immutable_tables[table]));
-        Promise.allSettled(promises).then(result => {
-            let failedTables = [];
-            result.forEach(r => r.status === "rejected" ? failedTables.push(r.reason) : null);
-            if (failedTables.length)
-                reject(["dataImmutable", failedTables]);
-            else
-                resolve("dataImmutable");
-        });
-    })
 }
 
 //Shares

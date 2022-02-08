@@ -34,9 +34,11 @@ CREATE TABLE TrustedList(
 /* User Data */
 
 CREATE TABLE Users (
+    id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     pubKey CHAR(66) NOT NULL,
     created DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY(id),
     PRIMARY KEY(floID)
 );
 
@@ -82,11 +84,13 @@ CREATE TABLE UserTag (
 
 /* User Requests */
 
-CREATE TABLE Request_Log(
+CREATE TABLE RequestLog(
+    id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     request TEXT NOT NULL,
     sign TEXT NOT NULL,
     request_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(id),
     FOREIGN KEY (floID) REFERENCES Users(floID)
 );
 
@@ -159,25 +163,30 @@ CREATE TABLE OutputToken (
 /* Transaction Data */
 
 CREATE TABLE PriceHistory (
+    id INT NOT NULL AUTO_INCREMENT,
     asset VARCHAR(64) NOT NULL,
     rate FLOAT NOT NULL,
     rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE TransactionHistory (
+    id INT NOT NULL AUTO_INCREMENT,
     seller CHAR(34) NOT NULL,
     buyer CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
     quantity FLOAT NOT NULL,
     unitValue DECIMAL(10, 2) NOT NULL,
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(id),
     FOREIGN KEY (buyer) REFERENCES Users(floID),
     FOREIGN KEY (seller) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
 CREATE TABLE AuditTransaction(
+    id INT NOT NULL AUTO_INCREMENT,
     rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     unit_price FLOAT NOT NULL,
     quantity FLOAT NOT NULL,
@@ -193,6 +202,7 @@ CREATE TABLE AuditTransaction(
     buyer_new_asset FLOAT NOT NULL,
     buyer_old_cash FLOAT NOT NULL,
     buyer_new_cash FLOAT NOT NULL,
+    PRIMARY KEY(id),
     FOREIGN KEY (sellerID) REFERENCES Users(floID),
     FOREIGN KEY (buyerID) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
@@ -208,12 +218,34 @@ CREATE TABLE _backup (
     PRIMARY KEY(t_name, id)
 );
 
+CREATE table _backupCache(
+    id INT AUTO_INCREMENT,
+    t_name TINYTEXT,
+    data_cache LONGTEXT,
+    status BOOLEAN,
+    PRIMARY KEY(id)
+);
+
 CREATE TABLE sinkShares(
     floID CHAR(34) NOT NULL,
     share TEXT,
     time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(floID)
 );
+
+CREATE TRIGGER Users_I AFTER INSERT ON Users
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Users', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER Users_U AFTER UPDATE ON Users
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Users', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER Users_D AFTER DELETE ON Users
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Users', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER RequestLog_I AFTER INSERT ON RequestLog
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER RequestLog_U AFTER UPDATE ON RequestLog
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER RequestLog_D AFTER DELETE ON RequestLog
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER UserSession_I AFTER INSERT ON UserSession
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
@@ -284,3 +316,24 @@ CREATE TRIGGER UserTag_U AFTER UPDATE ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
 CREATE TRIGGER UserTag_D AFTER DELETE ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER PriceHistory_I AFTER INSERT ON PriceHistory
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER PriceHistory_U AFTER UPDATE ON PriceHistory
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER PriceHistory_D AFTER DELETE ON PriceHistory
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER AuditTransaction_I AFTER INSERT ON AuditTransaction
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTransaction', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER AuditTransaction_U AFTER UPDATE ON AuditTransaction
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTransaction', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER AuditTransaction_D AFTER DELETE ON AuditTransaction
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTransaction', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER TransactionHistory_I AFTER INSERT ON TransactionHistory
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransactionHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TransactionHistory_U AFTER UPDATE ON TransactionHistory
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransactionHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TransactionHistory_D AFTER DELETE ON TransactionHistory
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransactionHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;

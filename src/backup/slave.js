@@ -43,17 +43,7 @@ function stopSlaveProcess() {
 
 function requestBackupSync(ws) {
     return new Promise((resolve, reject) => {
-        const tables = {
-            Users: "created",
-            Request_Log: "request_time",
-            TransactionHistory: "tx_time",
-            //PriceHistory: "rec_time",
-            _backup: "timestamp"
-        };
-        let subs = [];
-        for (let t in tables)
-            subs.push(`SELECT MAX(${tables[t]}) as ts FROM ${t}`);
-        DB.query(`SELECT MAX(ts) as last_time FROM (${subs.join(' UNION ')}) AS Z`).then(result => {
+        DB.query('SELECT MAX(timestamp) as last_time FROM _backup').then(result => {
             let request = {
                 floID: global.myFloID,
                 pubKey: myPubKey,
@@ -70,9 +60,9 @@ function requestBackupSync(ws) {
 
 const requestInstance = {
     ws: null,
-    delete_sync: null,
-    add_sync: null,
-    immutable_sync: null,
+    cache: null,
+    delete_count: null,
+    add_count: null,
     delete_data: null,
     add_data: null,
     total_add: null,
@@ -101,6 +91,8 @@ requestInstance.open = function(ws = null) {
 
     requestBackupSync(ws).then(request => {
         self.request = request;
+        self.cache = [];
+        self.add_count = self.delete_count = 0;
         self.ws = ws;
     }).catch(error => console.error(error))
 }
@@ -111,9 +103,9 @@ requestInstance.close = function() {
         self.ws.close();
     self.onetime = null;
     self.ws = null;
-    self.delete_sync = null;
-    self.add_sync = null;
-    self.immutable_sync = null;
+    self.cache = null;
+    self.delete_count = null;
+    self.add_count = null;
     self.delete_data = null;
     self.add_data = null;
     self.total_add = null;
@@ -124,7 +116,7 @@ requestInstance.close = function() {
 function processDataFromMaster(message) {
     try {
         message = JSON.parse(message);
-        console.debug(message);
+        console.debug("Master:", message);
         if (message.command.startsWith("SYNC"))
             processBackupData(message);
         else switch (message.command) {
@@ -174,33 +166,85 @@ function processBackupData(response) {
             break;
         case "SYNC_END":
             if (response.status) {
-                if (self.total_add !== self.add_sync)
-                    console.info(`Backup Sync Instance finished!, ${self.total_add - self.add_sync} packets not received.`);
+                if (self.total_add !== self.add_count)
+                    console.info(`Backup Sync Instance finished!, ${self.total_add - self.add_count} packets not received.`);
                 else
                     console.info("Backup Sync Instance finished successfully");
-                updateBackupTable(self.add_data, self.delete_data)
+                storeBackupData(self.cache, self.add_data, self.delete_data);
             } else
                 console.info("Backup Sync was not successful! Failed info: ", response.info);
             self.close();
             break;
         case "SYNC_DELETE":
             self.delete_data = response.delete_data;
-            self.delete_sync += 1;
-            deleteData(response.delete_data);
+            self.delete_count += 1;
+            self.cache.push(cacheBackupData(null, response.delete_data));
             break;
-        case "SYNC_ADD_UPDATE_HEADER":
+        case "SYNC_HEADER":
             self.add_data = response.add_data;
             self.total_add = Object.keys(response.add_data).length;
             break;
-        case "SYNC_ADD_UPDATE":
-            self.add_sync += 1;
-            addUpdateData(response.table, response.data);
-            break;
-        case "SYNC_ADD_IMMUTABLE":
-            self.immutable_sync += 1;
-            addImmutableData(response.table, response.data);
+        case "SYNC_UPDATE":
+            self.add_count += 1;
+            self.cache.push(cacheBackupData(response.table, response.data));
             break;
     }
+}
+
+const cacheBackupData = (tableName, dataCache) => new Promise((resolve, reject) => {
+    DB.query("INSERT INTO _backupCache (t_name, data_cache) VALUE (?, ?)", [tableName, JSON.stringify(dataCache)])
+        .then(_ => resolve(true)).catch(error => {
+            console.error(error);
+            reject(false);
+        })
+});
+
+function storeBackupData(cache_promises, add_header, delete_header) {
+    Promise.allSettled(cache_promises).then(_ => {
+        console.log("START: BackupCache -> Tables");
+        //Process 'Users' table 1st as it provides foreign key attribute to other tables
+        DB.query("SELECT * FROM _backupCache WHERE t_name=?", ["Users"]).then(data => {
+            Promise.allSettled(data.map(d => updateTableData("Users", JSON.parse(d.data_cache)))).then(result => {
+                storeBackupData.commit(data, result).then(_ => {
+                    DB.query("SELECT * FROM _backupCache WHERE t_name IS NOT NULL").then(data => {
+                        Promise.allSettled(data.map(d => updateTableData(d.t_name, JSON.parse(d.data_cache)))).then(result => {
+                            storeBackupData.commit(data, result).then(_ => {
+                                DB.query("SELECT * FROM _backupCache WHERE t_name IS NULL").then(data => {
+                                    Promise.allSettled(data.map(d => deleteTableData(JSON.parse(d.data_cache)))).then(result => {
+                                        storeBackupData.commit(data, result).then(_ => {
+                                            console.log("END: BackupCache -> Tables");
+                                            updateBackupTable(add_header, delete_header);
+                                        });
+                                    })
+                                })
+                            })
+                        })
+                    }).catch(error => {
+                        console.error(error);
+                        console.warn("ABORT: BackupCache -> Tables")
+                    });
+                })
+            })
+        }).catch(error => {
+            console.error(error);
+            console.warn("ABORT: BackupCache -> Tables")
+        })
+    }).catch(error => reject(error))
+}
+
+storeBackupData.commit = function(data, result) {
+    let promises = [];
+    for (let i = 0; i < data.length; i++)
+        switch (result[i].status) {
+            case "fulfilled":
+                promises.push(DB.query("DELETE FROM _backupCache WHERE id=?", data[i].id));
+                break;
+            case "rejected":
+                console.error(result[i].reason);
+                promises.push(DB.query("UPDATE _backupCache SET status=FALSE WHERE id=?", data[i].id));
+                break;
+        }
+    return Promise.allSettled(promises);
 }
 
 function updateBackupTable(add_data, delete_data) {
@@ -210,47 +254,34 @@ function updateBackupTable(add_data, delete_data) {
         [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
     ])).then(_ => null).catch(error => console.error(error));
     //update _backup table for deleted data
-    let del_queries = [];
-    delete_data.forEach(r => del_queries.push([]));
     DB.transaction(delete_data.map(r => [
         "INSERT INTO _backup (t_name, id, mode, timestamp) VALUES (?, ?, NULL, ?) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=?",
         [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
     ])).then(_ => null).catch(error => console.error(error));
 }
 
-function deleteData(data) {
-    let delete_needed = {};
-    data.forEach(r => r.t_name in delete_needed ? delete_needed[r.t_name].push(r.id) : delete_needed[r.t_name] = [r.id]);
-    let queries = [];
-    for (let table in delete_needed)
-        queries.push(`DELETE FROM ${table} WHERE id IN (${delete_needed[table]})`);
-    DB.transaction(queries).then(_ => null).catch(error => console.error(error));
+function deleteTableData(data) {
+    return new Promise((resolve, reject) => {
+        let delete_needed = {};
+        data.forEach(r => r.t_name in delete_needed ? delete_needed[r.t_name].push(r.id) : delete_needed[r.t_name] = [r.id]);
+        let queries = [];
+        for (let table in delete_needed)
+            queries.push(`DELETE FROM ${table} WHERE id IN (${delete_needed[table]})`);
+        DB.transaction(queries).then(_ => resolve(true)).catch(error => reject(error));
+    })
 }
 
-function addUpdateData(table, data) {
-    if (!data.length)
-        return;
-    let cols = Object.keys(data[0]),
-        _mark = "(" + Array(cols.length).fill('?') + ")";
-    let values = data.map(r => cols.map(c => validateValue(r[c]))).flat();
-    let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)} AS new` +
-        " ON DUPLICATE KEY UPDATE " + cols.filter(c => c != 'id').map(c => c + " = new." + c);
-    DB.query(statement, values).then(_ => null).catch(error => console.error(error));
-}
-
-function addImmutableData(table, data) {
-    if (!data.length)
-        return;
-    const primaryKeys = {
-        Users: "floID"
-    };
-    let cols = Object.keys(data[0]),
-        _mark = "(" + Array(cols.length).fill('?') + ")";
-    let values = data.map(r => cols.map(c => validateValue(r[c]))).flat();
-    let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)}`;
-    if (table in primaryKeys)
-        statement += ` ON DUPLICATE KEY UPDATE ${primaryKeys[table]}=${primaryKeys[table]}`;
-    DB.query(statement, values).then(_ => null).catch(error => console.error(error));
+function updateTableData(table, data) {
+    return new Promise((resolve, reject) => {
+        if (!data.length)
+            return resolve(null);
+        let cols = Object.keys(data[0]),
+            _mark = "(" + Array(cols.length).fill('?') + ")";
+        let values = data.map(r => cols.map(c => validateValue(r[c]))).flat();
+        let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)} AS new` +
+            " ON DUPLICATE KEY UPDATE " + cols.map(c => c + " = new." + c);
+        DB.query(statement, values).then(_ => resolve(true)).catch(error => reject(error));
+    })
 }
 
 const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? val.substring(0, val.length - 1) : val;
