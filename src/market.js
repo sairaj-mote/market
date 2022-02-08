@@ -99,7 +99,7 @@ function addBuyOrder(floID, asset, quantity, max_price) {
             return reject(INVALID(`Invalid max_price (${max_price})`));
         else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
-        getAssetBalance.check(floID, asset, quantity).then(_ => {
+        getAssetBalance.check(floID, floGlobals.currency, quantity).then(_ => {
             DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price])
                 .then(result => resolve("Added BuyOrder to DB"))
                 .catch(error => reject(error));
@@ -243,7 +243,7 @@ function withdrawFLO(floID, amount) {
             consumeAsset(floID, "FLO", amount).then(txQueries => {
                 DB.transaction(txQueries).then(result => {
                     //Send FLO to user via blockchain API
-                    floBlockchainAPI.sendTx(global.myFloID, floID, amount, global.myPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
+                    floBlockchainAPI.sendTx(global.sinkID, floID, amount, global.sinkPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
                         if (!txid)
                             throw Error("Transaction not successful");
                         //Transaction was successful, Add in DB
@@ -265,7 +265,7 @@ function withdrawFLO(floID, amount) {
 function retryWithdrawalFLO() {
     DB.query("SELECT id, floID, amount FROM OutputFLO WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
-            floBlockchainAPI.sendTx(global.myFloID, req.floID, req.amount, global.myPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
+            floBlockchainAPI.sendTx(global.sinkID, req.floID, req.amount, global.sinkPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
@@ -353,7 +353,7 @@ confirmDepositToken.checkTx = function(sender, txid) {
                 return reject([true, "Transaction transfer is not 'token'"]);
             var token_name = tx.parsedFloData.tokenIdentification,
                 amount_token = tx.parsedFloData.tokenAmount;
-            if (!assetList.includes(token_name) || token_name === "FLO")
+            if ((!assetList.includes(token_name) && token_name !== floGlobals.currency) || token_name === "FLO")
                 return reject([true, "Token not authorised"]);
             let vin_sender = tx.transactionDetails.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
@@ -373,7 +373,7 @@ function withdrawToken(floID, token, amount) {
             return reject(INVALID("Invalid FLO ID"));
         else if (typeof amount !== "number" || amount <= 0)
             return reject(INVALID(`Invalid amount (${amount})`));
-        else if (!assetList.includes(token) || token === "FLO")
+        else if ((!assetList.includes(token) && token !== floGlobals.currency) || token === "FLO")
             return reject(INVALID("Invalid Token"));
         //Check for FLO balance (transaction fee)
         const required_flo = floGlobals.sendAmt + floGlobals.fee;
@@ -383,7 +383,7 @@ function withdrawToken(floID, token, amount) {
                     consumeAsset(floID, token, amount, txQueries).then(txQueries => {
                         DB.transaction(txQueries).then(result => {
                             //Send FLO to user via blockchain API
-                            tokenAPI.sendToken(global.myPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
+                            tokenAPI.sendToken(global.sinkPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
                                 if (!txid) throw Error("Transaction not successful");
                                 //Transaction was successful, Add in DB
                                 DB.query("INSERT INTO OutputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
@@ -406,7 +406,7 @@ function withdrawToken(floID, token, amount) {
 function retryWithdrawalToken() {
     DB.query("SELECT id, floID, token, amount FROM OutputToken WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
-            tokenAPI.sendToken(global.myPrivKey, req.amount, req.floID, '(withdrawal from market)', req.token).then(txid => {
+            tokenAPI.sendToken(global.sinkPrivKey, req.amount, req.floID, '(withdrawal from market)', req.token).then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB

@@ -102,7 +102,7 @@
                         <strip-option value="sell">Sell</strip-option>
                     </strip-select>
                 </div>
-                <select id="get_asset"></select>
+                <sm-select id="get_asset"></sm-select>
                 <sm-input id="get_price" variant="outlined" placeholder="Max price (₹)" type="number" step="0.01"
                     required hiderequired animate>
                 </sm-input>
@@ -197,8 +197,6 @@
             <div id="wallet_actions">
                 <p class="label">Select asset</p>
                 <sm-select id="wallet_asset_selector">
-                    <sm-option value="FLO">FLO</sm-option>
-                    <sm-option value="Rupee">Rupee</sm-option>
                 </sm-select>
                 <div class="flex wallet_actions__wrapper">
                     <button class="button" value="deposit">
@@ -1049,14 +1047,15 @@
         })
         async function tradeFlo() {
             const asset = getRef('get_asset').value;
+            return console.debug(asset);
             const quantity = parseFloat(getRef('get_quantity').value)
             const price = parseFloat(getRef('get_price').value)
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
-                    await buy(asset, quantity, price, proxy.userID, await proxy.secret)    //TODO: asset_name
+                    await buy(asset, quantity, price, proxy.userID, await proxy.secret)
                 } else {
-                    await sell(asset, quantity, price, proxy.userID, await proxy.secret)   //TODO: asset_name
+                    await sell(asset, quantity, price, proxy.userID, await proxy.secret)
                 }
                 getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
@@ -1199,14 +1198,14 @@
                     if (asset === 'FLO') {
                         await depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     } else {
-                        await depositToken(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)  //TODO: token_name
+                        await depositToken(asset, quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
                         await withdrawFLO(quantity, proxy.userID, proxySecret)
                     } else {
-                        await withdrawToken(quantity, proxy.userID, proxySecret)    //TODO: token_name
+                        await withdrawToken(asset, quantity, proxy.userID, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1640,10 +1639,17 @@
                 console.debug(rates);
                 if(init){
                     let assetList = getRef('get_asset');
+                    let walletList = getRef('wallet_asset_selector');
+                    let c = document.createElement('sm-option');
+                    c.setAttribute('value', floGlobals.currency);
+                    c.innerText = floGlobals.currency;
+                    walletList.appendChild(c);
                     for(let asset in rates){
-                        let e = document.createElement('option');
+                        let e = document.createElement('sm-option');
+                        e.setAttribute('value', asset);
                         e.innerText = asset;
                         assetList.appendChild(e);
+                        walletList.appendChild(e.cloneNode(true));
                     }
                 }
                 let flo_rate = rates["FLO"];
