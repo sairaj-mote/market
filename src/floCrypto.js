@@ -44,8 +44,8 @@
             },
 
             getSenderPublicKeyString: function() {
-                privateKey = ellipticCurveEncryption.senderRandom();
-                senderPublicKeyString = ellipticCurveEncryption.senderPublicString(privateKey);
+                let privateKey = ellipticCurveEncryption.senderRandom();
+                var senderPublicKeyString = ellipticCurveEncryption.senderPublicString(privateKey);
                 return {
                     privateKey: privateKey,
                     senderPublicKeyString: senderPublicKeyString
@@ -80,8 +80,8 @@
                 //If the private key corresponded to a compressed public key, also drop the last byte (it should be 0x01).
                 if (isPubKeyCompressed == true) pk.pop()
                 pk.unshift(0)
-                privateKeyDecimal = BigInteger(pk).toString()
-                privateKeyHex = Crypto.util.bytesToHex(pk)
+                let privateKeyDecimal = BigInteger(pk).toString()
+                let privateKeyHex = Crypto.util.bytesToHex(pk)
                 return {
                     privateKeyDecimal: privateKeyDecimal,
                     privateKeyHex: privateKeyHex

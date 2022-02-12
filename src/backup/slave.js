@@ -1,7 +1,8 @@
 'use strict';
 
 const WAIT_TIME = 10 * 60 * 1000,
-    BACKUP_INTERVAL = 1 * 60 * 1000;
+    BACKUP_INTERVAL = 1 * 60 * 1000,
+    SINK_KEY_INDICATOR = '$$$';
 
 var DB; //Container for Database connection
 var masterWS = null; //Container for Master websocket connection
@@ -18,14 +19,15 @@ function startSlaveProcess(ws) {
     //inform master
     let message = {
         floID: global.myFloID,
-        pubKey: global.pubKey,
+        pubKey: global.myPubKey,
         req_time: Date.now(),
         type: "SLAVE_CONNECT"
     }
     message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
+    ws.send(JSON.stringify(message));
     //start sync
     requestInstance.open();
-    intervalID = setInterval(requestInstance.open, BACKUP_INTERVAL);
+    intervalID = setInterval(() => requestInstance.open(), BACKUP_INTERVAL);
 }
 
 function stopSlaveProcess() {
@@ -46,7 +48,7 @@ function requestBackupSync(ws) {
         DB.query('SELECT MAX(timestamp) as last_time FROM _backup').then(result => {
             let request = {
                 floID: global.myFloID,
-                pubKey: myPubKey,
+                pubKey: global.myPubKey,
                 type: "BACKUP_SYNC",
                 last_time: result[0].last_time,
                 req_time: Date.now()
@@ -93,6 +95,7 @@ requestInstance.open = function(ws = null) {
         self.request = request;
         self.cache = [];
         self.add_count = self.delete_count = 0;
+        self.last_response_time = Date.now();
         self.ws = ws;
     }).catch(error => console.error(error))
 }
@@ -116,7 +119,7 @@ requestInstance.close = function() {
 function processDataFromMaster(message) {
     try {
         message = JSON.parse(message);
-        console.debug("Master:", message);
+        //console.debug("Master:", message);
         if (message.command.startsWith("SYNC"))
             processBackupData(message);
         else switch (message.command) {
@@ -124,7 +127,12 @@ function processDataFromMaster(message) {
                 storeSinkShare(message);
                 break;
             case "SEND_SHARE":
-                sendSinkShare();
+                sendSinkShare(message.pubKey);
+                break;
+            case "REQUEST_ERROR":
+                console.log(message.error);
+                if (message.type === "BACKUP_SYNC")
+                    requestInstance.close();
                 break;
         }
     } catch (error) {
@@ -133,19 +141,25 @@ function processDataFromMaster(message) {
 }
 
 function storeSinkShare(message) {
-    console.debug(Date.now(), '|sinkID:', message.sinkID, '|share:', message.keyShare);
-    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?)", [message.sinkID, message.keyShare])
+    let encryptedShare = Crypto.AES.encrypt(floCrypto.decryptData(message.keyShare, global.myPrivKey), global.myPrivKey);
+    console.debug(Date.now(), '|sinkID:', message.sinkID, '|EnShare:', encryptedShare);
+    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE share=new.share", [message.sinkID, encryptedShare])
         .then(_ => null).catch(error => console.error(error));
 }
 
-function sendSinkShare() {
+function sendSinkShare(pubKey) {
     DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
+        if (!result.length)
+            return console.warn("No key-shares in DB!");
+        let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
+        if (share.startsWith(SINK_KEY_INDICATOR))
+            console.warn("Key is stored instead of share!");
         let response = {
             type: "SINK_SHARE",
             sinkID: result[0].floID,
-            share: result[0].share,
+            share: floCrypto.encryptData(share, pubKey),
             floID: global.myFloID,
-            pubKey: global.pubKey,
+            pubKey: global.myPubKey,
             req_time: Date.now()
         }
         response.sign = floCrypto.signData(response.type + "|" + response.req_time, global.myPrivKey); //TODO: strengthen signature
@@ -160,10 +174,6 @@ function processBackupData(response) {
     const self = requestInstance;
     self.last_response_time = Date.now();
     switch (response.command) {
-        case "SYNC_ERROR":
-            console.log(response.error);
-            self.close();
-            break;
         case "SYNC_END":
             if (response.status) {
                 if (self.total_add !== self.add_count)
@@ -182,7 +192,7 @@ function processBackupData(response) {
             break;
         case "SYNC_HEADER":
             self.add_data = response.add_data;
-            self.total_add = Object.keys(response.add_data).length;
+            self.total_add = new Set(response.add_data.map(a => a.t_name)).size;
             break;
         case "SYNC_UPDATE":
             self.add_count += 1;
@@ -229,7 +239,7 @@ function storeBackupData(cache_promises, add_header, delete_header) {
             console.error(error);
             console.warn("ABORT: BackupCache -> Tables")
         })
-    }).catch(error => reject(error))
+    })
 }
 
 storeBackupData.commit = function(data, result) {
@@ -287,6 +297,7 @@ function updateTableData(table, data) {
 const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? val.substring(0, val.length - 1) : val;
 
 module.exports = {
+    SINK_KEY_INDICATOR,
     set DB(db) {
         DB = db;
     },
