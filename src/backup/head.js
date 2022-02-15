@@ -2,6 +2,7 @@
 
 const K_Bucket = require('../../public/KBucket');
 const slave = require('./slave');
+const sync = require('./sync');
 const WebSocket = require('ws');
 const shareThreshold = 50 / 100;
 
@@ -12,91 +13,6 @@ var nodeShares = null,
     mod = null;
 const SLAVE_MODE = 0,
     MASTER_MODE = 1;
-
-//Backup Transfer
-function sendBackup(timestamp, ws) {
-    if (!timestamp) timestamp = 0;
-    else if (typeof timestamp === "string" && /\.\d{3}Z$/.test(timestamp))
-        timestamp = timestamp.substring(0, timestamp.length - 1);
-    let promises = [
-        send_dataSync(timestamp, ws),
-        send_deleteSync(timestamp, ws)
-    ];
-    Promise.allSettled(promises).then(result => {
-        let failedSync = [];
-        result.forEach(r => r.status === "rejected" ? failedSync.push(r.reason) : null);
-        if (failedSync.length) {
-            console.info("Backup Sync Failed:", failedSync);
-            ws.send(JSON.stringify({
-                command: "SYNC_END",
-                status: false,
-                info: failedSync
-            }));
-        } else {
-            console.info("Backup Sync completed");
-            ws.send(JSON.stringify({
-                command: "SYNC_END",
-                status: true
-            }));
-        }
-    });
-}
-
-function send_deleteSync(timestamp, ws) {
-    return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM _backup WHERE mode is NULL AND timestamp > ?", [timestamp]).then(result => {
-            ws.send(JSON.stringify({
-                command: "SYNC_DELETE",
-                delete_data: result
-            }));
-            resolve("deleteSync");
-        }).catch(error => {
-            console.error(error);
-            reject("deleteSync");
-        });
-    })
-}
-
-function send_dataSync(timestamp, ws) {
-    const sendTable = (table, id_list) => new Promise((res, rej) => {
-        DB.query(`SELECT * FROM ${table} WHERE id IN (${id_list})`)
-            .then(data => {
-                ws.send(JSON.stringify({
-                    table,
-                    command: "SYNC_UPDATE",
-                    data
-                }));
-                res(table);
-            }).catch(error => {
-                console.error(error);
-                rej(table);
-            });
-    });
-    return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM _backup WHERE mode=TRUE AND timestamp > ?", [timestamp]).then(result => {
-            let sync_needed = {};
-            result.forEach(r => r.t_name in sync_needed ? sync_needed[r.t_name].push(r.id) : sync_needed[r.t_name] = [r.id]);
-            ws.send(JSON.stringify({
-                command: "SYNC_HEADER",
-                add_data: result
-            }));
-            let promises = [];
-            for (let table in sync_needed)
-                promises.push(sendTable(table, sync_needed[table]));
-            Promise.allSettled(promises).then(result => {
-                let failedTables = [];
-                result.forEach(r => r.status === "rejected" ? failedTables.push(r.reason) : null);
-                if (failedTables.length)
-                    reject(["dataSync", failedTables]);
-                else
-                    resolve("dataSync");
-            });
-        }).catch(error => {
-            console.error(error);
-            reject("dataSync");
-        });
-    });
-}
 
 //Shares
 function generateShares(sinkKey) {
@@ -370,7 +286,10 @@ function startBackupTransmitter(server) {
                 //TODO: check if request time is valid;
                 else switch (request.type) {
                     case "BACKUP_SYNC":
-                        sendBackup(request.last_time, ws);
+                        sync.sendBackupData(request.last_time, request.checksum, ws);
+                        break;
+                    case "RE_SYNC":
+                        sync.sendTableData(request.tables, ws);
                         break;
                     case "UPDATE_MASTER":
                         updateMaster(request.floID);
@@ -392,7 +311,6 @@ function startBackupTransmitter(server) {
             } catch (error) {
                 console.error(error);
                 ws.send(JSON.stringify({
-                    type: request.type,
                     command: "REQUEST_ERROR",
                     error: 'Unable to process the request!'
                 }));
@@ -424,6 +342,7 @@ module.exports = {
     },
     set DB(db) {
         DB = db;
+        sync.DB = db;
         slave.DB = db;
     },
     get wss() {

@@ -19,7 +19,7 @@ const updateLastTime = asset => lastTime[asset] = Date.now();
 
 //store FLO price in DB every 1 hr
 function storeRate(asset, rate) {
-    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?, ?)", [asset, rate])
+    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?, ?)", [asset, rate.toFixed(3)])
         .then(_ => null).catch(error => console.error(error))
 }
 setInterval(() => {
@@ -116,7 +116,7 @@ function getRates(asset) {
                         resolve(currentRate[asset]);
                     } else if (noSellOrder[asset]) {
                         //No Sell, But Buy available: Increase the price
-                        checkForRatedSellers().then(result => {
+                        checkForRatedSellers(asset).then(result => {
                             if (result) {
                                 let tmp_val = currentRate[asset] * (1 + UP_RATE);
                                 if (tmp_val <= ratePast24hr * (1 + MAX_UP_PER_DAY)) {
@@ -142,7 +142,7 @@ function checkForRatedSellers(asset) {
             let ratedMin = result[0].max_p * (1 - TOP_RANGE);
             DB.query("SELECT COUNT(*) as value FROM SellOrder WHERE floID IN (" +
                 " SELECT UserTag.floID FROM UserTag INNER JOIN TagList ON UserTag.tag = TagList.tag" +
-                " WHERE TagList.sellPriority > ?)", [ratedMin]).then(result => {
+                " WHERE TagList.sellPriority > ?) AND asset=?", [ratedMin, asset]).then(result => {
                 resolve(result[0].value > 0);
             }).catch(error => reject(error))
         }).catch(error => reject(error))
