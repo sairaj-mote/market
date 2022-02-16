@@ -24,9 +24,9 @@ function generateShares(sinkKey) {
         return null;
     else {
         let N = nextNodes.length + 1,
-            th = Math.ceil(aliveNodes.length * shareThreshold),
+            th = Math.ceil(aliveNodes.length * shareThreshold) + 1,
             shares, refShare, mappedShares = {};
-        shares = floCrypto.createShamirsSecretShares(sinkKey, N, th < 2 ? 2 : th);
+        shares = floCrypto.createShamirsSecretShares(sinkKey, N, th);
         refShare = shares.pop();
         for (let i in nextNodes)
             mappedShares[nextNodes[i]] = [refShare, shares[i]].join("|");
