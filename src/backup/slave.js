@@ -3,7 +3,8 @@
 const WAIT_TIME = 10 * 60 * 1000,
     BACKUP_INTERVAL = 1 * 60 * 1000,
     CHECKSUM_INTERVAL = 15, //times of BACKUP_INTERVAL
-    SINK_KEY_INDICATOR = '$$$';
+    SINK_KEY_INDICATOR = '$$$',
+    HASH_ROW_COUNT = 100;
 
 var DB; //Container for Database connection
 var masterWS = null; //Container for Master websocket connection
@@ -219,6 +220,14 @@ function processBackupData(response) {
         case "SYNC_CHECKSUM":
             self.checksum = response.checksum;
             break;
+        case "SYNC_HASH":
+            verifyHash(response.hashes)
+                .then(mismatch => requestTableChunks(mismatch))
+                .catch(error => {
+                    console.error(error);
+                    self.close();
+                });
+            break;
     }
 }
 
@@ -337,12 +346,11 @@ function verifyChecksum(checksum_ref) {
                     mismatch.push(table);
             console.debug("Mismatch:", mismatch);
             if (!mismatch.length) //Checksum of every table is verified.
-                return resolve(true);
-            else //If one or more tables checksum is not correct, re-request the table data
-                Promise.allSettled(mismatch.map(t => DB.query("TRUNCATE " + t))).then(_ => {
-                    requestReSync(mismatch);
-                    resolve(false);
-                })
+                resolve(true);
+            else { //If one or more tables checksum is not correct, re-request the table data
+                requestHash(mismatch);
+                resolve(false);
+            }
         }).catch(error => {
             console.error(error);
             reject(false);
@@ -350,12 +358,13 @@ function verifyChecksum(checksum_ref) {
     })
 }
 
-function requestReSync(tables) {
+function requestHash(tables) {
+    //TODO: resync only necessary data (instead of entire table)
     let self = requestInstance;
     let request = {
         floID: global.myFloID,
         pubKey: global.myPubKey,
-        type: "RE_SYNC",
+        type: "HASH_SYNC",
         tables: tables,
         req_time: Date.now()
     };
@@ -366,6 +375,60 @@ function requestReSync(tables) {
     self.cache = [];
     self.total_add = null;
     self.add_count = self.delete_count = 0;
+}
+
+function verifyHash(hashes) {
+    const getHash = table => new Promise((res, rej) => {
+        DB.query("SHOW COLUMNS FROM " + table).then(result => {
+            let columns = result.map(r => r["Field"]).sort();
+            DB.query(`SELECT CEIL(id/${HASH_ROW_COUNT}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
+                .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
+                .catch(error => rej(error))
+        }).catch(error => rej(error))
+    });
+    const convertIntArray = obj => Object.keys(obj).map(i => parseInt(i));
+    const checkHash = (table, hash_ref) => new Promise((res, rej) => {
+        getHash(table).then(hash_cur => {
+            console.debug(hash_ref, hash_cur)
+            for (let i in hash_ref)
+                if (hash_ref[i] === hash_cur[i]) {
+                    delete hash_ref[i];
+                    delete hash_cur[i];
+                }
+            console.debug("HashDiff:", hash_ref, hash_cur);
+            res([convertIntArray(hash_ref), convertIntArray(hash_cur)]);
+        }).catch(error => rej(error))
+    })
+    return new Promise((resolve, reject) => {
+        let tables = Object.keys(hashes);
+        Promise.allSettled(tables.map(t => checkHash(t, hashes[t]))).then(result => {
+            let mismatch = {};
+            for (let t in tables)
+                if (result[t].status === "fulfilled") {
+                    mismatch[tables[t]] = result[t].value; //Data that are incorrect/missing/deleted
+                    //Data to be deleted (incorrect data will be added by resync)
+                    let id_end = result[t].value[1].map(i => i * HASH_ROW_COUNT); //eg if i=2 AND H_R_C = 5 then id_end = 2 * 5 = 10 (ie, range 6-10)
+                    Promise.allSettled(id_end.map(i =>
+                            DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_ROW_COUNT + 1} AND ${i}`))) //eg, i - HASH_ROW_COUNT + 1 = 10 - 5 + 1 = 6
+                        .then(_ => null);
+                } else
+                    console.error(result[t].reason);
+            console.debug("mismatch", mismatch);
+            resolve(mismatch);
+        }).catch(error => reject(error))
+    })
+}
+
+function requestTableChunks(tables, ws) {
+    let request = {
+        floID: global.myFloID,
+        pubKey: global.myPubKey,
+        type: "RE_SYNC",
+        tables: tables,
+        req_time: Date.now()
+    };
+    request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+    ws.send(JSON.stringify(tables));
 }
 
 module.exports = {

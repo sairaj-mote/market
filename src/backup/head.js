@@ -288,6 +288,9 @@ function startBackupTransmitter(server) {
                     case "BACKUP_SYNC":
                         sync.sendBackupData(request.last_time, request.checksum, ws);
                         break;
+                    case "HASH_SYNC":
+                        sync.sendTableHash(request.tables, ws);
+                        break;
                     case "RE_SYNC":
                         sync.sendTableData(request.tables, ws);
                         break;

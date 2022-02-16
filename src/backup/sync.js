@@ -1,4 +1,5 @@
 var DB; //Container for database
+const HASH_ROW_COUNT = 100;
 
 //Backup Transfer
 function sendBackupData(timestamp, checksum, ws) {
@@ -110,11 +111,34 @@ function backupSync_checksum(ws) {
 
 }
 
+function sendTableHash(tables, ws) {
+    const getHash = table => new Promise((res, rej) => {
+        DB.query("SHOW COLUMNS FROM " + table).then(result => {
+            let columns = result.map(r => r["Field"]).sort();
+            DB.query(`SELECT CEIL(id/${HASH_ROW_COUNT}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
+                .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
+                .catch(error => rej(error))
+        }).catch(error => rej(error))
+    });
+    Promise.allSettled(tables.map(t => getHash(t))).then(result => {
+        let hashes = {};
+        for (let i in tables)
+            if (result[i].status === "fulfilled")
+                hashes[tables[i]] = result[i].value;
+            else
+                console.error(result[i].reason);
+        ws.send(JSON.stringify({
+            command: "SYNC_HASH",
+            hashes: hashes
+        }));
+    })
+}
+
 function sendTableData(tables, ws) {
     let promises = [
         tableSync_data(tables, ws),
         tableSync_delete(tables, ws),
-        tableSync_checksum(tables, ws)
+        tableSync_checksum(Object.keys(tables), ws)
     ];
     Promise.allSettled(promises).then(result => {
         let failedSync = [];
@@ -137,54 +161,79 @@ function sendTableData(tables, ws) {
 }
 
 function tableSync_delete(tables, ws) {
+    let getDelete = (table, group_id) => new Promise((res, rej) => {
+        let id_end = group_id * HASH_ROW_COUNT,
+            id_start = id_end - HASH_ROW_COUNT + 1;
+        DB.query("SELCT * FROM _backup WHERE t_name=? AND mode is NULL AND id BETWEEN ? AND ?", [table, id_start, id_end])
+            .then(result => res(result))
+            .catch(error => rej(error))
+    })
     return new Promise((resolve, reject) => {
-        DB.query(`SELECT * FROM _backup WHERE mode is NULL AND t_name IN (${Array(tables.length).fill("?").join()})`, tables).then(result => {
+        let promises = [];
+        for (let t in tables)
+            for (let g_id in tables[t][1]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
+                promises.push(getDelete(t, g_id));
+        Promise.allSettled(promises).then(results => {
+            let delete_sync = results.filter(r => r.status === "fulfilled").map(r => r.value); //Filtered results
+            delete_sync = [].concat(...delete_sync); //Convert 2d array into 1d
             ws.send(JSON.stringify({
                 command: "SYNC_DELETE",
-                delete_data: result
+                delete_data: delete_sync
             }));
             resolve("deleteSync");
-        }).catch(error => {
-            console.error(error);
-            reject("deleteSync");
         });
     })
 }
 
 function tableSync_data(tables, ws) {
-    const sendTable = table => new Promise((res, rej) => {
-        DB.query(`SELECT * FROM ${table}`)
-            .then(data => {
-                ws.send(JSON.stringify({
-                    table,
-                    command: "SYNC_UPDATE",
-                    data
-                }));
-                res(table);
-            }).catch(error => {
-                console.error(error);
-                rej(table);
-            });
+    const sendTable = (table, group_id) => new Promise((res, rej) => {
+        let id_end = group_id * HASH_ROW_COUNT,
+            id_start = id_end - HASH_ROW_COUNT + 1;
+        DB.query(`SELECT * FROM ${table} WHERE id BETWEEN ? AND ?`, [id_start, id_end]).then(data => {
+            ws.send(JSON.stringify({
+                table,
+                command: "SYNC_UPDATE",
+                data
+            }));
+            res(table);
+        }).catch(error => {
+            console.error(error);
+            rej(table);
+        });
     });
+    const getUpdate = (table, group_id) => new Promise((res, rej) => {
+        let id_end = group_id * HASH_ROW_COUNT,
+            id_start = id_end - HASH_ROW_COUNT + 1;
+        DB.query("SELCT * FROM _backup WHERE t_name=? AND mode=TRUE AND id BETWEEN ? AND ?", [table, id_start, id_end])
+            .then(result => res(result))
+            .catch(error => rej(error))
+    })
     return new Promise((resolve, reject) => {
-        DB.query(`SELECT * FROM _backup WHERE mode=TRUE AND t_name IN (${Array(tables.length).fill("?").join()})`, tables).then(result => {
+        let promises = [];
+        for (let t in tables)
+            for (let g_id in tables[t][0]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
+                promises.push(getUpdate(t, g_id));
+        Promise.allSettled(promises).then(results => {
+            let update_sync = results.filter(r => r.status === "fulfilled").map(r => r.value); //Filtered results
+            update_sync = [].concat(...update_sync); //Convert 2d array into 1d
             ws.send(JSON.stringify({
                 command: "SYNC_HEADER",
-                add_data: result
+                add_data: update_sync
             }));
-            Promise.allSettled(tables.map(t => sendTable(t))).then(result => {
+            let promises = [];
+            for (let t in tables)
+                for (let g_id in tables[t][0]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
+                    promises.push(sendTable(t, g_id));
+            Promise.allSettled(promises).then(result => {
                 let failedTables = [];
                 result.forEach(r => r.status === "rejected" ? failedTables.push(r.reason) : null);
                 if (failedTables.length)
-                    reject(["dataSync", failedTables]);
+                    reject(["dataSync", [...new Set(failedTables)]]);
                 else
                     resolve("dataSync");
             });
-        }).catch(error => {
-            console.error(error);
-            reject("dataSync");
         });
-    });
+    })
 }
 
 function tableSync_checksum(tables, ws) {
@@ -206,6 +255,7 @@ function tableSync_checksum(tables, ws) {
 
 module.exports = {
     sendBackupData,
+    sendTableHash,
     sendTableData,
     set DB(db) {
         DB = db;
