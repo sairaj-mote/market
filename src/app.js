@@ -4,7 +4,9 @@ const express = require('express');
 //const sessions = require('express-session');
 const Request = require('./request');
 
-const REFRESH_INTERVAL = 1 * 60 * 1000;
+const {
+    REFRESH_INTERVAL
+} = require("./_constants")["app"];
 
 module.exports = function App(secret, DB) {
 

@@ -1,7 +1,10 @@
 'use strict';
 
 const coupling = require('./coupling');
-const MINIMUM_BUY_REQUIREMENT = 0.1;
+
+const {
+    MINIMUM_BUY_REQUIREMENT
+} = require('./_constants')["market"];
 
 var DB, assetList; //container for database and allowed assets
 
@@ -213,7 +216,7 @@ function confirmDepositFLO() {
 
 confirmDepositFLO.checkTx = function(sender, txid) {
     return new Promise((resolve, reject) => {
-        const receiver = global.myFloID; //receiver should be market's floID (ie, adminID)
+        let receiver = global.myFloID; //receiver should be market's floID (ie, adminID)
         floBlockchainAPI.getTx(txid).then(tx => {
             let vin_sender = tx.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
@@ -345,7 +348,7 @@ function confirmDepositToken() {
 
 confirmDepositToken.checkTx = function(sender, txid) {
     return new Promise((resolve, reject) => {
-        const receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
+        let receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
         tokenAPI.getTx(txid).then(tx => {
             if (tx.parsedFloData.type !== "transfer")
                 return reject([true, "Transaction type not 'transfer'"]);
@@ -376,7 +379,7 @@ function withdrawToken(floID, token, amount) {
         else if ((!assetList.includes(token) && token !== floGlobals.currency) || token === "FLO")
             return reject(INVALID("Invalid Token"));
         //Check for FLO balance (transaction fee)
-        const required_flo = floGlobals.sendAmt + floGlobals.fee;
+        let required_flo = floGlobals.sendAmt + floGlobals.fee;
         getAssetBalance.check(floID, "FLO", required_flo).then(_ => {
             getAssetBalance.check(floID, token, amount).then(_ => {
                 consumeAsset(floID, "FLO", required_flo).then(txQueries => {

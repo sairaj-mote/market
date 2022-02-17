@@ -4,7 +4,11 @@ const K_Bucket = require('../../public/KBucket');
 const slave = require('./slave');
 const sync = require('./sync');
 const WebSocket = require('ws');
-const shareThreshold = 50 / 100;
+
+const {
+    SINK_KEY_INDICATOR,
+    SHARE_THRESHOLD
+} = require("../_constants")["backup"];
 
 var DB, app, wss, tokenList; //Container for database and app
 var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
@@ -24,7 +28,7 @@ function generateShares(sinkKey) {
         return null;
     else {
         let N = nextNodes.length + 1,
-            th = Math.ceil(aliveNodes.length * shareThreshold) + 1,
+            th = Math.ceil(aliveNodes.length * SHARE_THRESHOLD) + 1,
             shares, refShare, mappedShares = {};
         shares = floCrypto.createShamirsSecretShares(sinkKey, N, th);
         refShare = shares.pop();
@@ -52,7 +56,7 @@ function sendSharesToNodes(sinkID, shares) {
 function storeSink(sinkID, sinkPrivKey) {
     global.sinkID = sinkID;
     global.sinkPrivKey = sinkPrivKey;
-    let encryptedKey = Crypto.AES.encrypt(slave.SINK_KEY_INDICATOR + sinkPrivKey, global.myPrivKey);
+    let encryptedKey = Crypto.AES.encrypt(SINK_KEY_INDICATOR + sinkPrivKey, global.myPrivKey);
     DB.query('INSERT INTO sinkShares (floID, share) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE share=new.share', [sinkID, encryptedKey])
         .then(_ => console.log('SinkID:', sinkID, '|SinkEnKey:', encryptedKey))
         .catch(error => console.error(error));
@@ -101,8 +105,8 @@ collectShares.retrive = function(floID, sinkID, share) {
         self.shares = {};
     } else if (self.sinkID !== sinkID)
         return console.error("Something is wrong! Slaves are sending different sinkID");
-    if (share.startsWith(slave.SINK_KEY_INDICATOR)) {
-        let sinkKey = share.substring(slave.SINK_KEY_INDICATOR.length);
+    if (share.startsWith(SINK_KEY_INDICATOR)) {
+        let sinkKey = share.substring(SINK_KEY_INDICATOR.length);
         console.debug("Received sinkKey:", sinkID, sinkKey);
         self.verify(sinkKey);
     } else
@@ -199,10 +203,10 @@ function informLiveNodes(init) {
         DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
             if (result.length) {
                 let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
-                if (share.startsWith(slave.SINK_KEY_INDICATOR)) {
+                if (share.startsWith(SINK_KEY_INDICATOR)) {
                     //sinkKey is already present in DB, use it directly
                     collectShares.active = false;
-                    global.sinkPrivKey = share.substring(slave.SINK_KEY_INDICATOR.length);
+                    global.sinkPrivKey = share.substring(SINK_KEY_INDICATOR.length);
                     global.sinkID = floCrypto.getFloID(global.sinkPrivKey);
                     if (global.sinkID != result[0].floID) {
                         console.warn("sinkID and sinkKey in DB are not pair!");
@@ -259,7 +263,7 @@ function slaveConnect(floID, pubKey, ws) {
             pubKey: global.myPubKey
         }));
     else if (nodeShares === null || //The 1st backup is connected
-        Object.keys(connectedSlaves).length < Math.pow(shareThreshold, 2) * Object.keys(nodeShares).length) //re-calib shares for better 
+        Object.keys(connectedSlaves).length < Math.pow(SHARE_THRESHOLD, 2) * Object.keys(nodeShares).length) //re-calib shares for better 
         sendSharesToNodes(global.sinkID, generateShares(global.sinkPrivKey))
     else if (nodeShares[floID])
         sendShare(ws, global.sinkID, nodeShares[floID]);

@@ -1,5 +1,10 @@
+'use strict';
+
+const {
+    HASH_N_ROW
+} = require("../_constants")["backup"];
+
 var DB; //Container for database
-const HASH_ROW_COUNT = 100;
 
 //Backup Transfer
 function sendBackupData(timestamp, checksum, ws) {
@@ -115,7 +120,7 @@ function sendTableHash(tables, ws) {
     const getHash = table => new Promise((res, rej) => {
         DB.query("SHOW COLUMNS FROM " + table).then(result => {
             let columns = result.map(r => r["Field"]).sort();
-            DB.query(`SELECT CEIL(id/${HASH_ROW_COUNT}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
+            DB.query(`SELECT CEIL(id/${HASH_N_ROW}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
                 .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
                 .catch(error => rej(error))
         }).catch(error => rej(error))
@@ -162,8 +167,8 @@ function sendTableData(tables, ws) {
 
 function tableSync_delete(tables, ws) {
     let getDelete = (table, group_id) => new Promise((res, rej) => {
-        let id_end = group_id * HASH_ROW_COUNT,
-            id_start = id_end - HASH_ROW_COUNT + 1;
+        let id_end = group_id * HASH_N_ROW,
+            id_start = id_end - HASH_N_ROW + 1;
         DB.query("SELECT * FROM _backup WHERE t_name=? AND mode is NULL AND (id BETWEEN ? AND ?)", [table, id_start, id_end])
             .then(result => res(result))
             .catch(error => rej(error))
@@ -187,8 +192,8 @@ function tableSync_delete(tables, ws) {
 
 function tableSync_data(tables, ws) {
     const sendTable = (table, group_id) => new Promise((res, rej) => {
-        let id_end = group_id * HASH_ROW_COUNT,
-            id_start = id_end - HASH_ROW_COUNT + 1;
+        let id_end = group_id * HASH_N_ROW,
+            id_start = id_end - HASH_N_ROW + 1;
         DB.query(`SELECT * FROM ${table} WHERE id BETWEEN ? AND ?`, [id_start, id_end]).then(data => {
             ws.send(JSON.stringify({
                 table,
@@ -202,8 +207,8 @@ function tableSync_data(tables, ws) {
         });
     });
     const getUpdate = (table, group_id) => new Promise((res, rej) => {
-        let id_end = group_id * HASH_ROW_COUNT,
-            id_start = id_end - HASH_ROW_COUNT + 1;
+        let id_end = group_id * HASH_N_ROW,
+            id_start = id_end - HASH_N_ROW + 1;
         DB.query("SELECT * FROM _backup WHERE t_name=? AND mode=TRUE AND (id BETWEEN ? AND ?)", [table, id_start, id_end])
             .then(result => res(result))
             .catch(error => rej(error))

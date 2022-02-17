@@ -1,0 +1,29 @@
+module.exports = {
+    app: {
+        REFRESH_INTERVAL: 1 * 60 * 1000 // 1 min
+    },
+    request: {
+        MAX_SESSION_TIMEOUT: 60 * 24 * 60 * 60 * 1000, //60 days
+        INVALID_SERVER_MSG: "INCORRECT_SERVER_ERROR" //Should be reflected in public backend script
+    },
+    market: {
+        MINIMUM_BUY_REQUIREMENT: 0.1
+    },
+    price: {
+        MIN_TIME: 1 * 60 * 60 * 1000, // 1 hr
+        DOWN_RATE: 0.2 / 100, //0.2% dec
+        UP_RATE: 0.5 / 100, //0.5 % inc
+        MAX_DOWN_PER_DAY: 4.8 / 100, //max 4.8% dec
+        MAX_UP_PER_DAY: 12 / 100, //max 12% inc
+        TOP_RANGE: 10 / 100, //top 10%
+        REC_HISTORY_INTERVAL: 30 * 60 * 1000 //30 mins
+    },
+    backup: {
+        SHARE_THRESHOLD: 50 / 100, // 50%
+        HASH_N_ROW: 100,
+        SINK_KEY_INDICATOR: '$$$',
+        BACKUP_INTERVAL: 1 * 60 * 1000, //1 min
+        BACKUP_SYNC_TIMEOUT: 10 * 60 * 1000, //10 mins
+        CHECKSUM_INTERVAL: 15, //times of BACKUP_INTERVAL
+    }
+}

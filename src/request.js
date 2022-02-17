@@ -1,6 +1,12 @@
 'use strict';
 
 const market = require("./market");
+
+const {
+    MAX_SESSION_TIMEOUT,
+    INVALID_SERVER_MSG
+} = require("./_constants")["request"];
+
 var DB, trustedIDs, secret; //container for database
 
 global.INVALID = function(message) {
@@ -17,12 +23,7 @@ global.INTERNAL = function INTERNAL(message) {
 }
 INTERNAL.e_code = 500;
 
-// creating 24 hours from milliseconds
-const oneDay = 1000 * 60 * 60 * 24;
-const maxSessionTimeout = 60 * oneDay;
-
 var serving;
-const INVALID_SERVER_MSG = "INCORRECT_SERVER_ERROR";
 
 function validateRequestFromFloID(request, sign, floID, proxy = true) {
     return new Promise((resolve, reject) => {
@@ -33,7 +34,7 @@ function validateRequestFromFloID(request, sign, floID, proxy = true) {
         DB.query("SELECT " + (proxy ? "session_time, proxyKey AS pubKey FROM UserSession" : "pubKey FROM Users") + " WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(proxy ? "Session not active" : "User not registered"));
-            if (proxy && result[0].session_time + maxSessionTimeout < Date.now())
+            if (proxy && result[0].session_time + MAX_SESSION_TIMEOUT < Date.now())
                 return reject(INVALID("Session Expired! Re-login required"));
             let req_str = validateRequest(request, sign, result[0].pubKey);
             req_str instanceof INVALID ? reject(req_str) : resolve(req_str);
@@ -496,7 +497,7 @@ module.exports = {
     set trustedIDs(ids) {
         trustedIDs = ids;
     },
-    set assetList(assets){
+    set assetList(assets) {
         market.assetList = assets;
     },
     set DB(db) {

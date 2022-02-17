@@ -1,10 +1,12 @@
 'use strict';
 
-const WAIT_TIME = 10 * 60 * 1000,
-    BACKUP_INTERVAL = 1 * 60 * 1000,
-    CHECKSUM_INTERVAL = 15, //times of BACKUP_INTERVAL
-    SINK_KEY_INDICATOR = '$$$',
-    HASH_ROW_COUNT = 100;
+const {
+    BACKUP_INTERVAL,
+    BACKUP_SYNC_TIMEOUT,
+    CHECKSUM_INTERVAL,
+    SINK_KEY_INDICATOR,
+    HASH_N_ROW
+} = require("../_constants")["backup"];
 
 var DB; //Container for Database connection
 var masterWS = null; //Container for Master websocket connection
@@ -80,7 +82,7 @@ requestInstance.open = function(ws = null) {
     //Check if there is an active request 
     if (self.request) {
         console.log("A request is already active");
-        if (self.last_response_time < Date.now() - WAIT_TIME)
+        if (self.last_response_time < Date.now() - BACKUP_SYNC_TIMEOUT)
             self.close();
         else
             return;
@@ -365,7 +367,7 @@ function verifyHash(hashes) {
     const getHash = table => new Promise((res, rej) => {
         DB.query("SHOW COLUMNS FROM " + table).then(result => {
             let columns = result.map(r => r["Field"]).sort();
-            DB.query(`SELECT CEIL(id/${HASH_ROW_COUNT}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
+            DB.query(`SELECT CEIL(id/${HASH_N_ROW}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
                 .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
                 .catch(error => rej(error))
         }).catch(error => rej(error))
@@ -389,9 +391,9 @@ function verifyHash(hashes) {
                 if (result[t].status === "fulfilled") {
                     mismatch[tables[t]] = result[t].value; //Data that are incorrect/missing/deleted
                     //Data to be deleted (incorrect data will be added by resync)
-                    let id_end = result[t].value[1].map(i => i * HASH_ROW_COUNT); //eg if i=2 AND H_R_C = 5 then id_end = 2 * 5 = 10 (ie, range 6-10)
+                    let id_end = result[t].value[1].map(i => i * HASH_N_ROW); //eg if i=2 AND H_R_C = 5 then id_end = 2 * 5 = 10 (ie, range 6-10)
                     Promise.allSettled(id_end.map(i =>
-                            DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_ROW_COUNT + 1} AND ${i}`))) //eg, i - HASH_ROW_COUNT + 1 = 10 - 5 + 1 = 6
+                            DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_N_ROW + 1} AND ${i}`))) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
                         .then(_ => null);
                 } else
                     console.error(result[t].reason);
@@ -414,7 +416,6 @@ function requestTableChunks(tables, ws) {
 }
 
 module.exports = {
-    SINK_KEY_INDICATOR,
     set DB(db) {
         DB = db;
     },

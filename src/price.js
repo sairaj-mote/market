@@ -1,12 +1,14 @@
 'use strict';
 
-const MIN_TIME = 10 * 1000, // 1 * 60 * 60 * 1000,
-    DOWN_RATE = 0.2 / 100,
-    UP_RATE = 0.5 / 100,
-    MAX_DOWN_PER_DAY = 4.8 / 100,
-    MAX_UP_PER_DAY = 12 / 100,
-    TOP_RANGE = 10 / 100,
-    REC_HISTORY_INTERVAL = 5 * 60 * 1000; // 1 * 60 * 60 * 1000;
+const {
+    MIN_TIME,
+    DOWN_RATE,
+    UP_RATE,
+    MAX_DOWN_PER_DAY,
+    MAX_UP_PER_DAY,
+    TOP_RANGE,
+    REC_HISTORY_INTERVAL
+} = require("./_constants")["price"];
 
 var DB; //container for database
 
