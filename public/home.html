@@ -1047,7 +1047,6 @@
         })
         async function tradeFlo() {
             const asset = getRef('get_asset').value;
-            return console.debug(asset);
             const quantity = parseFloat(getRef('get_quantity').value)
             const price = parseFloat(getRef('get_price').value)
             showProcess('trade_button_wrapper')

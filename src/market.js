@@ -99,7 +99,7 @@ function addBuyOrder(floID, asset, quantity, max_price) {
             return reject(INVALID(`Invalid max_price (${max_price})`));
         else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
-        getAssetBalance.check(floID, floGlobals.currency, quantity).then(_ => {
+        getAssetBalance.check(floID, floGlobals.currency, quantity * max_price).then(_ => {
             DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price])
                 .then(result => resolve("Added BuyOrder to DB"))
                 .catch(error => reject(error));

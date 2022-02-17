@@ -164,7 +164,7 @@ function tableSync_delete(tables, ws) {
     let getDelete = (table, group_id) => new Promise((res, rej) => {
         let id_end = group_id * HASH_ROW_COUNT,
             id_start = id_end - HASH_ROW_COUNT + 1;
-        DB.query("SELCT * FROM _backup WHERE t_name=? AND mode is NULL AND id BETWEEN ? AND ?", [table, id_start, id_end])
+        DB.query("SELECT * FROM _backup WHERE t_name=? AND mode is NULL AND (id BETWEEN ? AND ?)", [table, id_start, id_end])
             .then(result => res(result))
             .catch(error => rej(error))
     })
@@ -204,14 +204,14 @@ function tableSync_data(tables, ws) {
     const getUpdate = (table, group_id) => new Promise((res, rej) => {
         let id_end = group_id * HASH_ROW_COUNT,
             id_start = id_end - HASH_ROW_COUNT + 1;
-        DB.query("SELCT * FROM _backup WHERE t_name=? AND mode=TRUE AND id BETWEEN ? AND ?", [table, id_start, id_end])
+        DB.query("SELECT * FROM _backup WHERE t_name=? AND mode=TRUE AND (id BETWEEN ? AND ?)", [table, id_start, id_end])
             .then(result => res(result))
             .catch(error => rej(error))
     })
     return new Promise((resolve, reject) => {
         let promises = [];
         for (let t in tables)
-            for (let g_id in tables[t][0]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
+            for (let g_id of tables[t][0]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
                 promises.push(getUpdate(t, g_id));
         Promise.allSettled(promises).then(results => {
             let update_sync = results.filter(r => r.status === "fulfilled").map(r => r.value); //Filtered results
@@ -222,7 +222,7 @@ function tableSync_data(tables, ws) {
             }));
             let promises = [];
             for (let t in tables)
-                for (let g_id in tables[t][0]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
+                for (let g_id of tables[t][0]) //tables[t] is [convertIntArray(hash_ref), convertIntArray(hash_cur)]
                     promises.push(sendTable(t, g_id));
             Promise.allSettled(promises).then(result => {
                 let failedTables = [];

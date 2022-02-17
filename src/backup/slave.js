@@ -67,11 +67,8 @@ const requestInstance = {
     ws: null,
     cache: null,
     checksum: null,
-    delete_count: null,
-    add_count: null,
     delete_data: null,
     add_data: null,
-    total_add: null,
     request: null,
     onetime: null,
     last_response_time: null,
@@ -99,7 +96,6 @@ requestInstance.open = function(ws = null) {
     requestBackupSync(!self.checksum_count_down || self.onetime, ws).then(request => {
         self.request = request;
         self.cache = [];
-        self.add_count = self.delete_count = 0;
         self.last_response_time = Date.now();
         self.ws = ws;
     }).catch(error => console.error(error))
@@ -115,11 +111,8 @@ requestInstance.close = function() {
     self.ws = null;
     self.cache = null;
     self.checksum = null;
-    self.delete_count = null;
-    self.add_count = null;
     self.delete_data = null;
     self.add_data = null;
-    self.total_add = null;
     self.request = null;
     self.last_response_time = null;
 }
@@ -184,10 +177,6 @@ function processBackupData(response) {
     switch (response.command) {
         case "SYNC_END":
             if (response.status) {
-                if (self.total_add !== self.add_count)
-                    console.info(`Backup Sync Instance finished!, ${self.total_add - self.add_count} packets not received.`);
-                else
-                    console.info("Backup Sync Instance finished successfully");
                 storeBackupData(self.cache, self.checksum).then(result => {
                     updateBackupTable(self.add_data, self.delete_data);
                     if (result) {
@@ -206,15 +195,12 @@ function processBackupData(response) {
             break;
         case "SYNC_DELETE":
             self.delete_data = response.delete_data;
-            self.delete_count += 1;
             self.cache.push(cacheBackupData(null, response.delete_data));
             break;
         case "SYNC_HEADER":
             self.add_data = response.add_data;
-            self.total_add = new Set(response.add_data.map(a => a.t_name)).size;
             break;
         case "SYNC_UPDATE":
-            self.add_count += 1;
             self.cache.push(cacheBackupData(response.table, response.data));
             break;
         case "SYNC_CHECKSUM":
@@ -222,7 +208,7 @@ function processBackupData(response) {
             break;
         case "SYNC_HASH":
             verifyHash(response.hashes)
-                .then(mismatch => requestTableChunks(mismatch))
+                .then(mismatch => requestTableChunks(mismatch, self.ws))
                 .catch(error => {
                     console.error(error);
                     self.close();
@@ -344,7 +330,7 @@ function verifyChecksum(checksum_ref) {
             for (let table in checksum)
                 if (checksum[table] != checksum_ref[table])
                     mismatch.push(table);
-            console.debug("Mismatch:", mismatch);
+            console.debug("Checksum-mismatch:", mismatch);
             if (!mismatch.length) //Checksum of every table is verified.
                 resolve(true);
             else { //If one or more tables checksum is not correct, re-request the table data
@@ -373,8 +359,6 @@ function requestHash(tables) {
     self.request = request;
     self.checksum = null;
     self.cache = [];
-    self.total_add = null;
-    self.add_count = self.delete_count = 0;
 }
 
 function verifyHash(hashes) {
@@ -389,13 +373,11 @@ function verifyHash(hashes) {
     const convertIntArray = obj => Object.keys(obj).map(i => parseInt(i));
     const checkHash = (table, hash_ref) => new Promise((res, rej) => {
         getHash(table).then(hash_cur => {
-            console.debug(hash_ref, hash_cur)
             for (let i in hash_ref)
                 if (hash_ref[i] === hash_cur[i]) {
                     delete hash_ref[i];
                     delete hash_cur[i];
                 }
-            console.debug("HashDiff:", hash_ref, hash_cur);
             res([convertIntArray(hash_ref), convertIntArray(hash_cur)]);
         }).catch(error => rej(error))
     })
@@ -413,7 +395,7 @@ function verifyHash(hashes) {
                         .then(_ => null);
                 } else
                     console.error(result[t].reason);
-            console.debug("mismatch", mismatch);
+            console.debug("Hash-mismatch", mismatch);
             resolve(mismatch);
         }).catch(error => reject(error))
     })
@@ -428,7 +410,7 @@ function requestTableChunks(tables, ws) {
         req_time: Date.now()
     };
     request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
-    ws.send(JSON.stringify(tables));
+    ws.send(JSON.stringify(request));
 }
 
 module.exports = {

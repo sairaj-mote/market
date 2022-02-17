@@ -99,7 +99,7 @@ CREATE TABLE SellOrder (
     floID CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
     quantity FLOAT NOT NULL,
-    minPrice DECIMAL(10, 2),
+    minPrice DECIMAL(10, 2) NOT NULL,
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (floID) REFERENCES Users(floID),
