@@ -13,7 +13,7 @@ var masterWS = null; //Container for Master websocket connection
 
 var intervalID = null;
 
-function startSlaveProcess(ws) {
+function startSlaveProcess(ws, init) {
     if (!ws) throw Error("Master WS connection required");
     //stop existing process
     stopSlaveProcess();
@@ -30,7 +30,8 @@ function startSlaveProcess(ws) {
     message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
     ws.send(JSON.stringify(message));
     //start sync
-    requestInstance.open();
+    if (init)
+        requestInstance.open();
     intervalID = setInterval(() => requestInstance.open(), BACKUP_INTERVAL);
 }
 

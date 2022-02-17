@@ -154,7 +154,7 @@ function connectToMaster(i = 0, init = false) {
         connectWS(floID).then(ws => {
             ws.floID = floID;
             ws.onclose = () => connectToMaster(i);
-            serveAsSlave(ws);
+            serveAsSlave(ws, init);
         }).catch(error => {
             console.log(`Node(${floID}) is offline`);
             connectToMaster(i + 1, init)
@@ -170,10 +170,10 @@ function serveAsMaster(init) {
     app.resume();
 }
 
-function serveAsSlave(ws) {
+function serveAsSlave(ws, init) {
     console.debug('Starting slave process');
     app.pause();
-    slave.start(ws);
+    slave.start(ws, init);
     mod = SLAVE_MODE;
 }
 
