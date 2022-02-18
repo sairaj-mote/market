@@ -8,7 +8,7 @@ module.exports = {
         INVALID_SERVER_MSG: "INCORRECT_SERVER_ERROR" //Should be reflected in public backend script
     },
     market: {
-        MINIMUM_BUY_REQUIREMENT: 0.1
+        MINIMUM_BUY_REQUIREMENT: 0
     },
     price: {
         MIN_TIME: 1 * 60 * 60 * 1000, // 1 hr

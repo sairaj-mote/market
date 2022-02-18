@@ -69,7 +69,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
         else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
-            checkSellRequirement(floID).then(_ => {
+            checkSellRequirement(floID, asset).then(_ => {
                 DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price])
                     .then(result => resolve("Added SellOrder to DB"))
                     .catch(error => reject(error));
@@ -78,16 +78,16 @@ function addSellOrder(floID, asset, quantity, min_price) {
     });
 }
 
-const checkSellRequirement = floID => new Promise((resolve, reject) => {
+const checkSellRequirement = (floID, asset) => new Promise((resolve, reject) => {
     DB.query("SELECT * FROM UserTag WHERE floID=? AND tag=?", [floID, "MINER"]).then(result => {
         if (result.length)
             return resolve(true);
         //TODO: Should seller need to buy same type of asset before selling?
-        DB.query("SELECT SUM(quantity) AS brought FROM TransactionHistory WHERE buyer=?", [floID]).then(result => {
+        DB.query("SELECT SUM(quantity) AS brought FROM TransactionHistory WHERE buyer=? AND asset=?", [floID, asset]).then(result => {
             if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
                 resolve(true);
             else
-                reject(INVALID(`Sellers required to buy atleast ${MINIMUM_BUY_REQUIREMENT} FLO before placing a sell order unless they are a Miner`));
+                reject(INVALID(`Sellers required to buy atleast ${MINIMUM_BUY_REQUIREMENT} ${asset} before placing a sell order unless they are a Miner`));
         }).catch(error => reject(error))
     }).catch(error => reject(error))
 });

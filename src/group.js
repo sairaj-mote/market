@@ -208,7 +208,7 @@ function getUntaggedSellOrders(asset, cur_price) {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
                 " LEFT JOIN UserTag ON UserTag.floID = SellOrder.floID" +
                 " WHERE UserTag.floID IS NULL AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
-                " ORDER BY SellOrder.time_placed DESC", [asset, cur_price])
+                " ORDER BY SellOrder.time_placed", [asset, cur_price])
             .then(orders => resolve(orders))
             .catch(error => reject(error))
     })
@@ -219,7 +219,7 @@ function getUntaggedBuyOrders(asset, cur_price) {
         DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
                 " LEFT JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
                 " WHERE UserTag.floID IS NULL AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=? " +
-                " ORDER BY BuyOrder.time_placed DESC", [asset, cur_price])
+                " ORDER BY BuyOrder.time_placed", [asset, cur_price])
             .then(orders => resolve(orders))
             .catch(error => reject(error))
     })
@@ -230,7 +230,7 @@ function getSellOrdersInTag(tag, asset, cur_price) {
         DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity FROM SellOrder" +
             " INNER JOIN UserTag ON UserTag.floID = SellOrder.floID" +
             " WHERE UserTag.tag = ? AND SellOrder.asset = ? AND SellOrder.minPrice <=?" +
-            " ORDER BY SellOrder.time_placed DESC", [tag, asset, cur_price]).then(orders => {
+            " ORDER BY SellOrder.time_placed", [tag, asset, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);
             else
@@ -249,7 +249,7 @@ function getBuyOrdersInTag(tag, asset, cur_price) {
         DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
             " INNER JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
             " WHERE UserTag.tag = ? AND BuyOrder.asset = ? AND BuyOrder.maxPrice >=?" +
-            " ORDER BY BuyOrder.time_placed DESC", [tag, asset, cur_price]).then(orders => {
+            " ORDER BY BuyOrder.time_placed", [tag, asset, cur_price]).then(orders => {
             if (orders.length <= 1) // No (or) Only-one order, hence priority sort not required.
                 resolve(orders);
             else
@@ -271,10 +271,9 @@ function getPointsFromAPI(tag, floIDs) {
             Promise.allSettled(floIDs.map(id => fetch_api(api, id))).then(result => {
                 let points = {};
                 for (let i in result)
-                    if (result[i].status === "fulfilled")
-                        points[floIDs[i]] = result[i].value;
+                    points[floIDs[i]] = result[i].status === "fulfilled" ? result[i].value : 0;
                 resolve(points);
-            }).catch(error => reject(error))
+            })
         }).catch(error => reject(error))
     });
 }
