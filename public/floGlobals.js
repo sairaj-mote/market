@@ -9,7 +9,7 @@ const floGlobals = {
         FLO_TEST: ['https://testnet-flosight.duckdns.org', 'https://testnet.flocha.in/']
     },
     application: "exchange",
-    adminID: "FKAEdnPfjXLHSYwrXQu377ugN4tXU7VGdf",
+    adminID: "FMxYC7gYZhouzqtHZukGnPiQ8nvG4CMzXM",
     sendAmt: 0.001,
     fee: 0.0005,
     tokenURL: "https://ranchimallflo.duckdns.org/",
