@@ -97,6 +97,8 @@ function backupSync_checksum(ws) {
     return new Promise((resolve, reject) => {
         DB.query("SELECT DISTINCT t_name FROM _backup").then(result => {
             let tableList = result.map(r => r['t_name']);
+            if (!tableList.length)
+                return resolve("checksum");
             DB.query("CHECKSUM TABLE " + tableList.join()).then(result => {
                 let checksum = Object.fromEntries(result.map(r => [r.Table.split(".").pop(), r.Checksum]));
                 ws.send(JSON.stringify({
