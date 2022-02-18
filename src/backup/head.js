@@ -57,7 +57,7 @@ function storeSink(sinkID, sinkPrivKey) {
     global.sinkID = sinkID;
     global.sinkPrivKey = sinkPrivKey;
     let encryptedKey = Crypto.AES.encrypt(SINK_KEY_INDICATOR + sinkPrivKey, global.myPrivKey);
-    DB.query('INSERT INTO sinkShares (floID, share) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE share=new.share', [sinkID, encryptedKey])
+    DB.query('INSERT INTO sinkShares (floID, share) VALUE (?, ?) ON DUPLICATE KEY UPDATE share=?', [sinkID, encryptedKey, encryptedKey])
         .then(_ => console.log('SinkID:', sinkID, '|SinkEnKey:', encryptedKey))
         .catch(error => console.error(error));
 }

@@ -147,7 +147,7 @@ function processDataFromMaster(message) {
 function storeSinkShare(sinkID, keyShare) {
     let encryptedShare = Crypto.AES.encrypt(floCrypto.decryptData(keyShare, global.myPrivKey), global.myPrivKey);
     console.log(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
-    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE share=new.share", [sinkID, encryptedShare])
+    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) ON DUPLICATE KEY UPDATE share=?", [sinkID, encryptedShare, encryptedShare])
         .then(_ => null).catch(error => console.error(error));
 }
 
@@ -289,13 +289,13 @@ storeBackupData.commit = function(data, result) {
 function updateBackupTable(add_data, delete_data) {
     //update _backup table for added data
     DB.transaction(add_data.map(r => [
-        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, TRUE, ?) AS new ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=new.timestamp",
-        [r.t_name, r.id, validateValue(r.timestamp)]
+        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, TRUE, ?) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=?",
+        [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
     ])).then(_ => null).catch(error => console.error(error));
     //update _backup table for deleted data
     DB.transaction(delete_data.map(r => [
-        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, NULL, ?) AS new ON DUPLICATE KEY UPDATE mode=NULL, timestamp=new.timestamp",
-        [r.t_name, r.id, validateValue(r.timestamp)]
+        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, NULL, ?) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=?",
+        [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
     ])).then(_ => null).catch(error => console.error(error));
 }
 
@@ -317,8 +317,8 @@ function updateTableData(table, data) {
         let cols = Object.keys(data[0]),
             _mark = "(" + Array(cols.length).fill('?') + ")";
         let values = data.map(r => cols.map(c => validateValue(r[c]))).flat();
-        let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)} AS new` +
-            " ON DUPLICATE KEY UPDATE " + cols.map(c => c + " = new." + c);
+        let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)}` +
+            " ON DUPLICATE KEY UPDATE " + cols.map(c => `${c}=VALUES(${c})`).join();
         DB.query(statement, values).then(_ => resolve(true)).catch(error => reject(error));
     })
 }

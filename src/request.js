@@ -114,9 +114,9 @@ function Login(req, res) {
         proxyKey: data.proxyKey,
         timestamp: data.timestamp
     }, data.sign, data.floID, false).then(req_str => {
-        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?, ?) AS new " +
-            "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=new.proxyKey",
-            [data.floID, data.proxyKey]).then(_ => {
+        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?, ?) " +
+            "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?",
+            [data.floID, data.proxyKey, data.proxyKey]).then(_ => {
             storeRequest(data.floID, req_str, data.sign);
             res.send("Login Successful");
         }).catch(error => {
