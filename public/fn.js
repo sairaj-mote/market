@@ -7,7 +7,7 @@ function exchangeAPI(api, options) {
         let curPos = exchangeAPI.curPos || 0;
         if (curPos >= nodeList.length)
             return resolve('No Nodes online');
-        let url = "http://" + nodeURL[nodeList[curPos]];
+        let url = "https://" + nodeURL[nodeList[curPos]];
         (options ? fetch(url + api, options) : fetch(url + api))
         .then(result => resolve(result)).catch(error => {
             console.warn(nodeList[curPos], 'is offline');
