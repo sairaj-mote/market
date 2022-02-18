@@ -1,6 +1,7 @@
 module.exports = {
     app: {
-        REFRESH_INTERVAL: 1 * 60 * 1000 // 1 min
+        BLOCKCHAIN_REFRESH_INTERVAL: 1 * 60 * 60 * 1000, // 1 hr
+        PERIOD_INTERVAL: 15 * 60 * 1000 // 15 min
     },
     request: {
         MAX_SESSION_TIMEOUT: 60 * 24 * 60 * 60 * 1000, //60 days
@@ -16,14 +17,14 @@ module.exports = {
         MAX_DOWN_PER_DAY: 4.8 / 100, //max 4.8% dec
         MAX_UP_PER_DAY: 12 / 100, //max 12% inc
         TOP_RANGE: 10 / 100, //top 10%
-        REC_HISTORY_INTERVAL: 30 * 60 * 1000 //30 mins
+        REC_HISTORY_INTERVAL: 1 * 60 * 60 * 1000, // 1 hr
     },
     backup: {
         SHARE_THRESHOLD: 50 / 100, // 50%
         HASH_N_ROW: 100,
         SINK_KEY_INDICATOR: '$$$',
-        BACKUP_INTERVAL: 1 * 60 * 1000, //1 min
+        BACKUP_INTERVAL: 5 * 60 * 1000, //5 min
         BACKUP_SYNC_TIMEOUT: 10 * 60 * 1000, //10 mins
-        CHECKSUM_INTERVAL: 15, //times of BACKUP_INTERVAL
+        CHECKSUM_INTERVAL: 100, //times of BACKUP_INTERVAL
     }
 }

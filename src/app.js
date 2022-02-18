@@ -5,7 +5,7 @@ const express = require('express');
 const Request = require('./request');
 
 const {
-    REFRESH_INTERVAL
+    PERIOD_INTERVAL
 } = require("./_constants")["app"];
 
 module.exports = function App(secret, DB) {
@@ -141,7 +141,7 @@ module.exports = function App(secret, DB) {
         Request.resume();
         Request.periodicProcess();
         if (periodInstance === null)
-            periodInstance = setInterval(Request.periodicProcess, REFRESH_INTERVAL);
+            periodInstance = setInterval(Request.periodicProcess, PERIOD_INTERVAL);
     }
 
     Object.defineProperty(self, "periodInstance", {

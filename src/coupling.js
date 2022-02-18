@@ -17,8 +17,8 @@ function processCoupling(bestPairQueue) {
     bestPairQueue.get().then(pair_result => {
         let buyer_best = pair_result.buyOrder,
             seller_best = pair_result.sellOrder;
-        console.debug("Sell:", seller_best);
-        console.debug("Buy:", buyer_best);
+        //console.debug("Sell:", seller_best);
+        //console.debug("Buy:", buyer_best);
         spendAsset(bestPairQueue.asset, buyer_best, seller_best, pair_result.null_base).then(spent => {
             if (!spent.quantity) {
                 //Happens when there are only Null-base assets

@@ -11,6 +11,10 @@ const App = require('./app');
 
 const backup = require('./backup/head');
 
+const {
+    BLOCKCHAIN_REFRESH_INTERVAL
+} = require("./_constants")["app"];
+
 var DB, app;
 
 function refreshData(startup = false) {
@@ -81,7 +85,7 @@ function refreshDataFromBlockchain() {
                 promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE num=new.num", [floGlobals.adminID, result.totalTxs]));
                 //Check if all save process were successful
                 Promise.allSettled(promises).then(results => {
-                    console.debug(results.filter(r => r.status === "rejected"));
+                    //console.debug(results.filter(r => r.status === "rejected"));
                     if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
                         console.warn("Some data might not have been saved in database correctly");
                 });
@@ -176,7 +180,7 @@ module.exports = function startServer(public_dir) {
     }
 
     global.PUBLIC_DIR = public_dir;
-    console.debug(PUBLIC_DIR, global.myFloID);
+    console.log("Logged in as", global.myFloID);
 
     Database(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(db => {
         setDB(db);
@@ -185,6 +189,7 @@ module.exports = function startServer(public_dir) {
             app.start(config['port']).then(result => {
                 console.log(result);
                 backup.init(app);
+                setInterval(refreshData, BLOCKCHAIN_REFRESH_INTERVAL)
             }).catch(error => console.error(error))
         }).catch(error => console.error(error))
     }).catch(error => console.error(error));

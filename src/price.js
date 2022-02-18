@@ -97,7 +97,7 @@ fetchRates.USD_INR = function() {
 function getRates(asset) {
     return new Promise((resolve, reject) => {
         loadRate(asset).then(_ => {
-            console.debug(asset, currentRate[asset]);
+            //console.debug(asset, currentRate[asset]);
             let cur_time = Date.now();
             if (cur_time - lastTime[asset] < MIN_TIME) //Minimum time to update not crossed: No update required
                 resolve(currentRate[asset]);

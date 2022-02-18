@@ -57,7 +57,7 @@ function validateRequest(request, sign, pubKey) {
 }
 
 function storeRequest(floID, req_str, sign) {
-    console.debug(floID, req_str);
+    //console.debug(floID, req_str);
     DB.query("INSERT INTO RequestLog (floID, request, sign) VALUES (?,?,?)", [floID, req_str, sign])
         .then(_ => null).catch(error => console.error(error));
 }

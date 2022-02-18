@@ -254,7 +254,7 @@ function withdrawFLO(floID, amount) {
                             .then(_ => null).catch(error => console.error(error))
                             .finally(_ => resolve("Withdrawal was successful"));
                     }).catch(error => {
-                        console.debug(error);
+                        console.error(error);
                         DB.query("INSERT INTO OutputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
                             .then(_ => null).catch(error => console.error(error))
                             .finally(_ => resolve("Withdrawal request is in process"));
@@ -393,7 +393,7 @@ function withdrawToken(floID, token, amount) {
                                     .then(_ => null).catch(error => console.error(error))
                                     .finally(_ => resolve("Withdrawal was successful"));
                             }).catch(error => {
-                                console.debug(error);
+                                console.error(error);
                                 DB.query("INSERT INTO OutputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
                                     .then(_ => null).catch(error => console.error(error))
                                     .finally(_ => resolve("Withdrawal request is in process"));

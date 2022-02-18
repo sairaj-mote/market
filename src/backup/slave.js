@@ -146,7 +146,7 @@ function processDataFromMaster(message) {
 
 function storeSinkShare(sinkID, keyShare) {
     let encryptedShare = Crypto.AES.encrypt(floCrypto.decryptData(keyShare, global.myPrivKey), global.myPrivKey);
-    console.debug(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
+    console.log(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
     DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) AS new ON DUPLICATE KEY UPDATE share=new.share", [sinkID, encryptedShare])
         .then(_ => null).catch(error => console.error(error));
 }
@@ -333,7 +333,7 @@ function verifyChecksum(checksum_ref) {
             for (let table in checksum)
                 if (checksum[table] != checksum_ref[table])
                     mismatch.push(table);
-            console.debug("Checksum-mismatch:", mismatch);
+            //console.debug("Checksum-mismatch:", mismatch);
             if (!mismatch.length) //Checksum of every table is verified.
                 resolve(true);
             else { //If one or more tables checksum is not correct, re-request the table data
@@ -398,7 +398,7 @@ function verifyHash(hashes) {
                         .then(_ => null);
                 } else
                     console.error(result[t].reason);
-            console.debug("Hash-mismatch", mismatch);
+            //console.debug("Hash-mismatch", mismatch);
             resolve(mismatch);
         }).catch(error => reject(error))
     })
