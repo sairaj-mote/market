@@ -136,7 +136,7 @@ collectShares.verify = function(sinkKey) {
 function connectWS(floID) {
     let url = nodeURL[floID];
     return new Promise((resolve, reject) => {
-        const ws = new WebSocket('ws://' + url);
+        const ws = new WebSocket('wss://' + url);
         ws.on('open', _ => resolve(ws));
         ws.on('error', error => reject(error));
     })
