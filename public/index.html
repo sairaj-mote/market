@@ -1036,6 +1036,7 @@
                 getRef('get_total').value = 0
                 setTimeout(() => {
                     hideProcess('trade_button_wrapper')
+                    getRef('trade_button').disabled = true
                     setTimeout(() => {
                         getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
                     }, 100);
