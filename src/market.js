@@ -48,7 +48,7 @@ const consumeAsset = (floID, asset, amount, txQueries = []) => new Promise((reso
                     rem = 0;
                 } else {
                     txQueries.push(["DELETE FROM Vault WHERE id=?", [coins[i].id]]);
-                    rem -= result[i].quantity;
+                    rem -= coins[i].quantity;
                 }
             }
             if (rem > 0) //should not happen AS the total and net is checked already
