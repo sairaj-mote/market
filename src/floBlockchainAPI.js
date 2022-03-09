@@ -1,5 +1,6 @@
 'use strict';
 /* FLO Blockchain Operator to send/receive data from blockchain using API calls*/
+//version 2.2.1
 (function(GLOBAL) {
     const floBlockchainAPI = GLOBAL.floBlockchainAPI = {
 
@@ -426,76 +427,81 @@
             return new Promise((resolve, reject) => {
                 this.promisedAPI(`api/addrs/${addr}/txs?from=0&to=1`).then(response => {
                     var newItems = response.totalItems - options.ignoreOld;
-                    this.promisedAPI(`api/addrs/${addr}/txs?from=0&to=${newItems*2}`).then(
-                        response => {
-                            if (options.limit <= 0)
-                                options.limit = response.items.length;
-                            var filteredData = [];
-                            for (let i = 0; i < (response.totalItems - options.ignoreOld) &&
-                                filteredData.length < options.limit; i++) {
-                                if (options.pattern) {
-                                    try {
-                                        let jsonContent = JSON.parse(response.items[i].floData);
-                                        if (!Object.keys(jsonContent).includes(options.pattern))
-                                            continue;
-                                    } catch (error) {
-                                        continue;
-                                    }
-                                }
-                                if (options.sentOnly) {
-                                    let flag = false;
-                                    for (let vin of response.items[i].vin)
-                                        if (vin.addr === addr) {
-                                            flag = true;
-                                            break;
-                                        }
-                                    if (!flag) continue;
-                                }
-                                if (Array.isArray(options.sender)) {
-                                    let flag = false;
-                                    for (let vin of response.items[i].vin)
-                                        if (options.sender.includes(vin.addr)) {
-                                            flag = true;
-                                            break;
-                                        }
-                                    if (!flag) continue;
-                                }
-                                if (options.receivedOnly) {
-                                    let flag = false;
-                                    for (let vout of response.items[i].vout)
-                                        if (vout.scriptPubKey.addresses[0] === addr) {
-                                            flag = true;
-                                            break;
-                                        }
-                                    if (!flag) continue;
-                                }
-                                if (Array.isArray(options.receiver)) {
-                                    let flag = false;
-                                    for (let vout of response.items[i].vout)
-                                        if (options.receiver.includes(vout.scriptPubKey.addresses[0])) {
-                                            flag = true;
-                                            break;
-                                        }
-                                    if (!flag) continue;
-                                }
-                                if (options.filter && !options.filter(response.items[i].floData))
-                                    continue;
-
-                                if (options.tx) {
-                                    let d = {}
-                                    d.txid = response.items[i].txid;
-                                    d.time = response.items[i].time;
-                                    d.blockheight = response.items[i].blockheight;
-                                    d.data = response.items[i].floData;
-                                    filteredData.push(d);
-                                } else
-                                    filteredData.push(response.items[i].floData);
+                    this.promisedAPI(`api/addrs/${addr}/txs?from=0&to=${newItems*2}`).then(response => {
+                        if (options.limit <= 0)
+                            options.limit = response.items.length;
+                        var filteredData = [];
+                        let numToRead = response.totalItems - options.ignoreOld,
+                            unconfirmedCount = 0;
+                        for (let i = 0; i < numToRead && filteredData.length < options.limit; i++) {
+                            if (!response.items[i].confirmations) { //unconfirmed transactions
+                                unconfirmedCount++;
+                                numToRead++;
+                                continue;
                             }
-                            resolve({
-                                totalTxs: response.totalItems,
-                                data: filteredData
-                            });
-                        }).catch(error => {
+                            if (options.pattern) {
+                                try {
+                                    let jsonContent = JSON.parse(response.items[i].floData);
+                                    if (!Object.keys(jsonContent).includes(options.pattern))
+                                        continue;
+                                } catch (error) {
+                                    continue;
+                                }
+                            }
+                            if (options.sentOnly) {
+                                let flag = false;
+                                for (let vin of response.items[i].vin)
+                                    if (vin.addr === addr) {
+                                        flag = true;
+                                        break;
+                                    }
+                                if (!flag) continue;
+                            }
+                            if (Array.isArray(options.sender)) {
+                                let flag = false;
+                                for (let vin of response.items[i].vin)
+                                    if (options.sender.includes(vin.addr)) {
+                                        flag = true;
+                                        break;
+                                    }
+                                if (!flag) continue;
+                            }
+                            if (options.receivedOnly) {
+                                let flag = false;
+                                for (let vout of response.items[i].vout)
+                                    if (vout.scriptPubKey.addresses[0] === addr) {
+                                        flag = true;
+                                        break;
+                                    }
+                                if (!flag) continue;
+                            }
+                            if (Array.isArray(options.receiver)) {
+                                let flag = false;
+                                for (let vout of response.items[i].vout)
+                                    if (options.receiver.includes(vout.scriptPubKey.addresses[0])) {
+                                        flag = true;
+                                        break;
+                                    }
+                                if (!flag) continue;
+                            }
+                            if (options.filter && !options.filter(response.items[i].floData))
+                                continue;
+
+                            if (options.tx) {
+                                let d = {}
+                                d.txid = response.items[i].txid;
+                                d.time = response.items[i].time;
+                                d.blockheight = response.items[i].blockheight;
+                                d.data = response.items[i].floData;
+                                filteredData.push(d);
+                            } else
+                                filteredData.push(response.items[i].floData);
+                        }
+                        resolve({
+                            totalTxs: response.totalItems - unconfirmedCount,
+                            data: filteredData
+                        });
+                    }).catch(error => {
                         reject(error);
                     });
                 }).catch(error => {
