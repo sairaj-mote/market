@@ -57,7 +57,7 @@
                 </div>
             </div>
             <theme-toggle></theme-toggle>
-            <button onclick="showPopup('user_popup')">
+            <button id="user_popup_button" class="hide-completely" onclick="showPopup('user_popup')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px"
                     fill="#000000">
                     <path d="M0 0h24v24H0V0z" fill="none" />
@@ -66,7 +66,7 @@
                 </svg>
             </button>
         </header>
-        <section id="dashboard" class="card mobile-page hide-on-mobile">
+        <section id="dashboard" class="card mobile-page">
             <sm-form id="login_form" class="hide-">
                 <div class="grid gap-0-5">
                     <h4>Login</h4>
@@ -645,50 +645,16 @@
             };
         }
 
-        // Limits the rate of function execution
-        function throttle(func, delay) {
-            // If setTimeout is already scheduled, no need to do anything
-            if (timerId) {
-                return;
-            }
-
-            // Schedule a setTimeout after delay seconds
-            timerId = setTimeout(function () {
-                func();
-
-                // Once setTimeout function execution is finished, timerId = undefined so that in
-                // the next scroll event function execution can be scheduled by the setTimeout
-                timerId = undefined;
-            }, delay);
-        }
-
-        class Stack {
-            constructor() {
-                this.items = [];
-            }
-            push(element) {
-                this.items.push(element);
-            }
-            pop() {
-                if (this.items.length == 0)
-                    return "Underflow";
-                return this.items.pop();
-            }
-            peek() {
-                return this.items[this.items.length - 1];
-            }
-        }
-        let popupStack = new Stack()
         let zIndex = 10
         // function required for popups or modals to appear
         function showPopup(popupId, pinned) {
             zIndex++
             getRef(popupId).setAttribute('style', `z-index: ${zIndex}`)
-            popupStack = getRef(popupId).show({ pinned, popupStack })
+            getRef(popupId).show({ pinned })
             return getRef(popupId);
         }
 
-        // hides the popup or modal 
+        // hides the popup or modal
         function hidePopup() {
             if (popupStack.peek() === undefined)
                 return;
@@ -819,7 +785,7 @@
             document.body.classList.remove('hide-completely')
             document.querySelectorAll('sm-input[data-private-key]').forEach(input => input.customValidation = floCrypto.getPubKeyHex)
             document.addEventListener('keyup', (e) => {
-                if (e.code === 'Escape') {
+                if (e.key === 'Escape') {
                     hidePopup()
                 }
             })
@@ -1070,6 +1036,7 @@
                 getRef('get_total').value = 0
                 setTimeout(() => {
                     hideProcess('trade_button_wrapper')
+                    getRef('trade_button').disabled = true
                     setTimeout(() => {
                         getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
                     }, 100);
@@ -1435,7 +1402,7 @@
                 })
             } else {
                 transactions.forEach(transaction => {
-                    const {asset, quantity, unitValue, tx_time, buyer, seller } = transaction
+                    const { asset, quantity, unitValue, tx_time, buyer, seller } = transaction
                     let type, other;
                     if (seller === proxy.userID) {
                         type = 'Sold';
@@ -1570,20 +1537,20 @@
                 this.private = null;
                 this.public = null;
             },
-            get sinkID(){
+            get sinkID() {
                 return getRef("sink_id").value;
             },
-            set userID(id){
+            set userID(id) {
                 localStorage.setItem("exchange-user_ID", id);
                 this.user = id;
             },
-            get userID(){
-                if(this.user)
+            get userID() {
+                if (this.user)
                     return this.user;
-                else{
+                else {
                     let id = localStorage.getItem('exchange-user_ID');
                     return id ? this.user = id : undefined;
-                }  
+                }
             },
             set secret(key) {
                 localStorage.setItem("exchange-proxy_secret", key);
@@ -1636,14 +1603,14 @@
         function updateRate(init = false) {
             getRates().then(rates => {
                 console.debug(rates);
-                if(init){
+                if (init) {
                     let assetList = getRef('get_asset');
                     let walletList = getRef('wallet_asset_selector');
                     let c = document.createElement('sm-option');
                     c.setAttribute('value', floGlobals.currency);
                     c.innerText = floGlobals.currency;
                     walletList.appendChild(c);
-                    for(let asset in rates){
+                    for (let asset in rates) {
                         let e = document.createElement('sm-option');
                         e.setAttribute('value', asset);
                         e.innerText = asset;
@@ -1659,9 +1626,9 @@
         }
 
         function refresh(init = false) {
-            if (init){
+            if (init) {
                 console.info("init");
-                if(!proxy.userID){
+                if (!proxy.userID) {
                     getRef('home').classList.remove('signed-in');
                     getLoginCode().then(response => {
                         getRef("login_form").classList.remove('hide-completely');
@@ -1675,7 +1642,7 @@
                 console.info("refresh");
             updateRate(init);
             renderMarketOrders();
-            if(proxy.userID)
+            if (proxy.userID)
                 account();
         }
 
@@ -1699,6 +1666,7 @@
             getAccount(proxy.userID, await proxy.secret).then(acc => {
                 getRef("login_form").classList.add('hide-completely')
                 getRef('home').classList.add('signed-in')
+                getRef('user_popup_button').classList.remove('hide-completely')
                 accountDetails = acc
                 console.debug(acc);
                 //Element display
@@ -1730,7 +1698,7 @@
 
         const UI_evt = {
             signup(privKey) {
-                let code = getRef('sign_in_code').value, 
+                let code = getRef('sign_in_code').value,
                     hash = getRef('sign_in_hash').value;
                 if (!privKey)
                     privKey = getRef('get_registration_key').value.trim()
@@ -1760,7 +1728,7 @@
             login() {
                 showProcess('login_button_wrapper')
                 let privKey = getRef('login_form__priv_key').value;
-                let code = getRef('sign_in_code').value, 
+                let code = getRef('sign_in_code').value,
                     hash = getRef('sign_in_hash').value;
                 let rememberMe = getRef('remember_me').checked;
                 let tmpKey = floCrypto.generateNewID();

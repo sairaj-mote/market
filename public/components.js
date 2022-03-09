@@ -74,11 +74,13 @@ smButton.innerHTML = `
     background-color: rgba(var(--text-color), 0.3);
 }
 @media (hover: hover){
-    :host(:not([disabled])) .button:hover{
+    :host(:not([disabled])) .button:hover,
+    :host(:focus-within:not([disabled])) .button{
         -webkit-box-shadow: 0 0.1rem 0.1rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.8rem rgba(0, 0, 0, 0.12);
-                box-shadow: 0 0.1rem 0.1rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.8rem rgba(0, 0, 0, 0.12);
+        box-shadow: 0 0.1rem 0.1rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.8rem rgba(0, 0, 0, 0.12);
     }
-    :host([variant='outlined']) .button:hover{
+    :host([variant='outlined']:not([disabled])) .button:hover,
+    :host(:focus-within[variant='outlined']:not([disabled])) .button:hover{
         -webkit-box-shadow: 0 0 0 1px rgba(var(--text-color), 0.2) inset, 0 0.1rem 0.1rem rgba(0, 0, 0, 0.1), 0 0.4rem 0.8rem rgba(0, 0, 0, 0.12);
                 box-shadow: 0 0 0 1px rgba(var(--text-color), 0.2) inset, 0 0.1rem 0.1rem rgba(0, 0, 0, 0.1), 0 0.4rem 0.8rem rgba(0, 0, 0, 0.12);
     }
@@ -120,9 +122,12 @@ customElements.define('sm-button',
                 this.removeAttribute('disabled');
             }
         }
+        focusIn() {
+            this.focus();
+        }
 
         handleKeyDown(e) {
-            if (!this.hasAttribute('disabled') && (e.key === 'Enter' || e.code === 'Space')) {
+            if (!this.hasAttribute('disabled') && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
                 this.click();
             }
@@ -986,6 +991,24 @@ customElements.define('sm-notifications', class extends HTMLElement {
         });
     }
 });
+class Stack {
+    constructor() {
+        this.items = [];
+    }
+    push(element) {
+        this.items.push(element);
+    }
+    pop() {
+        if (this.items.length == 0)
+            return "Underflow";
+        return this.items.pop();
+    }
+    peek() {
+        return this.items[this.items.length - 1];
+    }
+}
+const popupStack = new Stack();
+
 const smPopup = document.createElement('template');
 smPopup.innerHTML = `
 <style>
@@ -1007,7 +1030,6 @@ smPopup.innerHTML = `
     --height: auto;
     --min-width: auto;
     --min-height: auto;
-    --body-padding: 1.5rem;
     --backdrop-background: rgba(0, 0, 0, 0.6);
     --border-radius: 0.8rem 0.8rem 0 0;
 }
@@ -1020,16 +1042,24 @@ smPopup.innerHTML = `
     left: 0;
     right: 0;
     place-items: center;
-    background: var(--backdrop-background);
-    -webkit-transition: opacity 0.3s;
-    -o-transition: opacity 0.3s;
-    transition: opacity 0.3s;
     z-index: 10;
     touch-action: none;
 }
 :host(.stacked) .popup{
     -webkit-transform: scale(0.9) translateY(-2rem) !important;
             transform: scale(0.9) translateY(-2rem) !important;
+}
+.background{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    background: var(--backdrop-background);
+    -webkit-transition: opacity 0.3s;
+    -o-transition: opacity 0.3s;
+    transition: opacity 0.3s;
 }
 .popup{
     display: -webkit-box;
@@ -1050,17 +1080,9 @@ smPopup.innerHTML = `
     min-height: var(--min-height);
     max-height: 90vh;
     border-radius: var(--border-radius);
-    -webkit-transform: scale(1) translateY(100%);
-            transform: scale(1) translateY(100%);
-    -webkit-transition: -webkit-transform 0.3s;
-    transition: -webkit-transform 0.3s;
-    -o-transition: transform 0.3s;
-    transition: transform 0.3s, -webkit-transform 0.3s;
-    transition: transform 0.3s;
     background: rgba(var(--background-color), 1);
     -webkit-box-shadow: 0 -1rem 2rem #00000020;
             box-shadow: 0 -1rem 2rem #00000020;
-    content-visibility: auto;
 }
 .container-header{
     display: -webkit-box;
@@ -1087,17 +1109,15 @@ smPopup.innerHTML = `
         -ms-flex: 1;
             flex: 1;
     width: 100%;
-    padding: var(--body-padding);
+    padding: var(--body-padding, 1.5rem);
     overflow-y: auto;
 }
 .hide{
-    opacity: 0;
-    pointer-events: none;
-    visiblity: none;
+    display:none;
 }
 @media screen and (min-width: 640px){
     :host{
-        --border-radius: 0.4rem;
+        --border-radius: 0.5rem;
     }
     .popup{
         -ms-flex-item-align: center;
@@ -1105,8 +1125,6 @@ smPopup.innerHTML = `
             align-self: center;
         border-radius: var(--border-radius);
         height: var(--height);
-        -webkit-transform: scale(1) translateY(3rem);
-                transform: scale(1) translateY(3rem);
         -webkit-box-shadow: 0 3rem 2rem -0.5rem #00000040;
                 box-shadow: 0 3rem 2rem -0.5rem #00000040;
     }
@@ -1141,7 +1159,8 @@ smPopup.innerHTML = `
     }
 }
 </style>
-<div part="background" class="popup-container hide" role="dialog">
+<div class="popup-container hide" role="dialog">
+    <div part="background" class="background"></div>
     <div part="popup" class="popup">
         <div part="popup-header" class="popup-top">
             <div class="handle"></div>
@@ -1163,26 +1182,30 @@ customElements.define('sm-popup', class extends HTMLElement {
         this.allowClosing = false;
         this.isOpen = false;
         this.pinned = false;
-        this.popupStack = undefined;
         this.offset = 0;
         this.touchStartY = 0;
         this.touchEndY = 0;
         this.touchStartTime = 0;
         this.touchEndTime = 0;
-        this.touchEndAnimataion = undefined;
+        this.touchEndAnimation = undefined;
+        this.focusable
+        this.autoFocus
+        this.mutationObserver
 
         this.popupContainer = this.shadowRoot.querySelector('.popup-container');
+        this.backdrop = this.shadowRoot.querySelector('.background');
         this.popup = this.shadowRoot.querySelector('.popup');
         this.popupBodySlot = this.shadowRoot.querySelector('.popup-body slot');
         this.popupHeader = this.shadowRoot.querySelector('.popup-top');
 
         this.resumeScrolling = this.resumeScrolling.bind(this);
+        this.setStateOpen = this.setStateOpen.bind(this);
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
         this.handleTouchStart = this.handleTouchStart.bind(this);
         this.handleTouchMove = this.handleTouchMove.bind(this);
         this.handleTouchEnd = this.handleTouchEnd.bind(this);
-        this.movePopup = this.movePopup.bind(this);
+        this.detectFocus = this.detectFocus.bind(this);
     }
 
     static get observedAttributes() {
@@ -1193,135 +1216,208 @@ customElements.define('sm-popup', class extends HTMLElement {
         return this.isOpen;
     }
 
+    animateTo(element, keyframes, options) {
+        const anime = element.animate(keyframes, { ...options, fill: 'both' })
+        anime.finished.then(() => {
+            anime.commitStyles()
+            anime.cancel()
+        })
+        return anime
+    }
+
     resumeScrolling() {
         const scrollY = document.body.style.top;
         window.scrollTo(0, parseInt(scrollY || '0') * -1);
-        setTimeout(() => {
-            document.body.style.overflow = 'auto';
-            document.body.style.top = 'initial';
-        }, 300);
+        document.body.style.overflow = '';
+        document.body.style.top = 'initial';
+    }
+
+    setStateOpen() {
+        if (!this.isOpen || this.offset) {
+            const animOptions = {
+                duration: 300,
+                easing: 'ease'
+            }
+            const initialAnimation = (window.innerWidth > 640) ? 'scale(1.1)' : `translateY(${this.offset ? `${this.offset}px` : '100%'})`
+            this.animateTo(this.popup, [
+                {
+                    opacity: this.offset ? 1 : 0,
+                    transform: initialAnimation
+                },
+                {
+                    opacity: 1,
+                    transform: 'none'
+                },
+            ], animOptions)
+
+        }
     }
 
     show(options = {}) {
-        const { pinned = false, popupStack } = options;
-        if (popupStack)
-            this.popupStack = popupStack;
-        if (this.popupStack && !this.hasAttribute('open')) {
-            this.popupStack.push({
+        const { pinned = false } = options;
+        if (!this.isOpen) {
+            const animOptions = {
+                duration: 300,
+                easing: 'ease'
+            }
+            popupStack.push({
                 popup: this,
                 permission: pinned
             });
-            if (this.popupStack.items.length > 1) {
-                this.popupStack.items[this.popupStack.items.length - 2].popup.classList.add('stacked');
+            if (popupStack.items.length > 1) {
+                this.animateTo(popupStack.items[popupStack.items.length - 2].popup.shadowRoot.querySelector('.popup'), [
+                    { transform: 'none' },
+                    { transform: (window.innerWidth > 640) ? 'scale(0.95)' : 'translateY(-1.5rem)' },
+                ], animOptions)
             }
+            this.popupContainer.classList.remove('hide');
+            if (!this.offset)
+                this.backdrop.animate([
+                    { opacity: 0 },
+                    { opacity: 1 },
+                ], animOptions)
+            this.setStateOpen()
             this.dispatchEvent(
                 new CustomEvent("popupopened", {
                     bubbles: true,
                     detail: {
                         popup: this,
-                        popupStack: this.popupStack
                     }
                 })
             );
-            this.setAttribute('open', '');
             this.pinned = pinned;
             this.isOpen = true;
+            document.body.style.overflow = 'hidden';
+            document.body.style.top = `-${window.scrollY}px`;
+            const elementToFocus = this.autoFocus || this.focusable[0];
+            elementToFocus.tagName.includes('SM-') ? elementToFocus.focusIn() : elementToFocus.focus();
+            if (!this.hasAttribute('open'))
+                this.setAttribute('open', '');
         }
-        this.popupContainer.classList.remove('hide');
-        this.popup.style.transform = 'none';
-        document.body.style.overflow = 'hidden';
-        document.body.style.top = `-${window.scrollY}px`;
-        return this.popupStack;
     }
     hide() {
-        if (window.innerWidth < 640)
-            this.popup.style.transform = 'translateY(100%)';
-        else
-            this.popup.style.transform = 'translateY(3rem)';
-        this.popupContainer.classList.add('hide');
-        this.removeAttribute('open');
-        if (typeof this.popupStack !== 'undefined') {
-            this.popupStack.pop();
-            if (this.popupStack.items.length) {
-                this.popupStack.items[this.popupStack.items.length - 1].popup.classList.remove('stacked');
-            } else {
-                this.resumeScrolling();
-            }
+        const animOptions = {
+            duration: 150,
+            easing: 'ease'
+        }
+        this.backdrop.animate([
+            { opacity: 1 },
+            { opacity: 0 }
+        ], animOptions)
+        this.animateTo(this.popup, [
+            {
+                opacity: 1,
+                transform: (window.innerWidth > 640) ? 'none' : `translateY(${this.offset ? `${this.offset}px` : '0'})`
+            },
+            {
+                opacity: 0,
+                transform: (window.innerWidth > 640) ? 'scale(1.1)' : 'translateY(100%)'
+            },
+        ], animOptions).finished
+            .finally(() => {
+                this.popupContainer.classList.add('hide');
+                this.popup.style = ''
+                this.removeAttribute('open');
+
+                if (this.forms.length) {
+                    this.forms.forEach(form => form.reset());
+                }
+                this.dispatchEvent(
+                    new CustomEvent("popupclosed", {
+                        bubbles: true,
+                        detail: {
+                            popup: this,
+                        }
+                    })
+                );
+                this.isOpen = false;
+            })
+        popupStack.pop();
+        if (popupStack.items.length) {
+            this.animateTo(popupStack.items[popupStack.items.length - 1].popup.shadowRoot.querySelector('.popup'), [
+                { transform: (window.innerWidth > 640) ? 'scale(0.95)' : 'translateY(-1.5rem)' },
+                { transform: 'none' },
+            ], animOptions)
+
         } else {
             this.resumeScrolling();
         }
-
-        if (this.forms.length) {
-            setTimeout(() => {
-                this.forms.forEach(form => form.reset());
-            }, 300);
-        }
-        setTimeout(() => {
-            this.dispatchEvent(
-                new CustomEvent("popupclosed", {
-                    bubbles: true,
-                    detail: {
-                        popup: this,
-                        popupStack: this.popupStack
-                    }
-                })
-            );
-            this.isOpen = false;
-        }, 300);
     }
 
     handleTouchStart(e) {
+        this.offset = 0
+        this.popupHeader.addEventListener('touchmove', this.handleTouchMove, { passive: true });
+        this.popupHeader.addEventListener('touchend', this.handleTouchEnd, { passive: true });
         this.touchStartY = e.changedTouches[0].clientY;
-        this.popup.style.transition = 'transform 0.1s';
         this.touchStartTime = e.timeStamp;
     }
 
     handleTouchMove(e) {
         if (this.touchStartY < e.changedTouches[0].clientY) {
             this.offset = e.changedTouches[0].clientY - this.touchStartY;
-            this.touchEndAnimataion = window.requestAnimationFrame(() => this.movePopup());
+            this.touchEndAnimation = window.requestAnimationFrame(() => {
+                this.popup.style.transform = `translateY(${this.offset}px)`;
+            });
         }
     }
 
     handleTouchEnd(e) {
         this.touchEndTime = e.timeStamp;
-        cancelAnimationFrame(this.touchEndAnimataion);
+        cancelAnimationFrame(this.touchEndAnimation);
         this.touchEndY = e.changedTouches[0].clientY;
-        this.popup.style.transition = 'transform 0.3s';
         this.threshold = this.popup.getBoundingClientRect().height * 0.3;
         if (this.touchEndTime - this.touchStartTime > 200) {
             if (this.touchEndY - this.touchStartY > this.threshold) {
                 if (this.pinned) {
-                    this.show();
+                    this.setStateOpen();
                     return;
                 } else
                     this.hide();
             } else {
-                this.show();
+                this.setStateOpen();
             }
         } else {
             if (this.touchEndY > this.touchStartY)
                 if (this.pinned) {
-                    this.show();
+                    this.setStateOpen();
                     return;
                 }
                 else
                     this.hide();
         }
+        this.popupHeader.removeEventListener('touchmove', this.handleTouchMove, { passive: true });
+        this.popupHeader.removeEventListener('touchend', this.handleTouchEnd, { passive: true });
     }
 
-    movePopup() {
-        this.popup.style.transform = `translateY(${this.offset}px)`;
+
+    detectFocus(e) {
+        if (e.key === 'Tab') {
+            const lastElement = this.focusable[this.focusable.length - 1];
+            const firstElement = this.focusable[0];
+            if (e.shiftKey && document.activeElement === firstElement) {
+                e.preventDefault();
+                lastElement.tagName.includes('SM-') ? lastElement.focusIn() : lastElement.focus();
+            } else if (!e.shiftKey && document.activeElement === lastElement) {
+                e.preventDefault();
+                firstElement.tagName.includes('SM-') ? firstElement.focusIn() : firstElement.focus();
+            }
+        }
+    }
+
+    updateFocusableList() {
+        this.focusable = this.querySelectorAll('sm-button:not([disabled]), button:not([disabled]), [href], sm-input, input, sm-select, select, sm-checkbox, sm-textarea, textarea, [tabindex]:not([tabindex="-1"])')
+        this.autoFocus = this.querySelector('[autofocus]')
     }
 
     connectedCallback() {
         this.popupBodySlot.addEventListener('slotchange', () => {
             this.forms = this.querySelectorAll('sm-form');
+            this.updateFocusableList()
         });
         this.popupContainer.addEventListener('mousedown', e => {
             if (e.target === this.popupContainer && !this.pinned) {
                 if (this.pinned) {
-                    this.show();
+                    this.setStateOpen();
                 } else
                     this.hide();
             }
@@ -1340,16 +1436,19 @@ customElements.define('sm-popup', class extends HTMLElement {
         });
         resizeObserver.observe(this);
 
+        this.mutationObserver = new MutationObserver(entries => {
+            this.updateFocusableList()
+        })
+        this.mutationObserver.observe(this, { attributes: true, childList: true, subtree: true })
 
+        this.addEventListener('keydown', this.detectFocus);
         this.popupHeader.addEventListener('touchstart', this.handleTouchStart, { passive: true });
-        this.popupHeader.addEventListener('touchmove', this.handleTouchMove, { passive: true });
-        this.popupHeader.addEventListener('touchend', this.handleTouchEnd, { passive: true });
     }
     disconnectedCallback() {
-        this.popupHeader.removeEventListener('touchstart', this.handleTouchStart, { passive: true });
-        this.popupHeader.removeEventListener('touchmove', this.handleTouchMove, { passive: true });
-        this.popupHeader.removeEventListener('touchend', this.handleTouchEnd, { passive: true });
+        this.removeEventListener('keydown', this.detectFocus);
         resizeObserver.unobserve();
+        this.mutationObserver.disconnect()
+        this.popupHeader.removeEventListener('touchstart', this.handleTouchStart, { passive: true });
     }
     attributeChangedCallback(name) {
         if (name === 'open') {
@@ -2225,7 +2324,6 @@ smSelect.innerHTML = `
     --accent-color: #4d2588;
     --text-color: 17, 17, 17;
     --background-color: 255, 255, 255;
-    --max-height: auto;
     --min-width: 100%;
 }
 :host([disabled]) .select{
@@ -2252,11 +2350,12 @@ smSelect.innerHTML = `
     fill: rgba(var(--text-color), 0.7);
 }      
 .selected-option-text{
-    font-size: 0.9rem;
+    font-size: inherit;
     overflow: hidden;
     -o-text-overflow: ellipsis;
        text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
 }
 .selection{
     border-radius: 0.3rem;
@@ -2265,13 +2364,13 @@ smSelect.innerHTML = `
     -ms-grid-columns: 1fr auto;
     grid-template-columns: 1fr auto;
         grid-template-areas: 'heading heading' '. .';
-    padding: 0.4rem 0.8rem;
+    padding: var(--padding,0.6rem 0.8rem);
     background: rgba(var(--text-color), 0.06);
-    border: solid 1px rgba(var(--text-color), 0.2);
     -webkit-box-align: center;
         -ms-flex-align: center;
             align-items: center;
     outline: none;
+    z-index: 2;
 }
 .selection:focus{
     -webkit-box-shadow: 0 0 0 0.1rem var(--accent-color);
@@ -2285,6 +2384,7 @@ smSelect.innerHTML = `
 }
 .options{
     top: 100%;
+    padding: var(--options-padding, 0.3rem);
     margin-top: 0.2rem; 
     overflow: hidden auto;
     position: absolute;
@@ -2297,11 +2397,11 @@ smSelect.innerHTML = `
         -ms-flex-direction: column;
             flex-direction: column;
     min-width: var(--min-width);
-    max-height: var(--max-height);
+    max-height: var(--max-height, auto);
     background: rgba(var(--background-color), 1);
     border: solid 1px rgba(var(--text-color), 0.2);
-    border-radius: 0.3rem;
-    z-index: 2;
+    border-radius: var(--border-radius, 0.5rem);
+    z-index: 1;
     -webkit-box-shadow: 0.4rem 0.8rem 1.2rem #00000030;
             box-shadow: 0.4rem 0.8rem 1.2rem #00000030;
 }
@@ -2328,7 +2428,7 @@ smSelect.innerHTML = `
     }
 }
 </style>
-<div class="select" >
+<div class="select">
     <div class="selection">
         <div class="selected-option-text"></div>
         <svg class="icon toggle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 13.172l4.95-4.95 1.414 1.414L12 16 5.636 9.636 7.05 8.222z"/></svg>
@@ -2344,6 +2444,7 @@ customElements.define('sm-select', class extends HTMLElement {
             mode: 'open'
         }).append(smSelect.content.cloneNode(true))
 
+        this.focusIn = this.focusIn.bind(this)
         this.reset = this.reset.bind(this)
         this.open = this.open.bind(this)
         this.collapse = this.collapse.bind(this)
@@ -2356,6 +2457,7 @@ customElements.define('sm-select', class extends HTMLElement {
         this.availableOptions
         this.previousOption
         this.isOpen = false;
+        this.label = ''
         this.slideDown = [{
             transform: `translateY(-0.5rem)`,
             opacity: 0
@@ -2386,13 +2488,24 @@ customElements.define('sm-select', class extends HTMLElement {
         this.selectedOptionText = this.shadowRoot.querySelector('.selected-option-text')
     }
     static get observedAttributes() {
-        return ['value', 'disabled']
+        return ['disabled', 'label']
     }
     get value() {
         return this.getAttribute('value')
     }
     set value(val) {
-        this.setAttribute('value', val)
+        const selectedOption = this.availableOptions.find(option => option.getAttribute('value') === val)
+        if (selectedOption) {
+            this.setAttribute('value', val)
+            this.selectedOptionText.textContent = `${this.label}${selectedOption.textContent}`;
+            if (this.previousOption) {
+                this.previousOption.classList.remove('check-selected')
+            }
+            selectedOption.classList.add('check-selected')
+            this.previousOption = selectedOption
+        } else {
+            console.warn(`There is no option with ${val} as value`)
+        }
     }
 
     reset(fire = true) {
@@ -2403,12 +2516,16 @@ customElements.define('sm-select', class extends HTMLElement {
             }
             firstElement.classList.add('check-selected')
             this.value = firstElement.getAttribute('value')
-            this.selectedOptionText.textContent = firstElement.textContent
+            this.selectedOptionText.textContent = `${this.label}${firstElement.textContent}`
             this.previousOption = firstElement;
             if (fire) {
                 this.fireEvent()
             }
         }
+    }
+
+    focusIn() {
+        this.selection.focus()
     }
 
     open() {
@@ -2444,7 +2561,7 @@ customElements.define('sm-select', class extends HTMLElement {
     }
 
     handleOptionsNavigation(e) {
-        if (e.code === 'ArrowUp') {
+        if (e.key === 'ArrowUp') {
             e.preventDefault()
             if (document.activeElement.previousElementSibling) {
                 document.activeElement.previousElementSibling.focus()
@@ -2452,7 +2569,7 @@ customElements.define('sm-select', class extends HTMLElement {
                 this.availableOptions[this.availableOptions.length - 1].focus()
             }
         }
-        else if (e.code === 'ArrowDown') {
+        else if (e.key === 'ArrowDown') {
             e.preventDefault()
             if (document.activeElement.nextElementSibling) {
                 document.activeElement.nextElementSibling.focus()
@@ -2464,13 +2581,7 @@ customElements.define('sm-select', class extends HTMLElement {
     handleOptionSelection(e) {
         if (this.previousOption !== document.activeElement) {
             this.value = document.activeElement.getAttribute('value')
-            this.selectedOptionText.textContent = document.activeElement.textContent;
             this.fireEvent()
-            if (this.previousOption) {
-                this.previousOption.classList.remove('check-selected')
-            }
-            document.activeElement.classList.add('check-selected')
-            this.previousOption = document.activeElement
         }
     }
     handleClick(e) {
@@ -2484,12 +2595,12 @@ customElements.define('sm-select', class extends HTMLElement {
     }
     handleKeydown(e) {
         if (e.target === this) {
-            if (this.isOpen && e.code === 'ArrowDown') {
+            if (this.isOpen && e.key === 'ArrowDown') {
                 e.preventDefault()
                 this.availableOptions[0].focus()
                 this.handleOptionSelection(e)
             }
-            else if (e.code === 'Enter' || e.code === 'Space') {
+            else if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
                 this.toggle()
             }
@@ -2497,7 +2608,7 @@ customElements.define('sm-select', class extends HTMLElement {
         else {
             this.handleOptionsNavigation(e)
             this.handleOptionSelection(e)
-            if (e.code === 'Enter' || e.code === 'Space') {
+            if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
                 this.collapse()
             }
@@ -2534,6 +2645,8 @@ customElements.define('sm-select', class extends HTMLElement {
             } else {
                 this.selection.setAttribute('tabindex', '0')
             }
+        } else if (name === 'label') {
+            this.label = this.hasAttribute('label') ? `${this.getAttribute('label')} ` : ''
         }
     }
 })
@@ -2562,11 +2675,12 @@ smOption.innerHTML = `
     width: 100%;
     gap: 0.5rem;
     grid-template-columns: max-content minmax(0, 1fr);
-    padding: 0.8rem 1.2rem;
+    padding: var(--padding, 0.6rem 1rem);
     cursor: pointer;
     white-space: nowrap;
     outline: none;
     user-select: none;
+    border-radius: var(--border-radius, 0.3rem);
 }
 :host(:focus){
     outline: none;

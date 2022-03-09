@@ -92,7 +92,9 @@ button,
   -webkit-tap-highlight-color: transparent;
   align-items: center;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .button {
   white-space: nowrap;
@@ -114,13 +116,16 @@ button:disabled {
 a:any-link:focus-visible {
   outline: rgba(var(--text-color), 1) 0.1rem solid;
 }
-
 sm-input {
   font-size: 0.9rem;
   --border-radius: 0.3rem;
   --background: var(--accent-color--light);
 }
 sm-button {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  font-size: 0.9rem;
   --padding: 0.7rem 1rem;
   &[variant="primary"] {
     .icon {
@@ -132,9 +137,6 @@ sm-button {
     .icon {
       fill: rgba(var(--text-color), 0.6);
     }
-  }
-  &.uppercase {
-    letter-spacing: 0.05em;
   }
   &.danger {
     --background: var(--danger-color);
@@ -315,6 +317,7 @@ ul {
   justify-content: center;
   text-align: center;
   width: 100%;
+  max-width: none;
   padding: 1.5rem;
 }
 
@@ -534,7 +537,7 @@ sm-checkbox {
 }
 
 #main_header {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   margin-bottom: 1rem;
   display: grid;
   gap: 1rem;

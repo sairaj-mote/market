@@ -1,8 +1,7 @@
 * {
   padding: 0;
   margin: 0;
-  -webkit-box-sizing: border-box;
-          box-sizing: border-box;
+  box-sizing: border-box;
   font-family: "Roboto", sans-serif;
 }
 
@@ -68,8 +67,7 @@ a:where([class]) {
   text-decoration: none;
 }
 a:where([class]):focus-visible {
-  -webkit-box-shadow: 0 0 0 0.1rem rgba(var(--text-color), 1) inset;
-          box-shadow: 0 0 0 0.1rem rgba(var(--text-color), 1) inset;
+  box-shadow: 0 0 0 0.1rem rgba(var(--text-color), 1) inset;
 }
 
 a {
@@ -83,24 +81,19 @@ button,
       -ms-user-select: none;
           user-select: none;
   position: relative;
-  display: -webkit-inline-box;
-  display: -ms-inline-flexbox;
   display: inline-flex;
   border: none;
   background-color: transparent;
   overflow: hidden;
   color: inherit;
   cursor: pointer;
-  -webkit-transition: -webkit-transform 0.3s;
-  transition: -webkit-transform 0.3s;
   transition: transform 0.3s;
-  transition: transform 0.3s, -webkit-transform 0.3s;
   -webkit-tap-highlight-color: transparent;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .button {
@@ -109,9 +102,7 @@ button,
   border-radius: 0.3rem;
   background-color: rgba(var(--text-color), 0.06);
   color: rgba(var(--text-color), 0.8);
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+  justify-content: center;
 }
 .button--primary {
   background-color: var(--accent-color);
@@ -141,6 +132,10 @@ sm-input {
 }
 
 sm-button {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  font-size: 0.9rem;
   --padding: 0.7rem 1rem;
 }
 sm-button[variant=primary] .icon {
@@ -148,9 +143,6 @@ sm-button[variant=primary] .icon {
 }
 sm-button[disabled] .icon {
   fill: rgba(var(--text-color), 0.6);
-}
-sm-button.uppercase {
-  letter-spacing: 0.05em;
 }
 sm-button.danger {
   --background: var(--danger-color);
@@ -162,8 +154,6 @@ ul {
 }
 
 .flex {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
 }
 
@@ -230,8 +220,6 @@ ul {
 }
 
 .flex {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
 }
 
@@ -272,15 +260,11 @@ ul {
 }
 
 .align-start {
-  -webkit-box-align: start;
-      -ms-flex-align: start;
-          align-items: flex-start;
+  align-items: flex-start;
 }
 
 .align-center {
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
 }
 
 .text-center {
@@ -288,15 +272,11 @@ ul {
 }
 
 .justify-start {
-  -webkit-box-pack: start;
-      -ms-flex-pack: start;
-          justify-content: start;
+  justify-content: start;
 }
 
 .justify-center {
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+  justify-content: center;
 }
 
 .justify-right {
@@ -304,8 +284,7 @@ ul {
 }
 
 .align-self-center {
-  -ms-flex-item-align: center;
-      align-self: center;
+  align-self: center;
 }
 
 .justify-self-center {
@@ -321,16 +300,11 @@ ul {
 }
 
 .direction-column {
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  flex-direction: column;
 }
 
 .space-between {
-  -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
+  justify-content: space-between;
 }
 
 .w-100 {
@@ -340,20 +314,16 @@ ul {
 .interact {
   position: relative;
   cursor: pointer;
-  -webkit-transition: -webkit-transform 0.3s;
-  transition: -webkit-transform 0.3s;
   transition: transform 0.3s;
-  transition: transform 0.3s, -webkit-transform 0.3s;
   -webkit-tap-highlight-color: transparent;
 }
 
 .empty-state {
   display: grid;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+  justify-content: center;
   text-align: center;
   width: 100%;
+  max-width: none;
   padding: 1.5rem;
 }
 
@@ -396,10 +366,7 @@ ul {
 
 #confirmation_popup,
 #prompt_popup {
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  flex-direction: column;
 }
 #confirmation_popup h4,
 #prompt_popup h4 {
@@ -428,8 +395,7 @@ ul {
 button:active,
 .button:active,
 .interact:active {
-  -webkit-transform: scale(0.96);
-          transform: scale(0.96);
+  transform: scale(0.96);
 }
 
 .popup__header {
@@ -437,9 +403,7 @@ button:active,
   gap: 0.5rem;
   width: 100%;
   padding: 0 1.5rem 0 0.5rem;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   grid-template-columns: auto 1fr auto;
 }
 
@@ -452,15 +416,12 @@ button:active,
   padding: 1.5rem;
 }
 #main_page > section:nth-of-type(1) {
-  -ms-flex-line-pack: start;
-      align-content: flex-start;
+  align-content: flex-start;
 }
 
 .logo {
   display: grid;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   width: 100%;
   grid-template-columns: auto 1fr;
   gap: 0 0.3rem;
@@ -479,12 +440,8 @@ button:active,
 }
 
 details summary {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -webkit-box-pack: justify;
-      -ms-flex-pack: justify;
-          justify-content: space-between;
+  justify-content: space-between;
   -webkit-user-select: none;
      -moz-user-select: none;
       -ms-user-select: none;
@@ -495,8 +452,7 @@ details[open] > summary {
   margin-bottom: 1rem;
 }
 details[open] > summary .icon {
-  -webkit-transform: rotate(180deg);
-          transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 strip-select {
@@ -557,17 +513,14 @@ sm-checkbox {
   padding: 1.5rem 0;
 }
 #landing > .grid {
-  -ms-flex-line-pack: start;
-      align-content: flex-start;
+  align-content: flex-start;
   text-align: center;
   gap: 1rem;
 }
 
 #sign_up {
   grid-template-rows: auto 1fr;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
 }
 #sign_up section {
   margin-top: -6rem;
@@ -595,11 +548,8 @@ sm-checkbox {
 #home {
   height: 100%;
   display: grid;
-  -webkit-box-align: start;
-      -ms-flex-align: start;
-          align-items: flex-start;
-  -ms-flex-line-pack: start;
-      align-content: flex-start;
+  align-items: flex-start;
+  align-content: flex-start;
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -608,13 +558,11 @@ sm-checkbox {
 }
 
 #main_header {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   margin-bottom: 1rem;
   display: grid;
   gap: 1rem;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   grid-template-columns: 1fr auto auto;
   grid-column: 1/-1;
 }
@@ -634,15 +582,12 @@ sm-checkbox {
 
 #trade_form,
 #login_form {
-  -ms-flex-item-align: start;
-      align-self: flex-start;
+  align-self: flex-start;
   padding: 1rem 1.5rem 1.5rem 1.5rem;
 }
 
 .quantity-selector .button {
-  -webkit-box-flex: 1;
-      -ms-flex: 1;
-          flex: 1;
+  flex: 1;
   padding: 0.5rem 0.6rem;
   margin-left: 0.5rem;
 }
@@ -697,9 +642,7 @@ sm-checkbox {
      -moz-user-select: none;
       -ms-user-select: none;
           user-select: none;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1.5rem 0.5rem 0.5rem;
   grid-template-columns: -webkit-min-content repeat(3, 1fr) -webkit-min-content;
@@ -737,9 +680,7 @@ sm-checkbox {
 }
 
 .cancel-order {
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   padding: 0.4rem 0.6rem;
 }
 .cancel-order span {
@@ -786,8 +727,7 @@ sm-checkbox {
 #user_section {
   gap: 1.5rem;
   padding: 1.5rem;
-  -ms-flex-line-pack: start;
-      align-content: flex-start;
+  align-content: flex-start;
 }
 
 .wallet_actions__wrapper {
@@ -796,9 +736,7 @@ sm-checkbox {
   margin-top: 0.5rem;
 }
 .wallet_actions__wrapper .button {
-  -webkit-box-flex: 1;
-      -ms-flex: 1;
-          flex: 1;
+  flex: 1;
 }
 
 .label {
@@ -809,9 +747,7 @@ sm-checkbox {
 
 .balance-card {
   display: grid;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  align-items: center;
   gap: 0.3rem 1rem;
   padding: 0.5rem 0;
   border-radius: 0.5rem;
@@ -824,14 +760,9 @@ sm-checkbox {
   grid-template-columns: auto 1fr auto;
 }
 .balance-card__icon {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -ms-flex-line-pack: center;
-      align-content: center;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+  align-content: center;
+  justify-content: center;
   padding: 0.6rem;
   border-radius: 0.8rem;
   background-color: var(--accent-color--light);
@@ -855,14 +786,10 @@ sm-checkbox {
 }
 
 #wallet_result {
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+  justify-content: center;
   text-align: center;
 }
 #wallet_result__icon {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
   padding: 1rem;
   border-radius: 50%;
@@ -887,46 +814,35 @@ sm-checkbox {
 
 @-webkit-keyframes pop-up {
   from {
-    -webkit-transform: translateY(3rem) scale(0.5);
-            transform: translateY(3rem) scale(0.5);
+    transform: translateY(3rem) scale(0.5);
     opacity: 0;
   }
   to {
-    -webkit-transform: translateY(0) scale(1);
-            transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
 
 @keyframes pop-up {
   from {
-    -webkit-transform: translateY(3rem) scale(0.5);
-            transform: translateY(3rem) scale(0.5);
+    transform: translateY(3rem) scale(0.5);
     opacity: 0;
   }
   to {
-    -webkit-transform: translateY(0) scale(1);
-            transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
 .stateful-button-wrapper {
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
   position: relative;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  justify-content: center;
+  align-items: center;
 }
 .stateful-button-wrapper sm-button,
 .stateful-button-wrapper slide-button {
   width: 100%;
   z-index: 1;
-  -webkit-transition: -webkit-clip-path 0.3s;
   transition: -webkit-clip-path 0.3s;
   transition: clip-path 0.3s;
   transition: clip-path 0.3s, -webkit-clip-path 0.3s;
@@ -946,15 +862,9 @@ sm-checkbox {
 .stateful-result {
   overflow: hidden;
   position: absolute;
-  display: -webkit-box;
-  display: -ms-flexbox;
   display: flex;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  justify-content: center;
+  align-items: center;
   height: 100%;
   width: 100%;
   left: 0;
@@ -997,26 +907,22 @@ sm-checkbox {
 @-webkit-keyframes pop {
   from {
     opacity: 0;
-    -webkit-transform: translateY(2rem);
-            transform: translateY(2rem);
+    transform: translateY(2rem);
   }
   to {
     opacity: 1;
-    -webkit-transform: translateY(0);
-            transform: translateY(0);
+    transform: translateY(0);
   }
 }
 
 @keyframes pop {
   from {
     opacity: 0;
-    -webkit-transform: translateY(2rem);
-            transform: translateY(2rem);
+    transform: translateY(2rem);
   }
   to {
     opacity: 1;
-    -webkit-transform: translateY(0);
-            transform: translateY(0);
+    transform: translateY(0);
   }
 }
 @-webkit-keyframes ripple-reveal {
@@ -1057,24 +963,14 @@ sm-checkbox {
   }
 
   .bottom_nav__item {
-    display: -webkit-box;
-    display: -ms-flexbox;
     display: flex;
-    -webkit-box-orient: vertical;
-    -webkit-box-direction: normal;
-        -ms-flex-direction: column;
-            flex-direction: column;
-    -webkit-box-align: center;
-        -ms-flex-align: center;
-            align-items: center;
-    -webkit-box-flex: 1;
-        -ms-flex: 1;
-            flex: 1;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
     padding: 0.5rem 0;
   }
   .bottom_nav__item .item__title,
 .bottom_nav__item .icon {
-    -webkit-transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
   .bottom_nav__item .item__title {
@@ -1088,13 +984,11 @@ sm-checkbox {
   }
   .bottom_nav__item--active .item__title {
     color: var(--accent-color);
-    -webkit-transform: translateY(100%);
-            transform: translateY(100%);
+    transform: translateY(100%);
     opacity: 0;
   }
   .bottom_nav__item--active .icon {
-    -webkit-transform: translateY(50%) scale(1.2);
-            transform: translateY(50%) scale(1.2);
+    transform: translateY(50%) scale(1.2);
     fill: var(--accent-color);
   }
 
@@ -1196,10 +1090,7 @@ sm-checkbox {
 
   .interact,
 button {
-    -webkit-transition: background-color 0.3s, -webkit-transform 0.3s;
-    transition: background-color 0.3s, -webkit-transform 0.3s;
     transition: background-color 0.3s, transform 0.3s;
-    transition: background-color 0.3s, transform 0.3s, -webkit-transform 0.3s;
   }
   .interact:hover,
 button:hover {
@@ -1212,19 +1103,14 @@ button:hover {
   }
   .order-card .cancel-order .icon,
 .order-card .cancel-order span {
-    -webkit-transition: opacity 0.3s, -webkit-transform 0.3s;
-    transition: opacity 0.3s, -webkit-transform 0.3s;
     transition: opacity 0.3s, transform 0.3s;
-    transition: opacity 0.3s, transform 0.3s, -webkit-transform 0.3s;
   }
   .order-card .cancel-order .icon {
     opacity: 0;
-    -webkit-transform: translateX(100%);
-            transform: translateX(100%);
+    transform: translateX(100%);
   }
   .order-card .cancel-order span {
-    -webkit-transform: translateX(100%);
-            transform: translateX(100%);
+    transform: translateX(100%);
     opacity: 0;
   }
   .order-card:hover .cancel-order .icon, .order-card:focus-within .cancel-order .icon {
@@ -1233,13 +1119,11 @@ button:hover {
   .order-card .cancel-order:hover .icon,
 .order-card .cancel-order:hover span {
     opacity: 1;
-    -webkit-transform: translateX(0);
-            transform: translateX(0);
+    transform: translateX(0);
   }
 
   .transaction-card button {
     opacity: 0;
-    -webkit-transition: opacity 0.3s;
     transition: opacity 0.3s;
   }
   .transaction-card:hover button {
