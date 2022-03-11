@@ -171,7 +171,21 @@ CREATE TABLE PriceHistory (
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
-CREATE TABLE TransactionHistory (
+CREATE TABLE TransferTransactions (
+    id INT NOT NULL AUTO_INCREMENT,
+    sender CHAR(34) NOT NULL,
+    receiver CHAR(34) NOT NULL,
+    token VARCHAR(64) NOT NULL,
+    amount FLOAT NOT NULL,
+    tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    txid VARCHAR(66) NOT NULL,
+    KEY(id),
+    PRIMARY KEY(txid),
+    FOREIGN KEY (sender) REFERENCES Users(floID),
+    FOREIGN KEY (receiver) REFERENCES Users(floID)
+);
+
+CREATE TABLE TradeTransactions (
     id INT NOT NULL AUTO_INCREMENT,
     seller CHAR(34) NOT NULL,
     buyer CHAR(34) NOT NULL,
@@ -179,13 +193,15 @@ CREATE TABLE TransactionHistory (
     quantity FLOAT NOT NULL,
     unitValue DECIMAL(10, 2) NOT NULL,
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY(id),
+    txid VARCHAR(66) NOT NULL,
+    KEY(id),
+    PRIMARY KEY(txid),
     FOREIGN KEY (buyer) REFERENCES Users(floID),
     FOREIGN KEY (seller) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
-CREATE TABLE AuditTransaction(
+CREATE TABLE AuditTrade(
     id INT NOT NULL AUTO_INCREMENT,
     rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     unit_price FLOAT NOT NULL,
@@ -324,16 +340,23 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON
 CREATE TRIGGER PriceHistory_D AFTER DELETE ON PriceHistory
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER AuditTransaction_I AFTER INSERT ON AuditTransaction
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTransaction', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER AuditTransaction_U AFTER UPDATE ON AuditTransaction
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTransaction', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER AuditTransaction_D AFTER DELETE ON AuditTransaction
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTransaction', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER AuditTransaction_I AFTER INSERT ON AuditTrade
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER AuditTransaction_U AFTER UPDATE ON AuditTrade
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER AuditTransaction_D AFTER DELETE ON AuditTrade
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER TransactionHistory_I AFTER INSERT ON TransactionHistory
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransactionHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER TransactionHistory_U AFTER UPDATE ON TransactionHistory
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransactionHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER TransactionHistory_D AFTER DELETE ON TransactionHistory
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransactionHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER TransactionHistory_I AFTER INSERT ON TradeTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TransactionHistory_U AFTER UPDATE ON TradeTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TransactionHistory_D AFTER DELETE ON TradeTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER TransferTransactions_I AFTER INSERT ON TransferTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TransferTransactions_U AFTER UPDATE ON TransferTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER TransferTransactions_D AFTER DELETE ON TransferTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;

@@ -3,10 +3,20 @@
 const coupling = require('./coupling');
 
 const {
-    MINIMUM_BUY_REQUIREMENT
+    MINIMUM_BUY_REQUIREMENT,
+    TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
 
 var DB, assetList; //container for database and allowed assets
+
+const checkIfUserRegistered = floID => new Promise((resolve, reject) => {
+    DB.query("SELECT id FROM Users WHERE floID=?", [floID]).then(result => {
+        if (result.length)
+            resolve(result[0].id);
+        else
+            reject(INVALID(`User ${floID} not registered`));
+    }).catch(error => reject(error));
+});
 
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
     let promises = (asset === floGlobals.currency) ? [
@@ -32,7 +42,7 @@ getAssetBalance.check = (floID, asset, amount) => new Promise((resolve, reject) 
         else
             resolve(true);
     }).catch(error => reject(error))
-})
+});
 
 const consumeAsset = (floID, asset, amount, txQueries = []) => new Promise((resolve, reject) => {
     //If asset/token is currency update Cash else consume from Vault
@@ -60,8 +70,8 @@ const consumeAsset = (floID, asset, amount, txQueries = []) => new Promise((reso
 
 function addSellOrder(floID, asset, quantity, min_price) {
     return new Promise((resolve, reject) => {
-        if (!floID || !floCrypto.validateAddr(floID))
-            return reject(INVALID("Invalid FLO ID"));
+        if (!floCrypto.validateAddr(floID))
+            return reject(INVALID(`Invalid floID (${floID})`));
         else if (typeof quantity !== "number" || quantity <= 0)
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof min_price !== "number" || min_price <= 0)
@@ -71,7 +81,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             checkSellRequirement(floID, asset).then(_ => {
                 DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price])
-                    .then(result => resolve("Added SellOrder to DB"))
+                    .then(result => resolve('Sell Order placed successfully'))
                     .catch(error => reject(error));
             }).catch(error => reject(error))
         }).catch(error => reject(error));
@@ -83,7 +93,7 @@ const checkSellRequirement = (floID, asset) => new Promise((resolve, reject) => 
         if (result.length)
             return resolve(true);
         //TODO: Should seller need to buy same type of asset before selling?
-        DB.query("SELECT SUM(quantity) AS brought FROM TransactionHistory WHERE buyer=? AND asset=?", [floID, asset]).then(result => {
+        DB.query("SELECT SUM(quantity) AS brought FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, asset]).then(result => {
             if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
                 resolve(true);
             else
@@ -94,8 +104,8 @@ const checkSellRequirement = (floID, asset) => new Promise((resolve, reject) => 
 
 function addBuyOrder(floID, asset, quantity, max_price) {
     return new Promise((resolve, reject) => {
-        if (!floID || !floCrypto.validateAddr(floID))
-            return reject(INVALID("Invalid FLO ID"));
+        if (!floCrypto.validateAddr(floID))
+            return reject(INVALID(`Invalid floID (${floID})`));
         else if (typeof quantity !== "number" || quantity <= 0)
             return reject(INVALID(`Invalid quantity (${quantity})`));
         else if (typeof max_price !== "number" || max_price <= 0)
@@ -104,7 +114,7 @@ function addBuyOrder(floID, asset, quantity, max_price) {
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, floGlobals.currency, quantity * max_price).then(_ => {
             DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price])
-                .then(result => resolve("Added BuyOrder to DB"))
+                .then(result => resolve('Buy Order placed successfully'))
                 .catch(error => reject(error));
         }).catch(error => reject(error));
     });
@@ -112,8 +122,8 @@ function addBuyOrder(floID, asset, quantity, max_price) {
 
 function cancelOrder(type, id, floID) {
     return new Promise((resolve, reject) => {
-        if (!floID || !floCrypto.validateAddr(floID))
-            return reject(INVALID("Invalid FLO ID"));
+        if (!floCrypto.validateAddr(floID))
+            return reject(INVALID(`Invalid floID (${floID})`));
         let tableName;
         if (type === "buy")
             tableName = "BuyOrder";
@@ -166,12 +176,44 @@ function getAccountDetails(floID) {
                             break;
                     }
             });
-            DB.query("SELECT * FROM TransactionHistory WHERE seller=? OR buyer=?", [floID, floID])
+            DB.query("SELECT * FROM TradeTransactions WHERE seller=? OR buyer=?", [floID, floID])
                 .then(result => response.transactions = result)
                 .catch(error => console.error(error))
                 .finally(_ => resolve(response));
         });
     });
+}
+
+function transferToken(sender, receiver, token, amount) {
+    return new Promise((resolve, reject) => {
+        if (floCrypto.validateAddr(sender))
+            return reject(INVALID(`Invalid sender (${sender})`));
+        else if (floCrypto.validateAddr(receiver))
+            return reject(INVALID(`Invalid receiver (${receiver})`));
+        else if (typeof amount !== "number" || amount <= 0)
+            return reject(INVALID(`Invalid amount (${amount})`));
+        else if (token !== floGlobals.currency && !assetList.includes(token))
+            return reject(INVALID(`Invalid token (${token})`));
+        getAssetBalance.check(senderID, token, amount).then(_ => {
+            checkIfUserRegistered(receiver).then(_ => {
+                consumeAsset(sender, token, amount).then(txQueries => {
+                    if (token === floGlobals.currency)
+                        txQueries.push(["UPDATE Cash SET balance=balance+? WHERE floID=?", [amount, receiver]]);
+                    else
+                        txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [receiver, amount]]);
+                    let time = Date.now();
+                    let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256([time, sender, receiver, token, amount].join("|"));
+                    txQueries.push([
+                        "INSERT INTO TransferTransactions (sender, receiver, token, amount, tx_time, txid)",
+                        [sender, receiver, token, amount, global.convertDateToString(time), hash]
+                    ]);
+                    DB.transaction(txQueries)
+                        .then(result => resolve(hash))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
 }
 
 function depositFLO(floID, txid) {
@@ -238,8 +280,8 @@ confirmDepositFLO.checkTx = function(sender, txid) {
 
 function withdrawFLO(floID, amount) {
     return new Promise((resolve, reject) => {
-        if (!floID || !floCrypto.validateAddr(floID))
-            return reject(INVALID("Invalid FLO ID"));
+        if (!floCrypto.validateAddr(floID))
+            return reject(INVALID(`Invalid floID (${floID})`));
         else if (typeof amount !== "number" || amount <= 0)
             return reject(INVALID(`Invalid amount (${amount})`));
         getAssetBalance.check(floID, "FLO", amount).then(_ => {
@@ -372,8 +414,8 @@ confirmDepositToken.checkTx = function(sender, txid) {
 
 function withdrawToken(floID, token, amount) {
     return new Promise((resolve, reject) => {
-        if (!floID || !floCrypto.validateAddr(floID))
-            return reject(INVALID("Invalid FLO ID"));
+        if (!floCrypto.validateAddr(floID))
+            return reject(INVALID(`Invalid floID (${floID})`));
         else if (typeof amount !== "number" || amount <= 0)
             return reject(INVALID(`Invalid amount (${amount})`));
         else if ((!assetList.includes(token) && token !== floGlobals.currency) || token === "FLO")
@@ -454,6 +496,7 @@ module.exports = {
     addSellOrder,
     cancelOrder,
     getAccountDetails,
+    transferToken,
     depositFLO,
     withdrawFLO,
     depositToken,

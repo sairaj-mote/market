@@ -371,6 +371,41 @@ function cancelOrder(type, id, floID, proxySecret) {
     })
 }
 
+function transferToken(receiver, token, amount, floID, proxySecret) {
+    return new Promise((resolve, reject) => {
+        if (!floCrypto.validateAddr(receiver))
+            return reject(INVALID(`Invalid receiver (${receiver})`));
+        else if (typeof amount !== "number" || amount <= 0)
+            return reject(`Invalid amount (${amount})`);
+        let request = {
+            floID: floID,
+            token: token,
+            receiver: receiver,
+            amount: amount,
+            timestamp: Date.now()
+        };
+        request.sign = signRequest({
+            type: "transfer_token",
+            receiver: receiver,
+            token: token,
+            amount: amount,
+            timestamp: request.timestamp
+        }, proxySecret);
+        console.debug(request);
+
+        exchangeAPI('/transfer-token', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error))
+    })
+}
+
 function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
@@ -382,7 +417,7 @@ function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
                 timestamp: Date.now()
             };
             request.sign = signRequest({
-                type: "deposit_FLO",
+                type: "deposit_flo",
                 txid: txid,
                 timestamp: request.timestamp
             }, proxySecret);
@@ -410,7 +445,7 @@ function withdrawFLO(quantity, floID, proxySecret) {
             timestamp: Date.now()
         };
         request.sign = signRequest({
-            type: "withdraw_FLO",
+            type: "withdraw_flo",
             amount: quantity,
             timestamp: request.timestamp
         }, proxySecret);
@@ -440,7 +475,7 @@ function depositToken(token, quantity, floID, sinkID, privKey, proxySecret) {
                 timestamp: Date.now()
             };
             request.sign = signRequest({
-                type: "deposit_Token",
+                type: "deposit_token",
                 txid: txid,
                 timestamp: request.timestamp
             }, proxySecret);
@@ -469,7 +504,7 @@ function withdrawToken(token, quantity, floID, proxySecret) {
             timestamp: Date.now()
         };
         request.sign = signRequest({
-            type: "withdraw_Token",
+            type: "withdraw_token",
             token: token,
             amount: quantity,
             timestamp: request.timestamp
@@ -498,7 +533,7 @@ function addUserTag(tag_user, tag, floID, proxySecret) {
             timestamp: Date.now()
         };
         request.sign = signRequest({
-            command: "add_Tag",
+            type: "add_tag",
             user: tag_user,
             tag: tag,
             timestamp: request.timestamp
@@ -527,7 +562,7 @@ function removeUserTag(tag_user, tag, floID, proxySecret) {
             timestamp: Date.now()
         };
         request.sign = signRequest({
-            command: "remove_Tag",
+            type: "remove_tag",
             user: tag_user,
             tag: tag,
             timestamp: request.timestamp

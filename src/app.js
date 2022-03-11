@@ -68,6 +68,9 @@ module.exports = function App(secret, DB) {
     //cancel sell or buy order
     app.post('/cancel', Request.CancelOrder);
 
+    //transfer amount to another user
+    app.post('/transfer-token', Request.TransferToken);
+
     //list sell or buy order
     app.get('/list-sellorders', Request.ListSellOrders);
     app.get('/list-buyorders', Request.ListBuyOrders);
@@ -86,7 +89,6 @@ module.exports = function App(secret, DB) {
     app.post('/withdraw-token', Request.WithdrawToken);
 
     //Manage user tags (Access to trusted IDs only)
-
     app.post('/add-tag', Request.addUserTag);
     app.post('/remove-tag', Request.removeUserTag);
 

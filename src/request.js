@@ -165,18 +165,17 @@ function PlaceSellOrder(req, res) {
         min_price: data.min_price,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.addSellOrder(data.floID, data.asset, data.quantity, data.min_price)
-            .then(result => {
-                storeRequest(data.floID, req_str, data.sign);
-                res.send('Sell Order placed successfully');
-            }).catch(error => {
-                if (error instanceof INVALID)
-                    res.status(INVALID.e_code).send(error.message);
-                else {
-                    console.error(error);
-                    res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
-                }
-            });
+        market.addSellOrder(data.floID, data.asset, data.quantity, data.min_price).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
+            }
+        });
     }).catch(error => {
         if (error instanceof INVALID)
             res.status(INVALID.e_code).send(error.message);
@@ -196,18 +195,17 @@ function PlaceBuyOrder(req, res) {
         max_price: data.max_price,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.addBuyOrder(data.floID, data.asset, data.quantity, data.max_price)
-            .then(result => {
-                storeRequest(data.floID, req_str, data.sign);
-                res.send('Buy Order placed successfully');
-            }).catch(error => {
-                if (error instanceof INVALID)
-                    res.status(INVALID.e_code).send(error.message);
-                else {
-                    console.error(error);
-                    res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
-                }
-            });
+        market.addBuyOrder(data.floID, data.asset, data.quantity, data.max_price).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Order placement failed! Try again later!");
+            }
+        });
     }).catch(error => {
         if (error instanceof INVALID)
             res.status(INVALID.e_code).send(error.message);
@@ -226,18 +224,47 @@ function CancelOrder(req, res) {
         id: data.orderID,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
-        market.cancelOrder(data.orderType, data.orderID, data.floID)
-            .then(result => {
-                storeRequest(data.floID, req_str, data.sign);
-                res.send(result);
-            }).catch(error => {
-                if (error instanceof INVALID)
-                    res.status(INVALID.e_code).send(error.message);
-                else {
-                    console.error(error);
-                    res.status(INTERNAL.e_code).send("Order cancellation failed! Try again later!");
-                }
-            });
+        market.cancelOrder(data.orderType, data.orderID, data.floID).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Order cancellation failed! Try again later!");
+            }
+        });
+    }).catch(error => {
+        if (error instanceof INVALID)
+            res.status(INVALID.e_code).send(error.message);
+        else {
+            console.error(error);
+            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+        }
+    });
+}
+
+function TransferToken(req, res) {
+    let data = req.body;
+    validateRequestFromFloID({
+        type: "transfer_token",
+        receiver: data.receiver,
+        token: data.token,
+        amount: data.amount,
+        timestamp: data.timestamp
+    }, data.sign, data.floID).then(req_str => {
+        market.transferToken(data.floID, data.receiver, data.token, data.amount).then(result => {
+            storeRequest(data.floID, req_str, data.sign);
+            res.send(result);
+        }).catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.message);
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Token Transfer failed! Try again later!");
+            }
+        });
     }).catch(error => {
         if (error instanceof INVALID)
             res.status(INVALID.e_code).send(error.message);
@@ -264,7 +291,7 @@ function ListBuyOrders(req, res) {
 
 function ListTransactions(req, res) {
     //TODO: Limit size (recent)
-    DB.query("SELECT * FROM TransactionHistory ORDER BY tx_time DESC")
+    DB.query("SELECT * FROM TradeTransactions ORDER BY tx_time DESC")
         .then(result => res.send(result))
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
@@ -301,7 +328,7 @@ function Account(req, res) {
 function DepositFLO(req, res) {
     let data = req.body;
     validateRequestFromFloID({
-        type: "deposit_FLO",
+        type: "deposit_flo",
         txid: data.txid,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
@@ -329,7 +356,7 @@ function DepositFLO(req, res) {
 function WithdrawFLO(req, res) {
     let data = req.body;
     validateRequestFromFloID({
-        type: "withdraw_FLO",
+        type: "withdraw_flo",
         amount: data.amount,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
@@ -357,7 +384,7 @@ function WithdrawFLO(req, res) {
 function DepositToken(req, res) {
     let data = req.body;
     validateRequestFromFloID({
-        type: "deposit_Token",
+        type: "deposit_token",
         txid: data.txid,
         timestamp: data.timestamp
     }, data.sign, data.floID).then(req_str => {
@@ -385,7 +412,7 @@ function DepositToken(req, res) {
 function WithdrawToken(req, res) {
     let data = req.body;
     validateRequestFromFloID({
-        type: "withdraw_Token",
+        type: "withdraw_token",
         token: data.token,
         amount: data.amount,
         timestamp: data.timestamp
@@ -416,7 +443,7 @@ function addUserTag(req, res) {
     if (!trustedIDs.includes(data.floID))
         return res.status(INVALID.e_code).send("Access Denied");
     validateRequestFromFloID({
-        command: "add_Tag",
+        type: "add_tag",
         user: data.user,
         tag: data.tag,
         timestamp: data.timestamp
@@ -448,7 +475,7 @@ function removeUserTag(req, res) {
         return res.status(INVALID.e_code).send("Access Denied");
     else
         validateRequestFromFloID({
-            command: "remove_Tag",
+            type: "remove_tag",
             user: data.user,
             tag: data.tag,
             timestamp: data.timestamp
@@ -482,6 +509,7 @@ module.exports = {
     PlaceBuyOrder,
     PlaceSellOrder,
     CancelOrder,
+    TransferToken,
     ListSellOrders,
     ListBuyOrders,
     ListTransactions,

@@ -3,10 +3,15 @@
 const group = require("./group");
 const price = require("./price");
 
+const {
+    TRADE_HASH_PREFIX
+} = require("./_constants")["market"];
+
 var DB; //container for database
 
 function startCouplingForAsset(asset) {
     price.getRates(asset).then(cur_rate => {
+        cur_rate = cur_rate.toFixed(3);
         group.getBestPairs(asset, cur_rate)
             .then(bestPairQueue => processCoupling(bestPairQueue))
             .catch(error => console.error("initiateCoupling", error))
@@ -112,7 +117,12 @@ function updateBalance(seller_best, buyer_best, txQueries, asset, cur_price, qua
     //Add coins to Buyer
     txQueries.push(["INSERT INTO Vault(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_price, quantity]])
     //Record transaction
-    txQueries.push(["INSERT INTO TransactionHistory (seller, buyer, asset, quantity, unitValue) VALUES (?, ?, ?, ?, ?)", [seller_best.floID, buyer_best.floID, asset, quantity, cur_price]]);
+    let time = Date.now();
+    let hash = TRADE_HASH_PREFIX + Crypto.SHA256([time, seller_best.floID, buyer_best.floID, asset, quantity, cur_price].join("|"));
+    txQueries.push([
+        "INSERT INTO TradeTransactions (seller, buyer, asset, quantity, unitValue, tx_time, txid) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [seller_best.floID, buyer_best.floID, asset, quantity, cur_price, global.convertDateToString(time), hash]
+    ]);
 }
 
 function beginAudit(sellerID, buyerID, asset, unit_price, quantity) {
@@ -125,7 +135,7 @@ function beginAudit(sellerID, buyerID, asset, unit_price, quantity) {
 
 function endAudit(sellerID, buyerID, asset, old_bal, unit_price, quantity) {
     auditBalance(sellerID, buyerID, asset).then(new_bal => {
-        DB.query("INSERT INTO AuditTransaction (asset, quantity, unit_price, total_cost," +
+        DB.query("INSERT INTO AuditTrade (asset, quantity, unit_price, total_cost," +
             " sellerID, seller_old_cash, seller_old_asset, seller_new_cash, seller_new_asset," +
             " buyerID, buyer_old_cash, buyer_old_asset, buyer_new_cash, buyer_new_asset)" +
             " Value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [

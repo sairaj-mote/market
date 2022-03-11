@@ -86,6 +86,7 @@ function Database(user, password, dbname, host = 'localhost') {
             user: user,
             password: password,
             database: dbname,
+            //dateStrings : true,
             timezone: 'UTC'
         });
         db.connect.then(conn => {

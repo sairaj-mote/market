@@ -1,6 +1,6 @@
 /* Node data */
 TRUNCATE _backup;
-TRUNCATE AuditTransaction;
+TRUNCATE AuditTrade;
 TRUNCATE BuyOrder;
 TRUNCATE Cash;
 TRUNCATE InputFLO;
@@ -12,7 +12,8 @@ TRUNCATE RequestLog;
 TRUNCATE SellOrder;
 TRUNCATE UserSession;
 TRUNCATE UserTag;
-TRUNCATE TransactionHistory;
+TRUNCATE TransferTransactions;
+TRUNCATE TradeTransactions;
 TRUNCATE Vault;
 DELETE FROM Users; 
 
