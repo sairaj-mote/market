@@ -289,7 +289,7 @@ function ListBuyOrders(req, res) {
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
 
-function ListTransactions(req, res) {
+function ListTradeTransactions(req, res) {
     //TODO: Limit size (recent)
     DB.query("SELECT * FROM TradeTransactions ORDER BY tx_time DESC")
         .then(result => res.send(result))
@@ -299,8 +299,38 @@ function ListTransactions(req, res) {
 function getRates(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
-    else
-        res.send(market.rates);
+    else {
+        let asset = req.query.asset,
+            rates = market.rates;
+        if (asset) {
+            if (asset in rates)
+                res.send(rates[asset]);
+            else
+                res.status(INVALID.e_code).send("Invalid asset parameter");
+        } else
+            res.send(rates);
+    }
+
+}
+
+function getTransaction(req, res) {
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let txid = req.query.txid;
+        if (!txid)
+            res.status(INVALID.e_code).send("txid (transactionID) parameter missing");
+        market.getTransactionDetails(txid)
+            .then(result => res.send(result))
+            .catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Unable to process! Try again later!");
+                }
+            });
+    }
 }
 
 function Account(req, res) {
@@ -512,8 +542,9 @@ module.exports = {
     TransferToken,
     ListSellOrders,
     ListBuyOrders,
-    ListTransactions,
+    ListTradeTransactions,
     getRates,
+    getTransaction,
     Account,
     DepositFLO,
     WithdrawFLO,

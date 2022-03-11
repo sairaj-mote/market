@@ -1456,7 +1456,7 @@
                 }
             } else {
                 try {
-                    const marketTransactions = await getTransactionList()
+                    const marketTransactions = await getTradeList()
                     marketTransactions.forEach(transaction => {
                         const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
                         const transactionDetails = {

@@ -4,6 +4,7 @@ const coupling = require('./coupling');
 
 const {
     MINIMUM_BUY_REQUIREMENT,
+    TRADE_HASH_PREFIX,
     TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
 
@@ -182,6 +183,26 @@ function getAccountDetails(floID) {
                 .finally(_ => resolve(response));
         });
     });
+}
+
+function getTransactionDetails(txid) {
+    let tableName, type;
+    if (txid.startsWith(TRANSFER_HASH_PREFIX)) {
+        tableName = 'TransferTransactions';
+        type = 'transfer';
+    } else if (txid.startsWith(TRADE_HASH_PREFIX)) {
+        tableName = 'TradeTransactions';
+        type = 'trade';
+    } else
+        return reject(INVALID("Invalid TransactionID"));
+    DB.query(`SELECT * FROM ${tableName} WHERE txid=?`, [txid]).then(result => {
+        if (result.length) {
+            let details = result[0];
+            details.type = type;
+            resolve(details);
+        } else
+            reject(INVALID("Transaction not found"));
+    }).catch(error => reject(error))
 }
 
 function transferToken(sender, receiver, token, amount) {
@@ -496,6 +517,7 @@ module.exports = {
     addSellOrder,
     cancelOrder,
     getAccountDetails,
+    getTransactionDetails,
     transferToken,
     depositFLO,
     withdrawFLO,

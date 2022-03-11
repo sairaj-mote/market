@@ -141,9 +141,9 @@ function getSellList() {
     });
 }
 
-function getTransactionList() {
+function getTradeList() {
     return new Promise((resolve, reject) => {
-        exchangeAPI('/list-transactions')
+        exchangeAPI('/list-trades')
             .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
@@ -151,14 +151,26 @@ function getTransactionList() {
     });
 }
 
-function getRates() {
+function getRates(asset = null) {
     return new Promise((resolve, reject) => {
-        exchangeAPI('/get-rates')
+        exchangeAPI('/get-rates' + (asset ? "?asset=" + asset : ""))
             .then(result => responseParse(result)
                 .then(result => resolve(result))
                 .catch(error => reject(error)))
             .catch(error => reject(error));
     });
+}
+
+function getTx(txid) {
+    return new Promise((resolve, reject) => {
+        if (!txid)
+            return reject('txid required');
+        exchangeAPI('/get-transaction?txid=' + txid)
+            .then(result => responseParse(result)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error));
+    })
 }
 
 function signRequest(request, privKey) {

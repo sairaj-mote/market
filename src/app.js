@@ -71,13 +71,14 @@ module.exports = function App(secret, DB) {
     //transfer amount to another user
     app.post('/transfer-token', Request.TransferToken);
 
-    //list sell or buy order
+    //list all orders and trades
     app.get('/list-sellorders', Request.ListSellOrders);
     app.get('/list-buyorders', Request.ListBuyOrders);
-
-    //list all process transactions and rate
-    app.get('/list-transactions', Request.ListTransactions);
-    app.get('/get-rates', Request.getRates)
+    app.get('/list-trades', Request.ListTradeTransactions);
+    
+    //get rates and tx
+    app.get('/get-rates', Request.getRates);
+    app.get('/get-transaction', Request.getTransaction);
 
     //get account details
     app.post('/account', Request.Account);
