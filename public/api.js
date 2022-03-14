@@ -102,6 +102,8 @@ function getAccount(floID, proxySecret) {
             floID: floID,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "get_account",
             timestamp: request.timestamp
@@ -173,11 +175,11 @@ function getTx(txid) {
     })
 }
 
-function signRequest(request, privKey) {
+function signRequest(request, signKey) {
     if (typeof request !== "object")
         throw Error("Request is not an object");
     let req_str = Object.keys(request).sort().map(r => r + ":" + request[r]).join("|");
-    return floCrypto.signData(req_str, privKey);
+    return floCrypto.signData(req_str, signKey);
 }
 
 function getLoginCode() {
@@ -190,6 +192,7 @@ function getLoginCode() {
     })
 }
 
+/*
 function signUp(privKey, code, hash) {
     return new Promise((resolve, reject) => {
         if (!code || !hash)
@@ -220,6 +223,7 @@ function signUp(privKey, code, hash) {
             .catch(error => reject(error));
     });
 }
+*/
 
 function login(privKey, proxyKey, code, hash) {
     return new Promise((resolve, reject) => {
@@ -228,6 +232,7 @@ function login(privKey, proxyKey, code, hash) {
         let request = {
             proxyKey: proxyKey,
             floID: floCrypto.getFloID(privKey),
+            pubKey: floCrypto.getPubKeyHex(privKey),
             timestamp: Date.now(),
             code: code,
             hash: hash
@@ -261,6 +266,8 @@ function logout(floID, proxySecret) {
             floID: floID,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "logout",
             timestamp: request.timestamp
@@ -293,6 +300,8 @@ function buy(asset, quantity, max_price, floID, proxySecret) {
             max_price: max_price,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "buy_order",
             asset: asset,
@@ -329,6 +338,8 @@ function sell(asset, quantity, min_price, floID, proxySecret) {
             min_price: min_price,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "sell_order",
             quantity: quantity,
@@ -362,6 +373,8 @@ function cancelOrder(type, id, floID, proxySecret) {
             orderID: id,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "cancel_order",
             order: type,
@@ -396,6 +409,8 @@ function transferToken(receiver, token, amount, floID, proxySecret) {
             amount: amount,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "transfer_token",
             receiver: receiver,
@@ -418,7 +433,7 @@ function transferToken(receiver, token, amount, floID, proxySecret) {
     })
 }
 
-function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
+function depositFLO(quantity, floID, sinkID, privKey, proxySecret = null) {
     return new Promise((resolve, reject) => {
         if (typeof quantity !== "number" || quantity <= floGlobals.fee)
             return reject(`Invalid quantity (${quantity})`);
@@ -428,11 +443,13 @@ function depositFLO(quantity, floID, sinkID, privKey, proxySecret) {
                 txid: txid,
                 timestamp: Date.now()
             };
+            if (!proxySecret) //Direct signing (without proxy)
+                request.pubKey = floCrypto.getPubKeyHex(privKey);
             request.sign = signRequest({
                 type: "deposit_flo",
                 txid: txid,
                 timestamp: request.timestamp
-            }, proxySecret);
+            }, proxySecret || privKey);
             console.debug(request);
 
             exchangeAPI('/deposit-flo', {
@@ -456,6 +473,8 @@ function withdrawFLO(quantity, floID, proxySecret) {
             amount: quantity,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "withdraw_flo",
             amount: quantity,
@@ -476,7 +495,7 @@ function withdrawFLO(quantity, floID, proxySecret) {
     })
 }
 
-function depositToken(token, quantity, floID, sinkID, privKey, proxySecret) {
+function depositToken(token, quantity, floID, sinkID, privKey, proxySecret = null) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.verifyPrivKey(privKey, floID))
             return reject("Invalid Private Key");
@@ -486,11 +505,13 @@ function depositToken(token, quantity, floID, sinkID, privKey, proxySecret) {
                 txid: txid,
                 timestamp: Date.now()
             };
+            if (!proxySecret) //Direct signing (without proxy)
+                request.pubKey = floCrypto.getPubKeyHex(privKey);
             request.sign = signRequest({
                 type: "deposit_token",
                 txid: txid,
                 timestamp: request.timestamp
-            }, proxySecret);
+            }, proxySecret || privKey);
             console.debug(request);
 
             exchangeAPI('/deposit-token', {
@@ -515,6 +536,8 @@ function withdrawToken(token, quantity, floID, proxySecret) {
             amount: quantity,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "withdraw_token",
             token: token,
@@ -544,6 +567,8 @@ function addUserTag(tag_user, tag, floID, proxySecret) {
             tag: tag,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "add_tag",
             user: tag_user,
@@ -573,6 +598,8 @@ function removeUserTag(tag_user, tag, floID, proxySecret) {
             tag: tag,
             timestamp: Date.now()
         };
+        if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+            request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "remove_tag",
             user: tag_user,

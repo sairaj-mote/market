@@ -33,31 +33,21 @@ CREATE TABLE TrustedList(
 
 /* User Data */
 
-CREATE TABLE Users (
-    id INT NOT NULL AUTO_INCREMENT,
-    floID CHAR(34) NOT NULL,
-    pubKey CHAR(66) NOT NULL,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    KEY(id),
-    PRIMARY KEY(floID)
-);
-
 CREATE TABLE UserSession (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     proxyKey CHAR(66) NOT NULL,
     session_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     KEY (id),
-    PRIMARY KEY(floID),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    PRIMARY KEY(floID)
 );
 
 CREATE TABLE Cash (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL UNIQUE,
     balance DECIMAL(12, 2) DEFAULT 0.00,
-    PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    KEY(id),
+    PRIMARY KEY(floID)
 );
 
 CREATE TABLE Vault (
@@ -68,7 +58,6 @@ CREATE TABLE Vault (
     base DECIMAL(10, 2),
     quantity FLOAT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
@@ -78,7 +67,6 @@ CREATE TABLE UserTag (
     tag VARCHAR(50) NOT NULL,
     PRIMARY KEY(floID, tag),
     KEY (id),
-    FOREIGN KEY (floID) REFERENCES Users(floID),
     FOREIGN KEY (tag) REFERENCES TagList(tag)
 );
 
@@ -89,9 +77,10 @@ CREATE TABLE RequestLog(
     floID CHAR(34) NOT NULL,
     request TEXT NOT NULL,
     sign TEXT NOT NULL,
+    proxy BOOLEAN NOT NULL,
     request_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    UNIQUE (sign)
 );
 
 CREATE TABLE SellOrder (
@@ -102,7 +91,6 @@ CREATE TABLE SellOrder (
     minPrice DECIMAL(10, 2) NOT NULL,
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
@@ -114,7 +102,6 @@ CREATE TABLE BuyOrder (
     maxPrice DECIMAL(10, 2) NOT NULL,
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
@@ -124,8 +111,7 @@ CREATE TABLE InputFLO (
     floID CHAR(34) NOT NULL,
     amount FLOAT,
     status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    PRIMARY KEY(id)
 );
 
 CREATE TABLE OutputFLO (
@@ -134,8 +120,7 @@ CREATE TABLE OutputFLO (
     floID CHAR(34) NOT NULL,
     amount FLOAT NOT NULL,
     status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    PRIMARY KEY(id)
 );
 
 CREATE TABLE InputToken (
@@ -145,8 +130,7 @@ CREATE TABLE InputToken (
     token VARCHAR(64),
     amount FLOAT,
     status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    PRIMARY KEY(id)
 );
 
 CREATE TABLE OutputToken (
@@ -156,8 +140,7 @@ CREATE TABLE OutputToken (
     token VARCHAR(64),
     amount FLOAT NOT NULL,
     status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id),
-    FOREIGN KEY (floID) REFERENCES Users(floID)
+    PRIMARY KEY(id)
 );
 
 /* Transaction Data */
@@ -180,9 +163,7 @@ CREATE TABLE TransferTransactions (
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     txid VARCHAR(66) NOT NULL,
     KEY(id),
-    PRIMARY KEY(txid),
-    FOREIGN KEY (sender) REFERENCES Users(floID),
-    FOREIGN KEY (receiver) REFERENCES Users(floID)
+    PRIMARY KEY(txid)
 );
 
 CREATE TABLE TradeTransactions (
@@ -196,8 +177,6 @@ CREATE TABLE TradeTransactions (
     txid VARCHAR(66) NOT NULL,
     KEY(id),
     PRIMARY KEY(txid),
-    FOREIGN KEY (buyer) REFERENCES Users(floID),
-    FOREIGN KEY (seller) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
@@ -219,8 +198,6 @@ CREATE TABLE AuditTrade(
     buyer_old_cash FLOAT NOT NULL,
     buyer_new_cash FLOAT NOT NULL,
     PRIMARY KEY(id),
-    FOREIGN KEY (sellerID) REFERENCES Users(floID),
-    FOREIGN KEY (buyerID) REFERENCES Users(floID),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
@@ -248,13 +225,6 @@ CREATE TABLE sinkShares(
     time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(floID)
 );
-
-CREATE TRIGGER Users_I AFTER INSERT ON Users
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Users', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Users_U AFTER UPDATE ON Users
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Users', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Users_D AFTER DELETE ON Users
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Users', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER RequestLog_I AFTER INSERT ON RequestLog
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;

@@ -4,7 +4,8 @@ module.exports = {
         PERIOD_INTERVAL: 15 * 60 * 1000 // 15 min
     },
     request: {
-        MAX_SESSION_TIMEOUT: 60 * 24 * 60 * 60 * 1000, //60 days
+        SIGN_EXPIRE_TIME: 1 * 60 * 1000, //1 min
+        MAX_SESSION_TIMEOUT: 30 * 24 * 60 * 60 * 1000, //30 days
         INVALID_SERVER_MSG: "INCORRECT_SERVER_ERROR" //Should be reflected in public backend script
     },
     market: {

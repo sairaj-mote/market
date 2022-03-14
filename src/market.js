@@ -10,18 +10,9 @@ const {
 
 var DB, assetList; //container for database and allowed assets
 
-const checkIfUserRegistered = floID => new Promise((resolve, reject) => {
-    DB.query("SELECT id FROM Users WHERE floID=?", [floID]).then(result => {
-        if (result.length)
-            resolve(result[0].id);
-        else
-            reject(INVALID(`User ${floID} not registered`));
-    }).catch(error => reject(error));
-});
-
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
     let promises = (asset === floGlobals.currency) ? [
-        DB.query("SELECT balance FROM Cash WHERE floID=?", [floID]),
+        DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]),
         DB.query("SELECT SUM(quantity*maxPrice) AS locked FROM BuyOrder WHERE floID=?", [floID])
     ] : [
         DB.query("SELECT SUM(quantity) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, asset]),
@@ -164,7 +155,7 @@ function getAccountDetails(floID) {
                 else
                     switch (i) {
                         case 0:
-                            response.cash = a.value[0].balance;
+                            response.cash = a.value.length ? a.value[0].balance : 0;
                             break;
                         case 1:
                             response.vault = a.value;
@@ -216,22 +207,20 @@ function transferToken(sender, receiver, token, amount) {
         else if (token !== floGlobals.currency && !assetList.includes(token))
             return reject(INVALID(`Invalid token (${token})`));
         getAssetBalance.check(senderID, token, amount).then(_ => {
-            checkIfUserRegistered(receiver).then(_ => {
-                consumeAsset(sender, token, amount).then(txQueries => {
-                    if (token === floGlobals.currency)
-                        txQueries.push(["UPDATE Cash SET balance=balance+? WHERE floID=?", [amount, receiver]]);
-                    else
-                        txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [receiver, amount]]);
-                    let time = Date.now();
-                    let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256([time, sender, receiver, token, amount].join("|"));
-                    txQueries.push([
-                        "INSERT INTO TransferTransactions (sender, receiver, token, amount, tx_time, txid)",
-                        [sender, receiver, token, amount, global.convertDateToString(time), hash]
-                    ]);
-                    DB.transaction(txQueries)
-                        .then(result => resolve(hash))
-                        .catch(error => reject(error))
-                }).catch(error => reject(error))
+            consumeAsset(sender, token, amount).then(txQueries => {
+                if (token === floGlobals.currency)
+                    txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [receiver, amount, amount]]);
+                else
+                    txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [receiver, amount]]);
+                let time = Date.now();
+                let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256([time, sender, receiver, token, amount].join("|"));
+                txQueries.push([
+                    "INSERT INTO TransferTransactions (sender, receiver, token, amount, tx_time, txid)",
+                    [sender, receiver, token, amount, global.convertDateToString(time), hash]
+                ]);
+                DB.transaction(txQueries)
+                    .then(result => resolve(hash))
+                    .catch(error => reject(error))
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
@@ -392,7 +381,7 @@ function confirmDepositToken() {
                     }
                     txQueries.push(["UPDATE InputToken SET status=?, token=?, amount=? WHERE id=?", ["SUCCESS", token_name, amount_token, req.id]]);
                     if (token_name === floGlobals.currency)
-                        txQueries.push(["UPDATE Cash SET balance=balance+? WHERE floID=?", [amount_token, req.floID]]);
+                        txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [req.floID, amount_token, amount_token]]);
                     else
                         txQueries.push(["INSERT INTO Vault(floID, asset, quantity) VALUES (?, ?, ?)", [req.floID, token_name, amount_token]]);
                     DB.transaction(txQueries)

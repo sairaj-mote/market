@@ -15,7 +15,6 @@ TRUNCATE UserTag;
 TRUNCATE TransferTransactions;
 TRUNCATE TradeTransactions;
 TRUNCATE Vault;
-DELETE FROM Users; 
 
 /* Blockchain data */
 TRUNCATE LastTx;

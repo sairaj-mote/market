@@ -364,8 +364,8 @@ function getTopValidBuyOrder(orders, cur_price) {
 
 function verifyBuyOrder(buyOrder, cur_price) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT balance AS bal FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
-            if (result[0].bal < cur_price * buyOrder.quantity) {
+        DB.query("SELECT balance FROM Cash WHERE floID=?", [buyOrder.floID]).then(result => {
+            if (!result.length || result[0].balance < cur_price * buyOrder.quantity) {
                 //This should not happen unless a buy order is placed when user doesnt have enough cash balance
                 console.warn(`Buy order ${buyOrder.id} is active, but Cash is insufficient`);
                 reject(false);

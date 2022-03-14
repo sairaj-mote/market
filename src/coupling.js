@@ -112,7 +112,7 @@ function processOrders(seller_best, buyer_best, txQueries, quantity, clear_sell)
 function updateBalance(seller_best, buyer_best, txQueries, asset, cur_price, quantity) {
     //Update cash balance for seller and buyer
     let totalAmount = cur_price * quantity;
-    txQueries.push(["UPDATE Cash SET balance=balance+? WHERE floID=?", [totalAmount, seller_best.floID]]);
+    txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [seller_best.floID, totalAmount, totalAmount]]);
     txQueries.push(["UPDATE Cash SET balance=balance-? WHERE floID=?", [totalAmount, buyer_best.floID]]);
     //Add coins to Buyer
     txQueries.push(["INSERT INTO Vault(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_price, quantity]])
@@ -158,6 +158,11 @@ function auditBalance(sellerID, buyerID, asset) {
             DB.query("SELECT floID, SUM(quantity) as asset_balance FROM Vault WHERE asset=? AND floID IN (?, ?) GROUP BY floID", [asset, sellerID, buyerID]).then(result => {
                 for (let i in result)
                     balance[result[i].floID].asset = result[i].asset_balance;
+                //Set them as 0 if undefined or null
+                balance[sellerID].cash = balance[sellerID].cash || 0;
+                balance[sellerID].asset = balance[sellerID].asset || 0;
+                balance[buyerID].cash = balance[buyerID].cash || 0;
+                balance[buyerID].asset = balance[buyerID].asset || 0;
                 resolve(balance);
             }).catch(error => reject(error))
         }).catch(error => reject(error))
