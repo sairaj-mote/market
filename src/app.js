@@ -49,11 +49,8 @@ module.exports = function App(secret, DB) {
         next();
     })
 
-    //get code for login or signup
+    //get code for login
     app.get('/get-login-code', Request.getLoginCode);
-
-    //signup request
-    //app.post('/signup', Request.SignUp);  Removing need for signup
 
     //login request
     app.post('/login', Request.Login);

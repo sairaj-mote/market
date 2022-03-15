@@ -10,6 +10,24 @@ const {
 
 var DB, assetList; //container for database and allowed assets
 
+function login(floID, proxyKey) {
+    return new Promise((resolve, reject) => {
+        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?, ?) " +
+                "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?",
+                [floID, proxyKey, proxyKey])
+            .then(result => resolve("Login Successful"))
+            .catch(error => reject(error))
+    })
+}
+
+function logout(floID) {
+    return new Promise((resolve, reject) => {
+        DB.query("DELETE FROM UserSession WHERE floID=?", [floID])
+            .then(result => resolve("Logout successful"))
+            .catch(error => reject(error))
+    })
+}
+
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
     let promises = (asset === floGlobals.currency) ? [
         DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]),
@@ -516,6 +534,8 @@ function blockchainReCheck() {
 }
 
 module.exports = {
+    login,
+    logout,
     get rates() {
         return coupling.price.currentRates;
     },
