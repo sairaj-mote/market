@@ -1,10 +1,10 @@
 'use strict';
-global.floGlobals = require('../public/floGlobals');
+global.floGlobals = require('../docs/scripts/floGlobals');
 require('./set_globals');
-require('./lib');
-require('./floCrypto');
-require('./floBlockchainAPI');
-require('./tokenAPI');
+require('../docs/scripts/lib');
+require('../docs/scripts/floCrypto');
+require('../docs/scripts/floBlockchainAPI');
+require('../docs/scripts/tokenAPI');
 
 const Database = require("./database");
 const App = require('./app');

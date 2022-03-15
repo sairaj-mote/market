@@ -1,10 +1,10 @@
 const fs = require('fs');
 const getInput = require('./getInput');
 
-const floGlobals = require('../public/floGlobals');
+const floGlobals = require('../docs/scripts/floGlobals');
 require('../src/set_globals');
-require('../src/lib');
-require('../src/floCrypto');
+require('../docs/scripts/lib');
+require('../docs/scripts/floCrypto');
 
 console.log(__dirname);
 

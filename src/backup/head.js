@@ -1,6 +1,6 @@
 'use strict';
 
-const K_Bucket = require('../../public/KBucket');
+const K_Bucket = require('../../docs/scripts/KBucket');
 const slave = require('./slave');
 const sync = require('./sync');
 const WebSocket = require('ws');
