@@ -1,3 +1,8 @@
+(typeof global !== "undefined" ? global : window).cryptocoin = floGlobals.blockchain;
+/*  Util Libraries required for Standard operations
+    All credits for these codes belong to their respective creators, moderators and owners.
+    For more info on licence for these codes, visit respective source.
+*/
 'use strict';
 //Crypto.js
 (function(GLOBAL) {
@@ -398,12 +403,16 @@
 //SecureRandom.js
 (function(GLOBAL) {
 
-    var getRandomValues =
-        (typeof require === 'function') ? function(buf) {
-            var bytes = require('crypto').randomBytes(buf.length)
+    const getRandomValues = function(buf) {
+        if (typeof require === 'function') {
+            var bytes = require('crypto').randomBytes(buf.length);
             buf.set(bytes)
             return buf;
-        } : (GLOBAL.crypto && GLOBAL.crypto.getRandomValues ? GLOBAL.crypto.getRandomValues : null);
+        } else if (GLOBAL.crypto && GLOBAL.crypto.getRandomValues)
+            return GLOBAL.crypto.getRandomValues(buf);
+        else
+            return null;
+    }
 
     /*!
      * Random number generator with ArcFour PRNG

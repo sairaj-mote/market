@@ -16,5 +16,4 @@ const floGlobals = {
     currency: "rupee"
 };
 
-(typeof global !== "undefined" ? global : window).cryptocoin = floGlobals.blockchain;
 ('object' === typeof module) ? module.exports = floGlobals: null;
