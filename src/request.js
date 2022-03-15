@@ -275,12 +275,11 @@ function TransferToken(req, res) {
     let data = req.body;
     validateRequest({
         type: "transfer_token",
-        receiver: data.receiver,
+        receiver: JSON.stringify(data.receiver),
         token: data.token,
-        amount: data.amount,
         timestamp: data.timestamp
     }, data.sign, data.floID, data.pubKey).then(req_str => {
-        market.transferToken(data.floID, data.receiver, data.token, data.amount).then(result => {
+        market.transferToken(data.floID, data.receiver, data.token).then(result => {
             storeRequest(data.floID, req_str, data.sign, !data.pubKey);
             res.send(result);
         }).catch(error => {

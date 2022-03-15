@@ -157,9 +157,9 @@ CREATE TABLE PriceHistory (
 CREATE TABLE TransferTransactions (
     id INT NOT NULL AUTO_INCREMENT,
     sender CHAR(34) NOT NULL,
-    receiver CHAR(34) NOT NULL,
+    receiver TEXT NOT NULL,
     token VARCHAR(64) NOT NULL,
-    amount FLOAT NOT NULL,
+    totalAmount FLOAT NOT NULL,
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     txid VARCHAR(66) NOT NULL,
     KEY(id),

@@ -118,7 +118,14 @@ function updateBalance(seller_best, buyer_best, txQueries, asset, cur_price, qua
     txQueries.push(["INSERT INTO Vault(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_price, quantity]])
     //Record transaction
     let time = Date.now();
-    let hash = TRADE_HASH_PREFIX + Crypto.SHA256([time, seller_best.floID, buyer_best.floID, asset, quantity, cur_price].join("|"));
+    let hash = TRADE_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
+        seller: seller_best.floID,
+        buyer: buyer_best.floID,
+        asset: asset,
+        quantity: quantity,
+        unitValue: cur_price,
+        tx_time: time,
+    }));
     txQueries.push([
         "INSERT INTO TradeTransactions (seller, buyer, asset, quantity, unitValue, tx_time, txid) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [seller_best.floID, buyer_best.floID, asset, quantity, cur_price, global.convertDateToString(time), hash]

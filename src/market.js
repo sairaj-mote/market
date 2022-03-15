@@ -190,39 +190,56 @@ function getTransactionDetails(txid) {
         if (result.length) {
             let details = result[0];
             details.type = type;
+            if (tableName === 'TransferTransactions') //As json object is stored for receiver in transfer (to support one-to-many)
+                details.receiver = JSON.parse(details.receiver);
             resolve(details);
         } else
             reject(INVALID("Transaction not found"));
     }).catch(error => reject(error))
 }
 
-function transferToken(sender, receiver, token, amount) {
+function transferToken(sender, receivers, token) {
     return new Promise((resolve, reject) => {
         if (floCrypto.validateAddr(sender))
-            return reject(INVALID(`Invalid sender (${sender})`));
-        else if (floCrypto.validateAddr(receiver))
-            return reject(INVALID(`Invalid receiver (${receiver})`));
-        else if (typeof amount !== "number" || amount <= 0)
-            return reject(INVALID(`Invalid amount (${amount})`));
+            reject(INVALID(`Invalid sender (${sender})`));
         else if (token !== floGlobals.currency && !assetList.includes(token))
-            return reject(INVALID(`Invalid token (${token})`));
-        getAssetBalance.check(senderID, token, amount).then(_ => {
-            consumeAsset(sender, token, amount).then(txQueries => {
-                if (token === floGlobals.currency)
-                    txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [receiver, amount, amount]]);
+            reject(INVALID(`Invalid token (${token})`));
+        else {
+            let invalidIDs = [],
+                totalAmount = 0;
+            for (let floID in receivers)
+                if (!floCrypto.validateAddr(floID))
+                    invalidIDs.push(floID);
                 else
-                    txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [receiver, amount]]);
-                let time = Date.now();
-                let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256([time, sender, receiver, token, amount].join("|"));
-                txQueries.push([
-                    "INSERT INTO TransferTransactions (sender, receiver, token, amount, tx_time, txid)",
-                    [sender, receiver, token, amount, global.convertDateToString(time), hash]
-                ]);
-                DB.transaction(txQueries)
-                    .then(result => resolve(hash))
-                    .catch(error => reject(error))
+                    totalAmount += receivers[floID];
+            if (invalidIDs.length)
+                reject(INVALID(`Invalid receiver (${invalidIDs})`));
+            else getAssetBalance.check(senderID, token, totalAmount).then(_ => {
+                consumeAsset(sender, token, totalAmount).then(txQueries => {
+                    if (token === floGlobals.currency)
+                        for (let floID in receivers)
+                            txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [floID, receivers[floID], receivers[floID]]]);
+                    else
+                        for (let floID in receivers)
+                            txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [floID, receivers[floID]]]);
+                    let time = Date.now();
+                    let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
+                        sender: sender,
+                        receiver: receivers,
+                        token: token,
+                        totalAmount: totalAmount,
+                        tx_time: time,
+                    }));
+                    txQueries.push([
+                        "INSERT INTO TransferTransactions (sender, receiver, token, totalAmount, tx_time, txid)",
+                        [sender, JSON.stringify(receiver), token, totalAmount, global.convertDateToString(time), hash]
+                    ]);
+                    DB.transaction(txQueries)
+                        .then(result => resolve(hash))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error))
             }).catch(error => reject(error))
-        }).catch(error => reject(error))
+        }
     })
 }
 

@@ -396,26 +396,35 @@ function cancelOrder(type, id, floID, proxySecret) {
     })
 }
 
-function transferToken(receiver, token, amount, floID, proxySecret) {
+//receiver should be object eg {floID1: amount1, floID2: amount2 ...}
+function transferToken(receiver, token, floID, proxySecret) {
     return new Promise((resolve, reject) => {
-        if (!floCrypto.validateAddr(receiver))
-            return reject(INVALID(`Invalid receiver (${receiver})`));
-        else if (typeof amount !== "number" || amount <= 0)
-            return reject(`Invalid amount (${amount})`);
+        if (typeof receiver !== Object || receiver === null)
+            return reject("Invalid receiver: parameter is not an object");
+        let invalidIDs = [],
+            invalidAmt = [];
+        for (let f in receiver) {
+            if (!floCrypto.validateAddr(f))
+                invalidIDs.push(f);
+            else if (typeof receiver[f] !== "number" || receiver[f] <= 0)
+                invalidAmt.push(receiver[f])
+        }
+        if (invalidIDs.length)
+            return reject(INVALID(`Invalid receiver (${invalidIDs})`));
+        else if (invalidAmt.length)
+            return reject(`Invalid amount (${invalidAmt})`);
         let request = {
             floID: floID,
             token: token,
             receiver: receiver,
-            amount: amount,
             timestamp: Date.now()
         };
         if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
             request.pubKey = floCrypto.getPubKeyHex(proxySecret);
         request.sign = signRequest({
             type: "transfer_token",
-            receiver: receiver,
+            receiver: JSON.stringify(receiver),
             token: token,
-            amount: amount,
             timestamp: request.timestamp
         }, proxySecret);
         console.debug(request);
