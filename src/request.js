@@ -58,7 +58,7 @@ validateRequest.getSignKey = (floID, pubKey) => new Promise((resolve, reject) =>
         DB.query("SELECT session_time, proxyKey FROM UserSession WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
                 reject(INVALID("Session not active"));
-            else if (proxy && result[0].session_time + MAX_SESSION_TIMEOUT < Date.now())
+            else if (result[0].session_time + MAX_SESSION_TIMEOUT < Date.now())
                 reject(INVALID("Session Expired! Re-login required"));
             else
                 resolve(result[0].proxyKey);
@@ -87,7 +87,7 @@ function logRequest(floID, req_str, sign, proxy = false) {
 function processRequest(res, rText, validateObj, sign, floID, pubKey, marketFn) {
     validateRequest(validateObj, sign, floID, pubKey).then(req_str => {
         marketFn().then(result => {
-            logRequest(data.floID, req_str, data.sign, !data.pubKey);
+            logRequest(floID, req_str, sign, !pubKey);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)

@@ -8,6 +8,8 @@ const {
     TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
 
+const MINI_PERIOD_INTERVAL = require('./_constants')['app']['PERIOD_INTERVAL'] / 10;
+
 var DB, assetList; //container for database and allowed assets
 
 function login(floID, proxyKey) {
@@ -195,30 +197,32 @@ function getAccountDetails(floID) {
 }
 
 function getTransactionDetails(txid) {
-    let tableName, type;
-    if (txid.startsWith(TRANSFER_HASH_PREFIX)) {
-        tableName = 'TransferTransactions';
-        type = 'transfer';
-    } else if (txid.startsWith(TRADE_HASH_PREFIX)) {
-        tableName = 'TradeTransactions';
-        type = 'trade';
-    } else
-        return reject(INVALID("Invalid TransactionID"));
-    DB.query(`SELECT * FROM ${tableName} WHERE txid=?`, [txid]).then(result => {
-        if (result.length) {
-            let details = result[0];
-            details.type = type;
-            if (tableName === 'TransferTransactions') //As json object is stored for receiver in transfer (to support one-to-many)
-                details.receiver = JSON.parse(details.receiver);
-            resolve(details);
+    return new Promise((resolve, reject) => {
+        let tableName, type;
+        if (txid.startsWith(TRANSFER_HASH_PREFIX)) {
+            tableName = 'TransferTransactions';
+            type = 'transfer';
+        } else if (txid.startsWith(TRADE_HASH_PREFIX)) {
+            tableName = 'TradeTransactions';
+            type = 'trade';
         } else
-            reject(INVALID("Transaction not found"));
-    }).catch(error => reject(error))
+            return reject(INVALID("Invalid TransactionID"));
+        DB.query(`SELECT * FROM ${tableName} WHERE txid=?`, [txid]).then(result => {
+            if (result.length) {
+                let details = result[0];
+                details.type = type;
+                if (tableName === 'TransferTransactions') //As json object is stored for receiver in transfer (to support one-to-many)
+                    details.receiver = JSON.parse(details.receiver);
+                resolve(details);
+            } else
+                reject(INVALID("Transaction not found"));
+        }).catch(error => reject(error))
+    })
 }
 
 function transferToken(sender, receivers, token) {
     return new Promise((resolve, reject) => {
-        if (floCrypto.validateAddr(sender))
+        if (!floCrypto.validateAddr(sender))
             reject(INVALID(`Invalid sender (${sender})`));
         else if (token !== floGlobals.currency && !assetList.includes(token))
             reject(INVALID(`Invalid token (${token})`));
@@ -232,14 +236,14 @@ function transferToken(sender, receivers, token) {
                     totalAmount += receivers[floID];
             if (invalidIDs.length)
                 reject(INVALID(`Invalid receiver (${invalidIDs})`));
-            else getAssetBalance.check(senderID, token, totalAmount).then(_ => {
+            else getAssetBalance.check(sender, token, totalAmount).then(_ => {
                 consumeAsset(sender, token, totalAmount).then(txQueries => {
                     if (token === floGlobals.currency)
                         for (let floID in receivers)
                             txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [floID, receivers[floID], receivers[floID]]]);
                     else
                         for (let floID in receivers)
-                            txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [floID, receivers[floID]]]);
+                            txQueries.push(["INSERT INTO Vault(floID, quantity, asset) VALUES (?, ?, ?)", [floID, receivers[floID], token]]);
                     let time = Date.now();
                     let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
                         sender: sender,
@@ -249,8 +253,8 @@ function transferToken(sender, receivers, token) {
                         tx_time: time,
                     }));
                     txQueries.push([
-                        "INSERT INTO TransferTransactions (sender, receiver, token, totalAmount, tx_time, txid)",
-                        [sender, JSON.stringify(receiver), token, totalAmount, global.convertDateToString(time), hash]
+                        "INSERT INTO TransferTransactions (sender, receiver, token, totalAmount, tx_time, txid) VALUE (?, ?, ?, ?, ?, ?)",
+                        [sender, JSON.stringify(receivers), token, totalAmount, global.convertDateToString(time), hash]
                     ]);
                     DB.transaction(txQueries)
                         .then(result => resolve(hash))
@@ -286,7 +290,7 @@ function confirmDepositFLO() {
         results.forEach(req => {
             confirmDepositFLO.checkTx(req.floID, req.txid).then(amount => {
                 let txQueries = [];
-                txQueries.push(["INSERT INTO Vault(floID, quantity) VALUES (?, ?)", [req.floID, amount]]);
+                txQueries.push(["INSERT INTO Vault(floID, quantity, asset) VALUES (?, ?, ?)", [req.floID, amount, "FLO"]]);
                 txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
                 DB.transaction(txQueries)
                     .then(result => console.debug("FLO deposited:", req.floID, amount))
@@ -303,7 +307,9 @@ function confirmDepositFLO() {
 
 confirmDepositFLO.checkTx = function(sender, txid) {
     return new Promise((resolve, reject) => {
-        let receiver = global.myFloID; //receiver should be market's floID (ie, adminID)
+        let receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
+        if (!receiver)
+            return reject([false, 'sinkID not loaded']);
         floBlockchainAPI.getTx(txid).then(tx => {
             let vin_sender = tx.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
@@ -436,6 +442,8 @@ function confirmDepositToken() {
 confirmDepositToken.checkTx = function(sender, txid) {
     return new Promise((resolve, reject) => {
         let receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
+        if (!receiver)
+            return reject([false, 'sinkID not loaded']);
         tokenAPI.getTx(txid).then(tx => {
             if (tx.parsedFloData.type !== "transfer")
                 return reject([true, "Transaction type not 'transfer'"]);
@@ -525,6 +533,13 @@ function periodicProcess() {
 }
 
 function blockchainReCheck() {
+    if (blockchainReCheck.timeout) {
+        clearTimeout(blockchainReCheck.timeout);
+        blockchainReCheck.timeout = null;
+    }
+    if (!global.sinkID)
+        return blockchainReCheck.timeout = setTimeout(blockchainReCheck, MINI_PERIOD_INTERVAL);
+
     confirmDepositFLO();
     confirmDepositToken();
     retryWithdrawalFLO();
@@ -532,6 +547,7 @@ function blockchainReCheck() {
     confirmWithdrawalFLO();
     confirmWithdrawalToken();
 }
+blockchainReCheck.timeout = null;
 
 module.exports = {
     login,

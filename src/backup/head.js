@@ -107,13 +107,13 @@ collectShares.retrive = function(floID, sinkID, share) {
         return console.error("Something is wrong! Slaves are sending different sinkID");
     if (share.startsWith(SINK_KEY_INDICATOR)) {
         let sinkKey = share.substring(SINK_KEY_INDICATOR.length);
-        //console.debug("Received sinkKey:", sinkID, sinkKey);
+        console.debug("Received sink:", sinkID);
         self.verify(sinkKey);
     } else
         self.shares[floID] = share.split("|");
     try {
         let sinkKey = floCrypto.retrieveShamirSecret([].concat(...Object.values(self.shares)));
-        //console.debug("Retrived sinkKey:", sinkID, sinkKey);
+        console.debug("Retrived sink:", sinkID);
         self.verify(sinkKey);
     } catch {
         //Unable to retrive sink private key. Waiting for more shares! Do nothing for now
@@ -212,7 +212,7 @@ function informLiveNodes(init) {
                         console.warn("sinkID and sinkKey in DB are not pair!");
                         storeSink(global.sinkID, global.sinkPrivKey);
                     }
-                    //console.debug("Loaded sinkKey:", global.sinkID, global.sinkPrivKey)
+                    console.debug("Loaded sink:", global.sinkID);
                     sendSharesToNodes(global.sinkID, generateShares(global.sinkPrivKey))
                 } else {
                     //Share is present in DB, try to collect remaining shares and retrive sinkKey
@@ -227,7 +227,7 @@ function informLiveNodes(init) {
                     console.log("Starting the exchange...");
                     collectShares.active = false;
                     let newSink = floCrypto.generateNewID();
-                    console.debug("Generated sinkKey:", newSink.floID, newSink.privKey);
+                    console.debug("Generated sink:", newSink.floID, newSink.privKey);
                     storeSink(newSink.floID, newSink.privKey);
                     sendSharesToNodes(newSink.floID, generateShares(newSink.privKey));
                 }

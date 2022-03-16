@@ -350,7 +350,7 @@ function cancelOrder(type, id, floID, proxySecret) {
 //receiver should be object eg {floID1: amount1, floID2: amount2 ...}
 function transferToken(receiver, token, floID, proxySecret) {
     return new Promise((resolve, reject) => {
-        if (typeof receiver !== Object || receiver === null)
+        if (typeof receiver !== 'object' || receiver === null)
             return reject("Invalid receiver: parameter is not an object");
         let invalidIDs = [],
             invalidAmt = [];
