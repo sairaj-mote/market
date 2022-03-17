@@ -30,6 +30,69 @@ function logout(floID) {
     })
 }
 
+function getBalance(floID, token) {
+    return new Promise((resolve, reject) => {
+        if (floID && !floCrypto.validateAddr(floID))
+            reject(INVALID(`Invalid floID(${floID})`));
+        else if (token && token !== floGlobals.currency && !assetList.includes(token))
+            reject(INVALID(`Invalid token(${token})`));
+        else if (!floID && !token)
+            reject(INVALID('Missing parameters: requires atleast one (floID, token)'));
+        else {
+            var promise;
+            if (floID && token)
+                promise = getBalance.floID_token(floID, token);
+            else if (floID)
+                promise = getBalance.floID(floID);
+            else if (token)
+                promise = getBalance.token(token);
+            promise.then(result => resolve(result)).catch(error => reject(error))
+        }
+    })
+}
+
+getBalance.floID_token = (floID, token) => new Promise((resolve, reject) => {
+    (token === floGlobals.currency ?
+        DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]) :
+        DB.query("SELECT SUM(quantity) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, token])
+    ).then(result => resolve({
+        floID,
+        token,
+        balance: result[0].balance.toFixed(4)
+    })).catch(error => reject(error))
+});
+
+getBalance.floID = (floID) => new Promise((resolve, reject) => {
+    Promise.all([
+        DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]),
+        DB.query("SELECT asset, SUM(quantity) AS balance FROM Vault WHERE floID=? GROUP BY asset", [floID])
+    ]).then(result => {
+        let response = {
+            floID,
+            balance: {}
+        };
+        response.balance[floGlobals.currency] = result[0][0].balance.toFixed(4);
+        for (let row of result[1])
+            response.balance[row.asset] = row.balance.toFixed(4);
+        resolve(response);
+    }).catch(error => reject(error))
+});
+
+getBalance.token = (token) => new Promise((resolve, reject) => {
+    (token === floGlobals.currency ?
+        DB.query("SELECT floID, balance FROM Cash") :
+        DB.query("SELECT floID, SUM(quantity) AS balance FROM Vault WHERE asset = ? GROUP BY floID", [token])
+    ).then(result => {
+        let response = {
+            token: token,
+            balance: {}
+        };
+        for (let row of result)
+            response.balance[row.floID] = row.balance.toFixed(4);
+        resolve(response);
+    }).catch(error => reject(error))
+});
+
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
     let promises = (asset === floGlobals.currency) ? [
         DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]),
@@ -558,6 +621,7 @@ module.exports = {
     addBuyOrder,
     addSellOrder,
     cancelOrder,
+    getBalance,
     getAccountDetails,
     getTransactionDetails,
     transferToken,

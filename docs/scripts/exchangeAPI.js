@@ -114,6 +114,21 @@ function getRates(asset = null) {
     });
 }
 
+function getBalance(floID = null, token = null) {
+    return new Promise((resolve, reject) => {
+        if (!floID && !token)
+            return reject("Need atleast one argument")
+        let queryStr = (floID ? "floID=" + floID : "") +
+            (floID && token ? "&" : "") +
+            (token ? "token=" + token : "");
+        exchangeAPI('/get-balance?' + queryStr)
+            .then(result => responseParse(result)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
+            .catch(error => reject(error));
+    })
+}
+
 function getTx(txid) {
     return new Promise((resolve, reject) => {
         if (!txid)

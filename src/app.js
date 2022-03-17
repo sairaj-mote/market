@@ -50,7 +50,7 @@ module.exports = function App(secret, DB) {
     })
 
     //get code for login
-    app.get('/get-login-code', Request.getLoginCode);
+    app.get('/get-login-code', Request.GetLoginCode);
 
     //login request
     app.post('/login', Request.Login);
@@ -72,10 +72,11 @@ module.exports = function App(secret, DB) {
     app.get('/list-sellorders', Request.ListSellOrders);
     app.get('/list-buyorders', Request.ListBuyOrders);
     app.get('/list-trades', Request.ListTradeTransactions);
-    
-    //get rates and tx
-    app.get('/get-rates', Request.getRates);
-    app.get('/get-transaction', Request.getTransaction);
+
+    //get rates, balance and tx
+    app.get('/get-rates', Request.GetRates);
+    app.get('/get-balance', Request.GetBalance);
+    app.get('/get-transaction', Request.GetTransaction);
 
     //get account details
     app.post('/account', Request.Account);
@@ -87,8 +88,8 @@ module.exports = function App(secret, DB) {
     app.post('/withdraw-token', Request.WithdrawToken);
 
     //Manage user tags (Access to trusted IDs only)
-    app.post('/add-tag', Request.addUserTag);
-    app.post('/remove-tag', Request.removeUserTag);
+    app.post('/add-tag', Request.AddUserTag);
+    app.post('/remove-tag', Request.RemoveUserTag);
 
     Request.DB = DB;
     Request.secret = secret;

@@ -253,7 +253,7 @@ function WithdrawToken(req, res) {
     );
 }
 
-function addUserTag(req, res) {
+function AddUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
         res.status(INVALID.e_code).send("Access Denied");
@@ -267,7 +267,7 @@ function addUserTag(req, res) {
     );
 }
 
-function removeUserTag(req, res) {
+function RemoveUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
         res.status(INVALID.e_code).send("Access Denied");
@@ -283,15 +283,17 @@ function removeUserTag(req, res) {
 
 /* Public Requests */
 
-function getLoginCode(req, res) {
+function GetLoginCode(req, res) {
     if (!serving)
-        return res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
-    let randID = floCrypto.randString(8, true) + Math.round(Date.now() / 1000);
-    let hash = Crypto.SHA1(randID + secret);
-    res.send({
-        code: randID,
-        hash: hash
-    });
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let randID = floCrypto.randString(8, true) + Math.round(Date.now() / 1000);
+        let hash = Crypto.SHA1(randID + secret);
+        res.send({
+            code: randID,
+            hash: hash
+        });
+    }
 }
 
 function ListSellOrders(req, res) {
@@ -315,7 +317,7 @@ function ListTradeTransactions(req, res) {
         .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
 }
 
-function getRates(req, res) {
+function GetRates(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     else {
@@ -332,14 +334,33 @@ function getRates(req, res) {
 
 }
 
-function getTransaction(req, res) {
+function GetTransaction(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     else {
         let txid = req.query.txid;
         if (!txid)
             res.status(INVALID.e_code).send("txid (transactionID) parameter missing");
-        market.getTransactionDetails(txid)
+        else market.getTransactionDetails(txid)
+            .then(result => res.send(result))
+            .catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Unable to process! Try again later!");
+                }
+            });
+    }
+}
+
+function GetBalance(req, res) {
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let floID = req.query.floID || req.query.addr,
+            token = req.query.token || req.query.asset;
+        market.getBalance(floID, token)
             .then(result => res.send(result))
             .catch(error => {
                 if (error instanceof INVALID)
@@ -353,7 +374,7 @@ function getTransaction(req, res) {
 }
 
 module.exports = {
-    getLoginCode,
+    GetLoginCode,
     Login,
     Logout,
     PlaceBuyOrder,
@@ -363,16 +384,17 @@ module.exports = {
     ListSellOrders,
     ListBuyOrders,
     ListTradeTransactions,
-    getRates,
-    getTransaction,
+    GetRates,
+    GetTransaction,
+    GetBalance,
     Account,
     DepositFLO,
     WithdrawFLO,
     DepositToken,
     WithdrawToken,
     periodicProcess: market.periodicProcess,
-    addUserTag,
-    removeUserTag,
+    AddUserTag,
+    RemoveUserTag,
     set trustedIDs(ids) {
         trustedIDs = ids;
     },
