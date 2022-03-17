@@ -620,3 +620,11 @@ function refreshDataFromBlockchain() {
         }).catch(error => reject(error));
     })
 }
+
+function clearAllLocalData() {
+    localStorage.removeItem('exchange-nodes');
+    localStorage.removeItem('exchange-lastTx');
+    localStorage.removeItem('exchange-proxy_secret');
+    localStorage.removeItem('exchange-user_ID');
+    location.reload();
+}
