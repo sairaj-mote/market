@@ -86,7 +86,11 @@
                 <div id="login_button_wrapper" class="stateful-button-wrapper">
                     <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
                 </div>
-                <sm-button onclick="showPopup('registration_popup')">Not registered? click here!</sm-button>
+                <sm-button onclick="showPopup('registration_popup')" style="display: none;" disabled>Not registered? click here!</sm-button>
+                <div class="grid gap-0-5">
+                    <p>Don't have FLO credentials?</p>
+                    <sm-button onclick="showPopup('sign_up_popup')">Generate FLO credentials</sm-button>
+                </div>
             </sm-form>
             <sm-form id="trade_form" class="user-content hide-completely">
                 <div id="flo_exchange_rate" class="grid align-center">
@@ -333,12 +337,8 @@
                 <p>Enter the private key of FLO ID you want to register.</p>
                 <sm-input id="get_registration_key" variant="outlined" placeholder="Private key" type="password"
                     required hiderequired></sm-input>
-                <sm-button variant="primary" onclick="UI_evt.signup()">Register</sm-button>
+                <sm-button variant="primary" onclick="UI_evt.signup()" disabled>Register</sm-button>
             </sm-form>
-            <div class="grid gap-0-5">
-                <p>Don't have FLO credentials?</p>
-                <sm-button onclick="showPopup('sign_up_popup')">Generate FLO credentials</sm-button>
-            </div>
         </div>
     </sm-popup>
     <sm-popup id="sign_up_popup">
@@ -363,7 +363,7 @@
                     <sm-copy id="generated_private_key"></sm-copy>
                 </div>
             </div>
-            <sm-button id="sign_up_button" variant="primary" onclick="registerID()">Register these credentials
+            <sm-button id="sign_up_button" variant="primary" onclick="registerID()" style="display: none;" disabled>Register these credentials
             </sm-button>
             <strong class="warning">
                 Keep your private key secure and don't share with anyone.

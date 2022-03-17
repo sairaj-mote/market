@@ -365,7 +365,7 @@ function retryWithdrawalFLO() {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
-                DB.query("UPDATE OutputFLO SET status=? WHERE id=?", ["WAITING_CONFIRMATION", req.id])
+                DB.query("UPDATE OutputFLO SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, req.id])
                     .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error));
         })
