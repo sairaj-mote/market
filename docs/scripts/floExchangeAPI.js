@@ -404,7 +404,7 @@
         }
     }
 
-    exchangeAPI.K_Bucket = function K_Bucket(masterID, backupList) {
+    const K_Bucket = exchangeAPI.K_Bucket = function K_Bucket(masterID, backupList) {
         const decodeID = function(floID) {
             let k = bitjs.Base58.decode(floID);
             k.shift();
