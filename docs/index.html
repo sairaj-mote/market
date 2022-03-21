@@ -17,8 +17,8 @@
     <script src="scripts/floCrypto.js"></script>
     <script src="scripts/floBlockchainAPI.js"></script>
     <script src="scripts/tokenAPI.js"></script>
-    <script src="scripts/KBucket.js"></script>
     <script src="scripts/exchangeAPI.js"></script>
+    <script>console.debug(exchangeAPI);</script>
 </head>
 
 <body class="hide-completely">
@@ -91,7 +91,7 @@
                     <p>Don't have FLO credentials?</p>
                     <sm-button onclick="showPopup('sign_up_popup')">Generate FLO credentials</sm-button>
                 </div>
-                <sm-button onclick="clearAllLocalData()">clear local data</sm-button>
+                <sm-button onclick="exchangeAPI.clearAllLocalData()">clear local data</sm-button>
             </sm-form>
             <sm-form id="trade_form" class="user-content hide-completely">
                 <div id="flo_exchange_rate" class="grid align-center">
@@ -1021,9 +1021,9 @@
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
-                    await buy(asset, quantity, price, proxy.userID, await proxy.secret)
+                    await exchangeAPI.buy(asset, quantity, price, proxy.userID, await proxy.secret)
                 } else {
-                    await sell(asset, quantity, price, proxy.userID, await proxy.secret)
+                    await exchangeAPI.sell(asset, quantity, price, proxy.userID, await proxy.secret)
                 }
                 getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
@@ -1165,16 +1165,16 @@
                 if (type === 'deposit') {
                     const privKey = getRef('get_private_key').value;
                     if (asset === 'FLO') {
-                        await depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                        await exchangeAPI.depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     } else {
-                        await depositToken(asset, quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                        await exchangeAPI.depositToken(asset, quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
                 } else {
                     if (asset === 'FLO') {
-                        await withdrawFLO(quantity, proxy.userID, proxySecret)
+                        await exchangeAPI.withdrawFLO(quantity, proxy.userID, proxySecret)
                     } else {
-                        await withdrawToken(asset, quantity, proxy.userID, proxySecret)
+                        await exchangeAPI.withdrawToken(asset, quantity, proxy.userID, proxySecret)
                     }
                     showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
                 }
@@ -1317,7 +1317,7 @@
                         const target = e.target.closest('.order-card')
                         const id = target.dataset.id
                         const type = target.dataset.type
-                        cancelOrder(type, id, proxy.userID, await proxy.secret)
+                        exchangeAPI.cancelOrder(type, id, proxy.userID, await proxy.secret)
                             .then(() => {
                                 notify('Order cancelled', 'success')
                                 target.animate([
@@ -1369,7 +1369,7 @@
                 if (res) {
                     try {
                         const proxy_secret = await proxy.secret;
-                        const promises = [...selectedOrders].map(([id, type]) => cancelOrder(type, id, proxy.userID, proxy_secret))
+                        const promises = [...selectedOrders].map(([id, type]) => exchangeAPI.cancelOrder(type, id, proxy.userID, proxy_secret))
                         await Promise.all(promises)
                         selectedOrders.clear()
                         hideMyOrdersOptions()
@@ -1439,7 +1439,7 @@
             const ordersType = getRef('market_orders_category_selector').value
             if (ordersType === 'open') {
                 try {
-                    const [buyOrders, sellOrders] = await Promise.all([getBuyList(), getSellList()])
+                    const [buyOrders, sellOrders] = await Promise.all([exchangeAPI.getBuyList(), exchangeAPI.getSellList()])
                     const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
                     allOpenOrders.forEach(order => {
                         const { floID, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
@@ -1459,7 +1459,7 @@
                 }
             } else {
                 try {
-                    const marketTransactions = await getTradeList()
+                    const marketTransactions = await exchangeAPI.getTradeList()
                     marketTransactions.forEach(transaction => {
                         const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
                         const transactionDetails = {
@@ -1604,7 +1604,7 @@
 
         let floExchangeRate = 0
         function updateRate(init = false) {
-            getRates().then(rates => {
+            exchangeAPI.getRates().then(rates => {
                 console.debug(rates);
                 if (init) {
                     let assetList = getRef('get_asset');
@@ -1633,7 +1633,7 @@
                 console.info("init");
                 if (!proxy.userID) {
                     getRef('home').classList.remove('signed-in');
-                    getLoginCode().then(response => {
+                    exchangeAPI.getLoginCode().then(response => {
                         getRef("login_form").classList.remove('hide-completely');
                         document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide-completely'))
                         getRef('sign_in_code').value = response.code;
@@ -1666,7 +1666,7 @@
 
         let accountDetails = {}
         async function account() {
-            getAccount(proxy.userID, await proxy.secret).then(acc => {
+            exchangeAPI.getAccount(proxy.userID, await proxy.secret).then(acc => {
                 getRef("login_form").classList.add('hide-completely')
                 getRef('home').classList.add('signed-in')
                 getRef('user_popup_button').classList.remove('hide-completely')
@@ -1706,7 +1706,7 @@
                 if (!privKey)
                     privKey = getRef('get_registration_key').value.trim()
                 if (privKey !== '') {
-                    signUp(privKey, code, hash).then(result => {
+                    exchangeAPI.signUp(privKey, code, hash).then(result => {
                         console.info(result);
                         notify("Account registered!", 'success')
                         hidePopup()
@@ -1719,7 +1719,7 @@
             logout() {
                 getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(async res => {
                     if (res) {
-                        logout(proxy.userID, await proxy.secret).then(result => {
+                        exchangeAPI.logout(proxy.userID, await proxy.secret).then(result => {
                             console.warn(result);
                             proxy.clear();
                             location.reload();
@@ -1735,7 +1735,7 @@
                     hash = getRef('sign_in_hash').value;
                 let rememberMe = getRef('remember_me').checked;
                 let tmpKey = floCrypto.generateNewID();
-                login(privKey, tmpKey.pubKey, code, hash).then(result => {
+                exchangeAPI.login(privKey, tmpKey.pubKey, code, hash).then(result => {
                     console.log(result);
                     proxy.secret = tmpKey.privKey;
                     proxy.userID = floCrypto.getFloID(privKey);
@@ -1756,7 +1756,7 @@
         }
 
         window.addEventListener('load', e => {
-            refreshDataFromBlockchain().then(nodes => {
+            exchangeAPI.init().then(nodes => {
                 console.log(nodes);
                 refresh(true);
             }).catch(error => console.error(error))
