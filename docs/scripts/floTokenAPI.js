@@ -2,7 +2,7 @@
 
 /* Token Operator to send/receive tokens from blockchain using API calls*/
 (function(GLOBAL) {
-    const tokenAPI = GLOBAL.tokenAPI = {
+    const floTokenAPI = GLOBAL.floTokenAPI = {
         fetch_api: function(apicall) {
             return new Promise((resolve, reject) => {
                 console.log(floGlobals.tokenURL + apicall);

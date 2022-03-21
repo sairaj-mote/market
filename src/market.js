@@ -507,7 +507,7 @@ confirmDepositToken.checkTx = function(sender, txid) {
         let receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
         if (!receiver)
             return reject([false, 'sinkID not loaded']);
-        tokenAPI.getTx(txid).then(tx => {
+        floTokenAPI.getTx(txid).then(tx => {
             if (tx.parsedFloData.type !== "transfer")
                 return reject([true, "Transaction type not 'transfer'"]);
             else if (tx.parsedFloData.transferType !== "token")
@@ -544,7 +544,7 @@ function withdrawToken(floID, token, amount) {
                     consumeAsset(floID, token, amount, txQueries).then(txQueries => {
                         DB.transaction(txQueries).then(result => {
                             //Send FLO to user via blockchain API
-                            tokenAPI.sendToken(global.sinkPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
+                            floTokenAPI.sendToken(global.sinkPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
                                 if (!txid) throw Error("Transaction not successful");
                                 //Transaction was successful, Add in DB
                                 DB.query("INSERT INTO OutputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
@@ -567,7 +567,7 @@ function withdrawToken(floID, token, amount) {
 function retryWithdrawalToken() {
     DB.query("SELECT id, floID, token, amount FROM OutputToken WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
-            tokenAPI.sendToken(global.sinkPrivKey, req.amount, req.floID, '(withdrawal from market)', req.token).then(txid => {
+            floTokenAPI.sendToken(global.sinkPrivKey, req.amount, req.floID, '(withdrawal from market)', req.token).then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
@@ -581,7 +581,7 @@ function retryWithdrawalToken() {
 function confirmWithdrawalToken() {
     DB.query("SELECT id, floID, token, amount, txid FROM OutputToken WHERE status=?", ["WAITING_CONFIRMATION"]).then(results => {
         results.forEach(req => {
-            tokenAPI.getTx(req.txid).then(tx => {
+            floTokenAPI.getTx(req.txid).then(tx => {
                 DB.query("UPDATE OutputToken SET status=? WHERE id=?", ["SUCCESS", req.id])
                     .then(result => console.debug("Token withdrawed:", req.floID, req.token, req.amount))
                     .catch(error => console.error(error));

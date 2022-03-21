@@ -1,6 +1,6 @@
 'use strict';
 
-const K_Bucket = require('../../docs/scripts/exchangeAPI').K_Bucket;
+const K_Bucket = require('../../docs/scripts/floExchangeAPI').K_Bucket;
 const slave = require('./slave');
 const sync = require('./sync');
 const WebSocket = require('ws');
@@ -65,7 +65,7 @@ function storeSink(sinkID, sinkPrivKey) {
 /*
 function transferMoneyToNewSink(oldSinkID, oldSinkKey, newSink) {
     const transferToken = token => new Promise((resolve, reject) => {
-        tokenAPI.getBalance(oldSinkID, token).then(tokenBalance => {
+        floTokenAPI.getBalance(oldSinkID, token).then(tokenBalance => {
             floBlockchainAPI.writeData(oldSinkID, `send ${tokenBalance} ${token}# |Exchange-market New sink`, oldSinkKey, newSink.floID, false)
                 .then(txid => resolve(txid))
                 .catch(error => reject(error))
@@ -86,7 +86,7 @@ function transferMoneyToNewSink(oldSinkID, oldSinkKey, newSink) {
             if (failedFlag)
                 return reject("Some token transfer has failed");
             floBlockchainAPI.getBalance(oldSinkID).then(floBalance => {
-                tokenAPI.getBalance(oldSinkID).then(cashBalance => {
+                floTokenAPI.getBalance(oldSinkID).then(cashBalance => {
                     floBlockchainAPI.sendTx(oldSinkID, newSink.floID, floBalance - floGlobals.fee, oldSinkKey, `send ${cashBalance} ${floGlobals.currency}# |Exchange-market New sink`)
                         .then(result => resolve(result))
                         .catch(error => reject(error))

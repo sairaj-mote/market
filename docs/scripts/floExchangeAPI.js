@@ -937,7 +937,7 @@
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject("Invalid Private Key");
-            tokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market', token).then(txid => {
+            floTokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market', token).then(txid => {
                 let request = {
                     floID: floID,
                     txid: txid,
@@ -1107,4 +1107,4 @@
         location.reload();
     }
 
-})('object' === typeof module ? module.exports : window.exchangeAPI = {});
+})('object' === typeof module ? module.exports : window.floExchangeAPI = {});

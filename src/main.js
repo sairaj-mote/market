@@ -4,7 +4,7 @@ require('./set_globals');
 require('../docs/scripts/lib');
 require('../docs/scripts/floCrypto');
 require('../docs/scripts/floBlockchainAPI');
-require('../docs/scripts/tokenAPI');
+require('../docs/scripts/floTokenAPI');
 
 const Database = require("./database");
 const App = require('./app');
