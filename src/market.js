@@ -53,8 +53,8 @@ function getBalance(floID, token) {
 
 getBalance.floID_token = (floID, token) => new Promise((resolve, reject) => {
     (token === floGlobals.currency ?
-        DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]) :
-        DB.query("SELECT SUM(quantity) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, token])
+        DB.query("SELECT IFNULL(SUM(balance), 0) AS balance FROM Cash WHERE floID=?", [floID]) :
+        DB.query("SELECT IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, token])
     ).then(result => resolve({
         floID,
         token,
@@ -64,8 +64,8 @@ getBalance.floID_token = (floID, token) => new Promise((resolve, reject) => {
 
 getBalance.floID = (floID) => new Promise((resolve, reject) => {
     Promise.all([
-        DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]),
-        DB.query("SELECT asset, SUM(quantity) AS balance FROM Vault WHERE floID=? GROUP BY asset", [floID])
+        DB.query("SELECT IFNULL(SUM(balance), 0) AS balance FROM Cash WHERE floID=?", [floID]),
+        DB.query("SELECT asset, IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE floID=? GROUP BY asset", [floID])
     ]).then(result => {
         let response = {
             floID,
@@ -81,7 +81,7 @@ getBalance.floID = (floID) => new Promise((resolve, reject) => {
 getBalance.token = (token) => new Promise((resolve, reject) => {
     (token === floGlobals.currency ?
         DB.query("SELECT floID, balance FROM Cash") :
-        DB.query("SELECT floID, SUM(quantity) AS balance FROM Vault WHERE asset = ? GROUP BY floID", [token])
+        DB.query("SELECT floID, IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE asset = ? GROUP BY floID", [token])
     ).then(result => {
         let response = {
             token: token,
@@ -95,11 +95,11 @@ getBalance.token = (token) => new Promise((resolve, reject) => {
 
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
     let promises = (asset === floGlobals.currency) ? [
-        DB.query("SELECT SUM(balance) AS balance FROM Cash WHERE floID=?", [floID]),
-        DB.query("SELECT SUM(quantity*maxPrice) AS locked FROM BuyOrder WHERE floID=?", [floID])
+        DB.query("SELECT IFNULL(SUM(balance), 0) AS balance FROM Cash WHERE floID=?", [floID]),
+        DB.query("SELECT IFNULL(SUM(quantity*maxPrice), 0) AS locked FROM BuyOrder WHERE floID=?", [floID])
     ] : [
-        DB.query("SELECT SUM(quantity) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, asset]),
-        DB.query("SELECT SUM(quantity) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
+        DB.query("SELECT IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, asset]),
+        DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
     ];
     Promise.all(promises).then(result => resolve({
         total: result[0][0].balance,
@@ -168,7 +168,7 @@ const checkSellRequirement = (floID, asset) => new Promise((resolve, reject) => 
         if (result.length)
             return resolve(true);
         //TODO: Should seller need to buy same type of asset before selling?
-        DB.query("SELECT SUM(quantity) AS brought FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, asset]).then(result => {
+        DB.query("SELECT IFNULL(SUM(quantity), 0) AS brought FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, asset]).then(result => {
             if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
                 resolve(true);
             else
@@ -223,7 +223,7 @@ function getAccountDetails(floID) {
     return new Promise((resolve, reject) => {
         let select = [];
         select.push(["balance", "Cash"]);
-        select.push(["asset, AVG(base) AS avg_base, SUM(quantity) AS quantity", "Vault", "GROUP BY asset"]);
+        select.push(["asset, AVG(base) AS avg_base, IFNULL(SUM(quantity), 0) AS quantity", "Vault", "GROUP BY asset"]);
         select.push(["id, asset, quantity, minPrice, time_placed", "SellOrder"]);
         select.push(["id, asset, quantity, maxPrice, time_placed", "BuyOrder"]);
         let promises = select.map(a => DB.query(`SELECT ${a[0]} FROM ${a[1]} WHERE floID=? ${a[2] || ""}`, [floID]));

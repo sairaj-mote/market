@@ -335,7 +335,7 @@ function verifySellOrder(sellOrder, asset, cur_price, mode_null) {
                     resolve(sellOrder);
             }).catch(error => reject(error));
         else if (mode_null)
-            DB.query("SELECT SUM(quantity) as total FROM Vault WHERE floID=? AND asset=?", [sellOrder.floID, asset]).then(result => {
+            DB.query("SELECT IFNULL(SUM(quantity), 0) as total FROM Vault WHERE floID=? AND asset=?", [sellOrder.floID, asset]).then(result => {
                 if (result[0].total < sellOrder.quantity)
                     console.warn(`Sell Order ${sellOrder.id} was made without enough Assets. This should not happen`);
                 if (result[0].total > 0)
