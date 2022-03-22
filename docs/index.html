@@ -86,7 +86,8 @@
                 <div id="login_button_wrapper" class="stateful-button-wrapper">
                     <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
                 </div>
-                <sm-button onclick="showPopup('registration_popup')" style="display: none;" disabled>Not registered? click here!</sm-button>
+                <sm-button onclick="showPopup('registration_popup')" style="display: none;" disabled>Not registered?
+                    click here!</sm-button>
                 <div class="grid gap-0-5">
                     <p>Don't have FLO credentials?</p>
                     <sm-button onclick="showPopup('sign_up_popup')">Generate FLO credentials</sm-button>
@@ -364,7 +365,8 @@
                     <sm-copy id="generated_private_key"></sm-copy>
                 </div>
             </div>
-            <sm-button id="sign_up_button" variant="primary" onclick="registerID()" style="display: none;" disabled>Register these credentials
+            <sm-button id="sign_up_button" variant="primary" onclick="registerID()" style="display: none;" disabled>
+                Register these credentials
             </sm-button>
             <strong class="warning">
                 Keep your private key secure and don't share with anyone.
@@ -735,6 +737,7 @@
 
         function getFormattedTime(timeString, relative) {
             try {
+                console.log(timeString)
                 const [date, time] = timeString.split('T')
                 const [year, month, day] = date.split('-').map(v => parseInt(v))
                 let [hours, minutes] = time.split(':').map(v => parseInt(v))
@@ -743,7 +746,7 @@
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
                 ];
-                const monthName = monthNames[month]
+                const monthName = monthNames[month - 1]
 
                 minutes = minutes < 10 ? `0${minutes}` : minutes
                 let finalHours = ``;
