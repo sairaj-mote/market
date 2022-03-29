@@ -325,7 +325,7 @@ function GetRates(req, res) {
             rates = market.rates;
         if (asset) {
             if (asset in rates)
-                res.send(rates[asset]);
+                res.send(rates[asset].toString());
             else
                 res.status(INVALID.e_code).send("Invalid asset parameter");
         } else
