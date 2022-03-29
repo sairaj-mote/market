@@ -347,6 +347,11 @@ ul {
     margin-left: 0.5rem;
   }
 }
+.icon-only {
+  padding: 0.6rem;
+  aspect-ratio: 1/1;
+  background-color: transparent;
+}
 
 .icon-button {
   padding: 0.6rem;
@@ -528,6 +533,10 @@ sm-checkbox {
   align-items: flex-start;
   align-content: flex-start;
 }
+#login_form {
+  width: min(24rem, 100%);
+  margin: 0 auto;
+}
 #login_form__priv_key {
   margin-top: 1rem;
 }
@@ -584,16 +593,11 @@ sm-checkbox {
     width: min(42rem, 100%);
   }
 }
-
-#exchange {
-  display: grid;
-  gap: 1.5rem;
-}
 .listed-asset {
   position: relative;
   grid-template-columns: auto 1fr auto;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 1rem 0;
   border-radius: 0.5rem;
   opacity: 0.8;
   font-weight: 400;
@@ -746,6 +750,7 @@ sm-checkbox {
 #wallet {
   gap: 1.5rem;
   align-content: flex-start;
+  width: min(24rem, 100%);
 }
 .wallet_actions__wrapper {
   grid-column: span 3;
@@ -763,8 +768,7 @@ sm-checkbox {
 .balance-card {
   display: grid;
   align-items: center;
-  gap: 0.3rem 1rem;
-  padding: 0.5rem 0;
+  gap: 0.3rem 0.5rem;
   border-radius: 0.5rem;
   &.is-locked {
     grid-template-columns: auto 1fr;
@@ -1000,11 +1004,16 @@ sm-checkbox {
       background-color: rgba(var(--text-color), 0.06);
     }
   }
-  #exchange {
-    display: grid;
-    grid-template-columns: 16rem 1fr;
+  .is-signed-in {
+    #exchange_wrapper {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: 16rem 1fr;
+      align-items: flex-start;
+    }
   }
   .listed-asset {
+    padding: 1rem;
     &--active {
       opacity: 1;
       background-color: rgba(var(--text-color), 0.06);
