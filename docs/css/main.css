@@ -567,17 +567,13 @@ sm-checkbox {
   grid-column: 1/-1;
 }
 
-#flo_exchange_rate {
+.rate-card {
   grid-template-columns: auto 1fr auto;
-  gap: 0.5rem;
+  gap: 1rem;
   padding: 1rem;
   border-radius: 0.5rem;
   border: solid rgba(var(--text-color), 0.2) thin;
   background-color: rgba(var(--background-color), 1);
-}
-
-#flo_rate {
-  font-weight: 700;
 }
 
 #trade_form,
