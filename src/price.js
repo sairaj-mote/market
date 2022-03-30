@@ -41,9 +41,9 @@ function getHistory(asset, duration) {
     return new Promise((resolve, reject) => {
         duration = getHistory.validateDuration(duration);
         let statement = "SELECT " +
-            (!duration || duration.endsWith("year") ? "DATE(rec_time) AS time, AVG(rate) as rate" : "rec_time AS time, rate") +
-            " WHERE asset=?" + (duration ? " AND rec_time >= NOW() - INTERVAL " + duration : "") +
-            (!duration || duration.endsWith("year") ? " GROUP BY time" : "") +
+            (!duration || duration.endsWith("month") || duration.endsWith("year") ? "DATE(rec_time) AS time, AVG(rate) as rate" : "rec_time AS time, rate") +
+            " FROM PriceHistory WHERE asset=?" + (duration ? " AND rec_time >= NOW() - INTERVAL " + duration : "") +
+            (!duration || duration.endsWith("month") || duration.endsWith("year") ? " GROUP BY time" : "") +
             " ORDER BY time";
         DB.query(statement, asset)
             .then(result => resolve(result))
