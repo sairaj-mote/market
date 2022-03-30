@@ -93,11 +93,11 @@
                     <sm-button onclick="floExchangeAPI.clearAllLocalData()">clear local data</sm-button>
                 </sm-form>
                 <section id="exchange_wrapper">
-                    <div id="asset_list-wrapper" class="grid gap-1 align-start hide user-content hide-on-mobile">
+                    <div id="asset_list-wrapper" class="grid gap-1 align-start hide user-content">
                         <h4>Assets</h4>
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
-                    <sm-form id="trade_form" class="user-content hide ">
+                    <sm-form id="trade_form" class="user-content hide hide-on-mobile">
                         <div class="flex space-between align-center">
                             <a href="#/exchange" class="button icon-only hide-on-desktop">
                                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
@@ -889,23 +889,32 @@
             }
             switch (pageId) {
                 case 'exchange':
-                    if (!params.hasOwnProperty('asset') || params.asset === '') {
+                    if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
                         params.asset = 'FLO'
                     }
-                    if (getRef('listed_assets').querySelector('.listed-asset--active'))
-                        getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
-                    getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
-                    getRef('get_price').value = parseFloat(floGlobals.exchangeRates[params.asset].toFixed(2))
-                    getRef('traded_asset').textContent = `Trade ${params.asset}`
-                    getRef('trade_button').textContent = `${tradeType} ${params.asset}`
-                    getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(3))} ${params.asset}`
-                    getRef('quantity_selector').querySelectorAll('.button').forEach(button => {
-                        if (tradeType === 'buy') {
-                            button.title = `Buy ${params.asset} worth ${button.textContent} of total rupee`
-                        } else {
-                            button.title = `Sell ${button.textContent} of total ${params.asset}`
-                        }
-                    })
+                    if (params.hasOwnProperty('asset') && params.asset !== '') {
+                        if (getRef('listed_assets').querySelector('.listed-asset--active'))
+                            getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
+                        getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
+                        getRef('get_price').value = parseFloat(floGlobals.exchangeRates[params.asset].toFixed(2))
+                        getRef('traded_asset').textContent = `Trade ${params.asset}`
+                        getRef('trade_button').textContent = `${tradeType} ${params.asset}`
+                        getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(3))} ${params.asset}`
+                        getRef('quantity_selector').querySelectorAll('.button').forEach(button => {
+                            if (tradeType === 'buy') {
+                                button.title = `Buy ${params.asset} worth ${button.textContent} of total rupee`
+                            } else {
+                                button.title = `Sell ${button.textContent} of total ${params.asset}`
+                            }
+                        })
+                    }
+                    if (params.hasOwnProperty('asset') && params.asset !== '') {
+                        getRef('exchange_wrapper').children[0].classList.add('hide-on-mobile')
+                        getRef('exchange_wrapper').children[1].classList.remove('hide-on-mobile')
+                    } else {
+                        getRef('exchange_wrapper').children[1].classList.add('hide-on-mobile')
+                        getRef('exchange_wrapper').children[0].classList.remove('hide-on-mobile')
+                    }
                     break;
                 case 'my_orders':
                     break;
@@ -1010,6 +1019,26 @@
                 this.render()
             }
         }
+        function animateTo(element, keyframes, options) {
+            const anime = element.animate(keyframes, { ...options, fill: 'both' })
+            anime.finished.then(() => {
+                anime.commitStyles()
+                anime.cancel()
+            })
+            return anime
+        }
+        let isMobileView = false
+        const mobileQuery = window.matchMedia('(max-width: 40rem)')
+        function handleMobileChange(e) {
+            isMobileView = e.matches
+            if (!isMobileView) {
+                getRef('exchange_wrapper').children[0].style = ''
+                getRef('exchange_wrapper').children[1].style = ''
+            }
+        }
+        mobileQuery.addEventListener('change', handleMobileChange)
+
+        handleMobileChange(mobileQuery)
     </script>
     <script>
         const listedAssets = {
@@ -1815,7 +1844,7 @@
                 //My orders
                 renderUserOrders();
                 proxy.secret.then(_ => null).catch(_ => null);
-                showPage(window.location.hash)
+                showPage(window.location.hash, { firstLoad: true });
             }).catch(error => console.error(error))
         };
 
