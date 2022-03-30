@@ -75,6 +75,7 @@ module.exports = function App(secret, DB) {
 
     //get rates, balance and tx
     app.get('/get-rates', Request.GetRates);
+    app.get('/rate-history', Request.GetRateHistory);
     app.get('/get-balance', Request.GetBalance);
     app.get('/get-transaction', Request.GetTransaction);
 

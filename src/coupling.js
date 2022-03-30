@@ -11,7 +11,7 @@ var DB; //container for database
 
 function startCouplingForAsset(asset) {
     price.getRates(asset).then(cur_rate => {
-        cur_rate = cur_rate.toFixed(3);
+        cur_rate = cur_rate.toFixed(8);
         group.getBestPairs(asset, cur_rate)
             .then(bestPairQueue => processCoupling(bestPairQueue))
             .catch(error => console.error("initiateCoupling", error))

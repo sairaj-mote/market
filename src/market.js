@@ -30,6 +30,17 @@ function logout(floID) {
     })
 }
 
+function getRateHistory(asset, duration) {
+    return new Promise((resolve, reject) => {
+        if (!asset || !assetList.includes(asset))
+            reject(INVALID(`Invalid asset(${asset})`));
+        else
+            coupling.price.getHistory(asset, duration)
+            .then(result => resolve(result))
+            .catch(error => reject(error))
+    })
+}
+
 function getBalance(floID, token) {
     return new Promise((resolve, reject) => {
         if (floID && !floCrypto.validateAddr(floID))
@@ -58,7 +69,7 @@ getBalance.floID_token = (floID, token) => new Promise((resolve, reject) => {
     ).then(result => resolve({
         floID,
         token,
-        balance: result[0].balance.toFixed(4)
+        balance: result[0].balance.toFixed(8)
     })).catch(error => reject(error))
 });
 
@@ -71,9 +82,9 @@ getBalance.floID = (floID) => new Promise((resolve, reject) => {
             floID,
             balance: {}
         };
-        response.balance[floGlobals.currency] = result[0][0].balance.toFixed(4);
+        response.balance[floGlobals.currency] = result[0][0].balance.toFixed(8);
         for (let row of result[1])
-            response.balance[row.asset] = row.balance.toFixed(4);
+            response.balance[row.asset] = row.balance.toFixed(8);
         resolve(response);
     }).catch(error => reject(error))
 });
@@ -88,7 +99,7 @@ getBalance.token = (token) => new Promise((resolve, reject) => {
             balance: {}
         };
         for (let row of result)
-            response.balance[row.floID] = row.balance.toFixed(4);
+            response.balance[row.floID] = row.balance.toFixed(8);
         resolve(response);
     }).catch(error => reject(error))
 });
@@ -621,6 +632,7 @@ module.exports = {
     addBuyOrder,
     addSellOrder,
     cancelOrder,
+    getRateHistory,
     getBalance,
     getAccountDetails,
     getTransactionDetails,

@@ -334,6 +334,25 @@ function GetRates(req, res) {
 
 }
 
+function GetRateHistory(req, res) {
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let asset = req.query.asset,
+            duration = req.query.duration || "";
+        market.getRateHistory(asset, duration)
+            .then(result => res.send(result))
+            .catch(error => {
+                if (error instanceof INVALID)
+                    res.status(INVALID.e_code).send(error.message);
+                else {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send("Unable to process! Try again later!");
+                }
+            });
+    }
+}
+
 function GetTransaction(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
@@ -385,6 +404,7 @@ module.exports = {
     ListBuyOrders,
     ListTradeTransactions,
     GetRates,
+    GetRateHistory,
     GetTransaction,
     GetBalance,
     Account,
