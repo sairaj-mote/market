@@ -577,6 +577,16 @@
         });
     }
 
+    exchangeAPI.getRateHistory = function(asset, duration = null) {
+        return new Promise((resolve, reject) => {
+            fetch_api('/rate-history?asset=' + asset + (duration ? '&duration=' + duration : ""))
+                .then(result => responseParse(result)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error)))
+                .catch(error => reject(error));
+        });
+    }
+
     exchangeAPI.getBalance = function(floID = null, token = null) {
         return new Promise((resolve, reject) => {
             if (!floID && !token)

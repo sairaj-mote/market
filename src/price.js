@@ -20,14 +20,14 @@ var currentRate = {}, //container for FLO price (from API or by model)
 const updateLastTime = asset => lastTime[asset] = Date.now();
 
 //store FLO price in DB every 1 hr
-function storeRate(asset, rate) {
+function storeHistory(asset, rate) {
     DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?, ?)", [asset, rate.toFixed(3)])
         .then(_ => null).catch(error => console.error(error))
 }
 setInterval(() => {
     for (let asset in currentRate)
-        storeRate(asset, currentRate[asset]);
-}, REC_HISTORY_INTERVAL)
+        storeHistory(asset, currentRate[asset]);
+}, REC_HISTORY_INTERVAL);
 
 function getPastRate(asset, hrs = 24) {
     return new Promise((resolve, reject) => {
@@ -35,6 +35,45 @@ function getPastRate(asset, hrs = 24) {
             .then(result => result.length ? resolve(result[0].rate) : reject('No records found in past 24hrs'))
             .catch(error => reject(error))
     });
+}
+
+function getHistory(asset, duration) {
+    return new Promise((resolve, reject) => {
+        duration = getHistory.validateDuration(duration);
+        let statement = "SELECT " +
+            (!duration || duration.endsWith("year") ? "DATE(rec_time) AS time, AVG(rate) as rate" : "rec_time AS time, rate") +
+            " WHERE asset=?" + (duration ? " AND rec_time >= NOW() - INTERVAL " + duration : "") +
+            (!duration || duration.endsWith("year") ? " GROUP BY time" : "") +
+            " ORDER BY time";
+        DB.query(statement, asset)
+            .then(result => resolve(result))
+            .catch(error => reject(error))
+    });
+}
+
+getHistory.validateDuration = duration => {
+    let n = duration.match(/\d+/g),
+        d = duration.match(/\D+/g);
+    n = n ? n[0] || 1 : 1;
+    d = d ? d[0].replace(/[-\s]/g, '') : "";
+    switch (d.toLowerCase()) {
+        case "day":
+        case "days":
+            return n + " day";
+        case "week":
+        case "weeks":
+            return n + " week";
+        case "month":
+        case "months":
+            return n + " month";
+        case "year":
+        case "years":
+            return n + " year";
+        case "alltime":
+            return null;
+        default:
+            return '1 day';
+    }
 }
 
 function loadRate(asset) {
@@ -60,7 +99,7 @@ function fetchRates() {
             fetchRates.USD_INR().then(INR_rate => {
                 let FLO_INR_rate = FLO_rate * INR_rate;
                 console.debug('Rates:', FLO_rate, INR_rate, FLO_INR_rate);
-                storeRate(FLO_INR_rate);
+                storeHistory(FLO_INR_rate);
                 resolve(FLO_INR_rate);
             }).catch(error => reject(error))
         }).catch(error => reject(error))
@@ -153,6 +192,7 @@ function checkForRatedSellers(asset) {
 
 module.exports = {
     getRates,
+    getHistory,
     updateLastTime,
     noOrder(asset, buy, sell) {
         noBuyOrder[asset] = buy;

@@ -30,6 +30,17 @@ function logout(floID) {
     })
 }
 
+function getRateHistory(asset, duration) {
+    return new Promise((resolve, reject) => {
+        if (!asset || !assetList.includes(asset))
+            reject(INVALID(`Invalid asset(${asset})`));
+        else
+            coupling.price.getHistory(asset, duration)
+            .then(result => resolve(result))
+            .catch(error => reject(error))
+    })
+}
+
 function getBalance(floID, token) {
     return new Promise((resolve, reject) => {
         if (floID && !floCrypto.validateAddr(floID))
@@ -621,6 +632,7 @@ module.exports = {
     addBuyOrder,
     addSellOrder,
     cancelOrder,
+    getRateHistory,
     getBalance,
     getAccountDetails,
     getTransactionDetails,
