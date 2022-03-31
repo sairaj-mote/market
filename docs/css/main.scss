@@ -1056,6 +1056,11 @@ sm-checkbox {
     }
   }
 }
+@media screen and (min-width: 64rem) {
+  #home {
+    grid-template-columns: 10rem 1fr;
+  }
+}
 @media screen and (min-width: 72rem) {
   .page-layout {
     grid-template-columns: 1fr 80vw 1fr;
