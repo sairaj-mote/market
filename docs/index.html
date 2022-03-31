@@ -18,6 +18,7 @@
     <script src="scripts/floBlockchainAPI.js"></script>
     <script src="scripts/floTokenAPI.js"></script>
     <script src="scripts/floExchangeAPI.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script>console.debug(floExchangeAPI);</script>
 </head>
 
@@ -54,7 +55,7 @@
                     <h4>RanchiMall Market</h4>
                 </div>
             </div>
-            <theme-toggle></theme-toggle>
+            <theme-toggle id="theme_toggle"></theme-toggle>
             <button id="user_popup_button" class="hide" onclick="showPopup('user_popup')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px"
                     fill="#000000">
@@ -93,9 +94,35 @@
                     <sm-button onclick="floExchangeAPI.clearAllLocalData()">clear local data</sm-button>
                 </sm-form>
                 <section id="exchange_wrapper">
-                    <div id="asset_list-wrapper" class="grid gap-1 align-start hide user-content">
+                    <div id="asset_list_wrapper" class="grid gap-1 align-start hide user-content">
                         <h4>Tokens</h4>
                         <ul id="listed_assets" class="user-content hide"></ul>
+                    </div>
+                    <div id="price_chart_wrapper" class="flex direction-column gap-0-5">
+                        <div class="flex align-center space-between" style="z-index: 5;">
+                            <h4 id="chart_asset"></h4>
+                            <div class="flex align-center justify-right gap-0-5">
+                                <sm-select>
+                                    <sm-option value="1">1</sm-option>
+                                    <sm-option value="2">2</sm-option>
+                                    <sm-option value="3">3</sm-option>
+                                    <sm-option value="4">4</sm-option>
+                                    <sm-option value="5">5</sm-option>
+                                    <sm-option value="6">6</sm-option>
+                                    <sm-option value="7">7</sm-option>
+                                </sm-select>
+                                <strip-select>
+                                    <strip-option value="day" selected>D</strip-option>
+                                    <strip-option value="week">W</strip-option>
+                                    <strip-option value="month">M</strip-option>
+                                    <strip-option value="year">Y</strip-option>
+                                    <strip-option value="all-time">ALL</strip-option>
+                                </strip-select>
+                            </div>
+                        </div>
+                        <div class="flex" style="position: relative;">
+                            <div id="price_history_chart"></div>
+                        </div>
                     </div>
                     <sm-form id="trade_form" class="user-content hide hide-on-mobile">
                         <div class="flex space-between align-center">
@@ -853,7 +880,48 @@
             lastPage: '',
             params: {}
         }
+        function getChartTheme() {
+            const theme = getRef('theme_toggle').value
+            const textColor = window.getComputedStyle(document.body).getPropertyValue('--text-color')
+            const accentColor = theme === 'dark' ? '#a3a1ff' : '#504dff'
+            return {
+                chart: {
+                    layout: {
+                        backgroundColor: `rgba(${textColor}, 0.01)`,
+                        lineColor: `rgba(${textColor}, 0.1)`,
+                        textColor: `rgba(${textColor}, 0.8)`,
+                    },
+                    watermark: {
+                        color: 'rgba(0, 0, 0, 0)',
+                    },
+                    crosshair: {
+                        color: '#758696',
+                    },
+                    grid: {
+                        vertLines: {
+                            color: '#2B2B43',
+                        },
+                        horzLines: {
+                            color: '#363C4E',
+                        },
+                    },
+                },
+                series: {
+                    color: accentColor
+                }
+            }
+        }
+        function setChartTheme(e) {
+            const themeToApply = getChartTheme()
+            chart.applyOptions(themeToApply.chart);
+            lineSeries.applyOptions(themeToApply.series);
+        }
 
+        document.addEventListener('themechange', setChartTheme)
+
+
+        let chart
+        let lineSeries
         async function showPage(targetPage, options = {}) {
             const { firstLoad, hashChange } = options
             let pageId
@@ -896,6 +964,7 @@
                         if (getRef('listed_assets').querySelector('.listed-asset--active'))
                             getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
                         getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
+                        getRef('chart_asset').textContent = `${params.asset}/INR`
                         getRef('get_price').value = parseFloat(floGlobals.exchangeRates[params.asset].toFixed(4))
                         getRef('traded_asset').textContent = `Trade ${params.asset}`
                         getRef('trade_button').textContent = `${tradeType} ${params.asset}`
@@ -909,12 +978,37 @@
                         })
                     }
                     if (params.hasOwnProperty('asset') && params.asset !== '') {
-                        getRef('exchange_wrapper').children[0].classList.add('hide-on-mobile')
-                        getRef('exchange_wrapper').children[1].classList.remove('hide-on-mobile')
+                        getRef('asset_list_wrapper').classList.add('hide-on-mobile')
+                        getRef('trade_form').classList.remove('hide-on-mobile')
+
+                        if (firstLoad) {
+                            chart = LightweightCharts.createChart(getRef('price_history_chart'), {
+                                width: 800, height: 600,
+                                timeScale: {
+                                    timeVisible: true,
+                                },
+                            });
+                            lineSeries = chart.addLineSeries();
+                            setChartTheme()
+                        }
+                        floExchangeAPI.getRateHistory(params.asset, '2 weeks').then(data => {
+                            data = data.map(({ time, rate }) => {
+                                return {
+                                    time: new Date(time).getTime() / 1000,
+                                    value: rate
+                                }
+                            })
+                            lineSeries.setData(data);
+                            new ResizeObserver(entries => {
+                                const { width, height } = entries[0].contentRect;
+                                chart.applyOptions({ width, height });
+                            }).observe(getRef('price_history_chart').parentNode);
+                        })
                     } else {
-                        getRef('exchange_wrapper').children[1].classList.add('hide-on-mobile')
-                        getRef('exchange_wrapper').children[0].classList.remove('hide-on-mobile')
+                        getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
+                        getRef('trade_form').classList.add('hide-on-mobile')
                     }
+
                     break;
                 case 'my_orders':
                     break;

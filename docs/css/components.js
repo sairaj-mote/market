@@ -1544,6 +1544,9 @@ class ThemeToggle extends HTMLElement {
     static get observedAttributes() {
         return ['checked'];
     }
+    get theme() {
+        return this.hasTheme;
+    }
 
     daylight() {
         this.hasTheme = 'light';
