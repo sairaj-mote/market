@@ -1038,6 +1038,11 @@ sm-checkbox {
     flex-direction: column;
   }
 
+  .listed-asset {
+    border-radius: 0;
+    border-bottom: solid thin rgba(var(--text-color), 0.1);
+  }
+
   #price_chart_wrapper {
     flex: 1;
   }

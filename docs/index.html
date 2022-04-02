@@ -66,10 +66,10 @@
             </button>
         </header>
         <section id="pages_container">
-            <section id="exchange" class="mobile-page">
+            <section id="exchange" class="mobile-page hide">
                 <sm-form id="login_form">
                     <div class="grid gap-0-5">
-                        <h4>Login</h4>
+                        <h2>Login</h2>
                         <p>Please login for exchange.</p>
                     </div>
                     <sm-input type="password" id="login_form__priv_key" placeholder="Private key" animate required>
@@ -95,6 +95,7 @@
                 </sm-form>
                 <section id="exchange_wrapper" class="hide user-content">
                     <div id="asset_list_wrapper" class="grid gap-1 align-start">
+                        <h5>ASSETS</h5>
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
@@ -115,8 +116,9 @@
                             <div class="flex align-center space-between">
                                 <div id="chart_asset"></div>
                                 <strip-select id="price_duration_selector">
-                                    <strip-option value="hour" title="1 Hour price interval" selected>H</strip-option>
-                                    <strip-option value="day" title="1 Day price interval">D</strip-option>
+                                    <strip-option value="hour" title="1 Hour price interval" selected>Hour
+                                    </strip-option>
+                                    <strip-option value="day" title="1 Day price interval">Day</strip-option>
                                 </strip-select>
                             </div>
                             <div class="flex" style="position: relative; flex: 1">
@@ -415,7 +417,6 @@
                 <h4 id="wallet_result__title"></h4>
                 <p id="wallet_result__description"></p>
             </div>
-            <button class="button" onclick="hideWalletResult()">Go back</button>
         </div>
     </sm-popup>
     <sm-popup id="transaction_info_popup">
@@ -806,6 +807,7 @@
 
         window.addEventListener('hashchange', e => showPage(window.location.hash))
         window.addEventListener("load", () => {
+            showPage(window.location.hash, { firstLoad: true });
             document.body.classList.remove('hide')
             document.querySelectorAll('sm-input[data-private-key]').forEach(input => input.customValidation = floCrypto.getPubKeyHex)
             document.addEventListener('keyup', (e) => {
@@ -854,48 +856,6 @@
             lastPage: '',
             params: {}
         }
-        function getChartTheme() {
-            const theme = getRef('theme_toggle').value
-            const textColor = window.getComputedStyle(document.body).getPropertyValue('--text-color')
-            const accentColor = theme === 'dark' ? '#a3a1ff' : '#504dff'
-            return {
-                chart: {
-                    layout: {
-                        backgroundColor: `rgba(${textColor}, 0.01)`,
-                        lineColor: `rgba(${textColor}, 0.1)`,
-                        textColor: `rgba(${textColor}, 0.8)`,
-                    },
-                    watermark: {
-                        color: 'rgba(0, 0, 0, 0)',
-                    },
-                    crosshair: {
-                        color: '#758696',
-                    },
-                    grid: {
-                        vertLines: {
-                            color: '#2B2B43',
-                        },
-                        horzLines: {
-                            color: '#363C4E',
-                        },
-                    },
-                },
-                series: {
-                    color: accentColor
-                }
-            }
-        }
-        function setChartTheme(e) {
-            const themeToApply = getChartTheme()
-            chart.applyOptions(themeToApply.chart);
-            lineSeries.applyOptions(themeToApply.series);
-        }
-
-        document.addEventListener('themechange', setChartTheme)
-
-
-        let chart
-        let lineSeries
         async function showPage(targetPage, options = {}) {
             const { firstLoad, hashChange } = options
             let pageId
@@ -904,10 +864,6 @@
             let searchParams
             if (targetPage === '') {
                 pageId = 'exchange'
-                // if (typeof proxy.userID === "undefined") {
-                //     pageId = 'landing'
-                // } else {
-                // }
             } else {
                 if (targetPage.includes('/')) {
                     if (targetPage.includes('?')) {
@@ -929,74 +885,112 @@
                 const urlSearchParams = new URLSearchParams('?' + searchParams);
                 params = Object.fromEntries(urlSearchParams.entries());
             }
-            switch (pageId) {
-                case 'exchange':
-                    if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
-                        params.asset = 'FLO'
-                    }
-                    if (params.hasOwnProperty('asset') && params.asset !== '') {
-                        if (getRef('listed_assets').querySelector('.listed-asset--active'))
-                            getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
-                        getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
-                        getRef('chart_asset').innerHTML = `<h4> ${params.asset}/INR</h4><p>${formatAmount(floGlobals.exchangeRates[params.asset])}</p>`
-                        getRef('get_price').value = parseFloat(floGlobals.exchangeRates[params.asset].toFixed(4))
-                        getRef('traded_asset').textContent = `Trade ${params.asset}`
-                        getRef('trade_button').textContent = `${tradeType} ${params.asset}`
-                        getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
-                        getRef('quantity_selector').querySelectorAll('.button').forEach(button => {
-                            if (tradeType === 'buy') {
-                                button.title = `Buy ${params.asset} worth ${button.textContent} of total rupee`
-                            } else {
-                                button.title = `Sell ${button.textContent} of total ${params.asset}`
-                            }
-                        })
-                    }
-                    if (params.hasOwnProperty('asset') && params.asset !== '') {
-                        getRef('asset_list_wrapper').classList.add('hide-on-mobile')
-                        getRef('main_header').classList.add('hide-on-mobile')
-                        getRef('asset_page').classList.remove('hide-on-mobile')
-
-                        if (!chart) {
-                            chart = LightweightCharts.createChart(getRef('price_history_chart'), {
-                                width: 800, height: 600,
-                                timeScale: {
-                                    timeVisible: true,
-                                },
-                            });
-                            lineSeries = chart.addLineSeries();
-                            setChartTheme()
-                        }
-                        render.chart(params.asset)
-                    } else {
-                        getRef('main_header').classList.remove('hide-on-mobile')
-                        getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
-                        getRef('asset_page').classList.add('hide-on-mobile')
-                    }
-                    break;
-                case 'my_orders':
-                    break;
-                case 'market':
-                    break;
-                case 'wallet':
-                    break;
+            if (typeof proxy.userID === "undefined" && !['exchange', 'market'].includes(pageId)) {
+                pageId = 'exchange'
+                history.replaceState(null, null, '#/exchange')
             }
+            if (!firstLoad)
+                switch (pageId) {
+                    case 'exchange':
+                        if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
+                            params.asset = 'FLO'
+                        }
+                        if (params.hasOwnProperty('asset') && params.asset !== '') {
+                            if (getRef('listed_assets').querySelector('.listed-asset--active'))
+                                getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
+                            getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
+                            getRef('chart_asset').innerHTML = `<h4> ${params.asset}/INR</h4><p>${formatAmount(floGlobals.exchangeRates[params.asset])}</p>`
+                            getRef('get_price').value = parseFloat(floGlobals.exchangeRates[params.asset].toFixed(4))
+                            getRef('traded_asset').textContent = `Trade ${params.asset}`
+                            getRef('trade_button').textContent = `${tradeType} ${params.asset}`
+                            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
+                            getRef('quantity_selector').querySelectorAll('.button').forEach(button => {
+                                if (tradeType === 'buy') {
+                                    button.title = `Buy ${params.asset} worth ${button.textContent} of total rupee`
+                                } else {
+                                    button.title = `Sell ${button.textContent} of total ${params.asset}`
+                                }
+                            })
+                        }
+                        const animOptions = {
+                            duration: 150,
+                            easing: 'ease',
+                            fill: 'forwards',
+                        }
+                        if (params.hasOwnProperty('asset') && params.asset !== '') {
+                            if (isMobileView) {
+                                if (!getRef('asset_list_wrapper').classList.contains('hide-on-mobile')) {
+                                    animateTo(getRef('main_header'), slideOutLeft, animOptions)
+                                    animateTo(getRef('asset_list_wrapper'), slideOutLeft, animOptions).onfinish = () => {
+                                        getRef('main_header').classList.add('hide-on-mobile')
+                                        getRef('asset_list_wrapper').classList.add('hide-on-mobile')
+                                        getRef('asset_page').classList.remove('hide-on-mobile')
+                                        animateTo(getRef('asset_page'), slideInLeft, animOptions)
+                                    }
+                                }
+                            } else {
+                                getRef('main_header').classList.add('hide-on-mobile')
+                                getRef('asset_list_wrapper').classList.add('hide-on-mobile')
+                                getRef('asset_page').classList.remove('hide-on-mobile')
+                            }
+
+                            if (!chart) {
+                                chart = LightweightCharts.createChart(getRef('price_history_chart'), {
+                                    width: 800, height: 600,
+                                    timeScale: {
+                                        timeVisible: true,
+                                    },
+                                });
+                                lineSeries = chart.addLineSeries();
+                                setChartTheme()
+                            }
+                            render.chart(params.asset)
+                        } else {
+                            if (isMobileView) {
+                                if (!getRef('asset_page').classList.contains('hide-on-mobile')) {
+                                    animateTo(getRef('asset_page'), slideOutRight, animOptions).onfinish = () => {
+                                        getRef('asset_page').classList.add('hide-on-mobile')
+                                        getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
+                                        animateTo(getRef('asset_list_wrapper'), slideInRight, animOptions)
+                                        getRef('main_header').classList.remove('hide-on-mobile')
+                                        animateTo(getRef('main_header'), slideInRight, animOptions)
+                                    }
+                                }
+                            } else {
+                                getRef('asset_page').classList.add('hide-on-mobile')
+                                getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
+                            }
+                        }
+                        break;
+                    case 'my_orders':
+                        break;
+                    case 'market':
+                        break;
+                    case 'wallet':
+                        break;
+                }
             if (pagesData.lastPage !== pageId) {
                 document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hide'))
                 getRef(pageId).classList.remove('hide')
                 document.querySelectorAll('.main_navbar__item').forEach(elem => elem.classList.remove('main_navbar__item--active'))
                 document.querySelector(`.main_navbar__item[href="#/${pageId}"]`).classList.add('main_navbar__item--active')
-                // getRef(pageId)?.animate([
-                //     {
-                //         opacity: 0,
-                //     },
-                //     {
-                //         opacity: 1,
-                //     },
-                // ],
-                //     {
-                //         duration: 150,
-                //         easing: 'ease'
-                //     })
+                getRef('pages_container').style.overflowY = "hidden";
+                getRef(pageId).animate([
+                    {
+                        opacity: 0,
+                        transform: 'translateY(1rem)'
+                    },
+                    {
+                        opacity: 1,
+                        transform: 'translateY(0)'
+                    },
+                ],
+                    {
+                        duration: 150,
+                        easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                    }).onfinish = () => {
+                        getRef('pages_container').style.overflowY = "";
+                    }
                 pagesData.lastPage = pageId
             }
             pagesData.params = params
@@ -1089,8 +1083,9 @@
         function handleMobileChange(e) {
             isMobileView = e.matches
             if (!isMobileView) {
-                getRef('exchange_wrapper').children[0].style = ''
-                getRef('exchange_wrapper').children[1].style = ''
+                getRef('main_header').style = ''
+                getRef('asset_list_wrapper').style = ''
+                getRef('asset_page').style = ''
             }
         }
         mobileQuery.addEventListener('change', handleMobileChange)
@@ -1131,6 +1126,7 @@
             listedAsset(name, rate) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild.firstElementChild
                 clone.href = `#/exchange?asset=${name}`
+                clone.dataset.listedAsset = name
                 clone.querySelector('.listed-asset__icon').innerHTML = listedAssets[name] ? listedAssets[name].icon : ''
                 clone.querySelector('.listed-asset__rate').textContent = rate
                 clone.querySelector('.listed-asset__name').textContent = name
@@ -1232,6 +1228,100 @@
                         }
                     });
                 })
+            },
+            userOrders() {
+                let { buyOrders, sellOrders, transactions } = accountDetails
+                getRef('orders_list').innerHTML = '';
+                const frag = document.createDocumentFragment()
+                const ordersType = getRef('my_orders_category_selector').value
+                if (ordersType === 'open') {
+                    const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
+                    allOpenOrders.forEach(order => {
+                        const { id, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                        const orderDetails = {
+                            id,
+                            asset,
+                            quantity,
+                            type: minPrice ? 'sell' : 'buy',
+                            price: minPrice || maxPrice,
+                            time: time_placed
+                        }
+                        frag.append(render.orderCard(orderDetails))
+                    })
+                } else {
+                    transactions.forEach(transaction => {
+                        const { asset, quantity, unitValue, tx_time, buyer, seller } = transaction
+                        let type, other;
+                        if (seller === proxy.userID) {
+                            type = 'Sold';
+                            other = buyer === proxy.userID ? 'MySelf' : buyer;
+                        } else if (buyer === proxy.userID) {
+                            type = 'Bought';
+                            other = seller;
+                        } else
+                            return;
+                        const transactionDetails = {
+                            buyer,
+                            seller,
+                            type,
+                            other,
+                            asset,
+                            quantity,
+                            unitValue,
+                            time: tx_time
+                        }
+                        frag.append(render.transactionCard(transactionDetails))
+                    });
+                }
+                getRef('orders_list').append(frag)
+            },
+            async marketOrders() {
+                const frag = document.createDocumentFragment()
+                getRef('market_orders_list').innerHTML = '';
+                const ordersType = getRef('market_orders_category_selector').value
+                if (ordersType === 'open') {
+                    try {
+                        const [buyOrders, sellOrders] = await Promise.all([floExchangeAPI.getBuyList(), floExchangeAPI.getSellList()])
+                        const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
+                        allOpenOrders.forEach(order => {
+                            const { floID, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
+                            const orderDetails = {
+                                floID,
+                                asset,
+                                quantity,
+                                type: minPrice ? 'sell' : 'buy',
+                                unitValue: minPrice || maxPrice,
+                                time: time_placed
+                            }
+                            frag.append(render.marketOrderCard(orderDetails))
+                        })
+                    }
+                    catch (err) {
+                        notify(err.data, 'error')
+                    }
+                } else {
+                    try {
+                        const marketTransactions = await floExchangeAPI.getTradeList()
+                        marketTransactions.forEach(transaction => {
+                            const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
+                            const transactionDetails = {
+                                buyer,
+                                seller,
+                                asset,
+                                quantity,
+                                unitValue,
+                                time: tx_time
+                            }
+                            frag.append(render.marketTransactionCard(transactionDetails))
+                        })
+                        const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
+                        getRef('market_orders_list').append(marketTransactionList)
+                    }
+                    catch (err) {
+                        notify(err.data, 'error')
+                    }
+                }
+                getRef('market_orders_list').append(frag)
             }
         }
 
@@ -1245,6 +1335,47 @@
             getRef(id).children[0].disabled = false
             getRef(id).querySelector('sm-spinner')?.remove()
         }
+
+        let chart
+        let lineSeries
+        function getChartTheme() {
+            const theme = getRef('theme_toggle').value
+            const textColor = window.getComputedStyle(document.body).getPropertyValue('--text-color')
+            const accentColor = theme === 'dark' ? '#a3a1ff' : '#504dff'
+            return {
+                chart: {
+                    layout: {
+                        backgroundColor: `rgba(${textColor}, 0.01)`,
+                        lineColor: `rgba(${textColor}, 0.1)`,
+                        textColor: `rgba(${textColor}, 0.8)`,
+                    },
+                    watermark: {
+                        color: 'rgba(0, 0, 0, 0)',
+                    },
+                    crosshair: {
+                        color: '#758696',
+                    },
+                    grid: {
+                        vertLines: {
+                            color: '#2B2B43',
+                        },
+                        horzLines: {
+                            color: '#363C4E',
+                        },
+                    },
+                },
+                series: {
+                    color: accentColor
+                }
+            }
+        }
+        function setChartTheme(e) {
+            const themeToApply = getChartTheme()
+            chart.applyOptions(themeToApply.chart);
+            lineSeries.applyOptions(themeToApply.series);
+        }
+
+        document.addEventListener('themechange', setChartTheme)
 
         getRef('trading_view_switcher').addEventListener('change', e => {
             if (e.target.value === 'trade') {
@@ -1644,103 +1775,9 @@
             })
         }
 
-        function renderUserOrders() {
-            let { buyOrders, sellOrders, transactions } = accountDetails
-            getRef('orders_list').innerHTML = '';
-            const frag = document.createDocumentFragment()
-            const ordersType = getRef('my_orders_category_selector').value
-            if (ordersType === 'open') {
-                const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
-                allOpenOrders.forEach(order => {
-                    const { id, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
-                    const orderDetails = {
-                        id,
-                        asset,
-                        quantity,
-                        type: minPrice ? 'sell' : 'buy',
-                        price: minPrice || maxPrice,
-                        time: time_placed
-                    }
-                    frag.append(render.orderCard(orderDetails))
-                })
-            } else {
-                transactions.forEach(transaction => {
-                    const { asset, quantity, unitValue, tx_time, buyer, seller } = transaction
-                    let type, other;
-                    if (seller === proxy.userID) {
-                        type = 'Sold';
-                        other = buyer === proxy.userID ? 'MySelf' : buyer;
-                    } else if (buyer === proxy.userID) {
-                        type = 'Bought';
-                        other = seller;
-                    } else
-                        return;
-                    const transactionDetails = {
-                        buyer,
-                        seller,
-                        type,
-                        other,
-                        asset,
-                        quantity,
-                        unitValue,
-                        time: tx_time
-                    }
-                    frag.append(render.transactionCard(transactionDetails))
-                });
-            }
-            getRef('orders_list').append(frag)
-        }
-        getRef('my_orders_category_selector').addEventListener('change', renderUserOrders)
+        getRef('my_orders_category_selector').addEventListener('change', render.userOrders)
 
-        getRef('market_orders_category_selector').addEventListener('change', renderMarketOrders)
-        async function renderMarketOrders() {
-            const frag = document.createDocumentFragment()
-            getRef('market_orders_list').innerHTML = '';
-            const ordersType = getRef('market_orders_category_selector').value
-            if (ordersType === 'open') {
-                try {
-                    const [buyOrders, sellOrders] = await Promise.all([floExchangeAPI.getBuyList(), floExchangeAPI.getSellList()])
-                    const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
-                    allOpenOrders.forEach(order => {
-                        const { floID, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
-                        const orderDetails = {
-                            floID,
-                            asset,
-                            quantity,
-                            type: minPrice ? 'sell' : 'buy',
-                            unitValue: minPrice || maxPrice,
-                            time: time_placed
-                        }
-                        frag.append(render.marketOrderCard(orderDetails))
-                    })
-                }
-                catch (err) {
-                    notify(err.data, 'error')
-                }
-            } else {
-                try {
-                    const marketTransactions = await floExchangeAPI.getTradeList()
-                    marketTransactions.forEach(transaction => {
-                        const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
-                        const transactionDetails = {
-                            buyer,
-                            seller,
-                            asset,
-                            quantity,
-                            unitValue,
-                            time: tx_time
-                        }
-                        frag.append(render.marketTransactionCard(transactionDetails))
-                    })
-                    const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
-                    getRef('market_orders_list').append(marketTransactionList)
-                }
-                catch (err) {
-                    notify(err.data, 'error')
-                }
-            }
-            getRef('market_orders_list').append(frag)
-        }
+        getRef('market_orders_category_selector').addEventListener('change', render.marketOrders)
         getRef('market_orders_list').addEventListener('click', e => {
             if (e.target.closest('.more-info')) {
                 showMoreDetails(e)
@@ -1880,14 +1917,25 @@
                                 net: 0
                             }
                         }
+                        // dynamically render listed assets if not already rendered
                         getRef('listed_assets').append(render.listedAsset(asset, formatAmount(parseFloat(rate))));
                         getRef('wallet_asset_selector').append(createElement('sm-option', {
                             textContent: asset,
                             attributes: { value: asset },
                         }));
                     })
+                } else {
+                    // update rates in UI
+                    for (const asset in rates) {
+                        const rate = rates[asset]
+                        const listedAsset = getRef(`listed_assets`).querySelector(`[data-listed-asset="${asset}"]`)
+                        if (listedAsset) {
+                            listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rate))
+                        }
+                    }
                 }
-                getRef('get_price').value = parseFloat(parseFloat(rates["FLO"]).toFixed(4))
+                if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== ''))
+                    getRef('get_price').value = parseFloat(parseFloat(rates[pagesData.params.asset]).toFixed(4))
             }).catch(error => console.error(error))
         }
 
@@ -1906,7 +1954,7 @@
             } else
                 console.info("refresh");
             updateRate(init);
-            renderMarketOrders();
+            render.marketOrders();
             if (proxy.userID)
                 account();
         }
@@ -1961,10 +2009,13 @@
                 getRef('my_assets').append(frag)
 
                 //My orders
-                renderUserOrders();
+                render.userOrders();
                 proxy.secret.then(_ => null).catch(_ => null);
-                showPage(window.location.hash, { firstLoad: true });
+                showPage(window.location.hash);
             }).catch(error => console.error(error))
+                .finally(() => {
+                    hideProcess('login_button_wrapper')
+                })
         };
 
         const UI_evt = {
@@ -2010,10 +2061,10 @@
                     getRef('sign_in_code').value = null;
                     getRef('sign_in_hash').value = null;
                     account();
-                }).catch(error => notify(error.data, 'error'))
-                    .finally(() => {
-                        hideProcess('login_button_wrapper')
-                    })
+                }).catch(error => {
+                    notify(error.data, 'error')
+                    hideProcess('login_button_wrapper')
+                })
             }
 
         };
