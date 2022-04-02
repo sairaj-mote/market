@@ -72,8 +72,8 @@
                         <h2>Login</h2>
                         <p>Please login for exchange.</p>
                     </div>
-                    <sm-input type="password" id="login_form__priv_key" placeholder="Private key" animate required>
-                    </sm-input>
+                    <sm-input type="password" id="login_form__priv_key" placeholder="Private key"
+                        error-text="Invalid private key" data-private-key animate required>
                     </sm-input>
                     <sm-checkbox id="remember_me" checked>
                         <span class="button__icon--right">
@@ -405,7 +405,7 @@
                 <button class="button" value="1">100%</button>
             </div>
             <sm-input id="get_private_key" placeholder="FLO private key" type="password" required
-                error-text="Invalid private key" animate>
+                error-text="Invalid private key" data-private-key="" animate>
             </sm-input>
             <div id="wallet_popup__cta_wrapper" class="stateful-button-wrapper">
                 <sm-button id="wallet_popup__cta" class="uppercase" variant="primary"></sm-button>
@@ -809,6 +809,7 @@
         window.addEventListener("load", () => {
             showPage(window.location.hash, { firstLoad: true });
             document.body.classList.remove('hide')
+            document.querySelectorAll('sm-input[data-flo-id]').forEach(input => input.customValidation = floCrypto.validateAddr)
             document.querySelectorAll('sm-input[data-private-key]').forEach(input => input.customValidation = floCrypto.getPubKeyHex)
             document.addEventListener('keyup', (e) => {
                 if (e.key === 'Escape') {
@@ -921,8 +922,10 @@
                             if (isMobileView) {
                                 if (!getRef('asset_list_wrapper').classList.contains('hide-on-mobile')) {
                                     animateTo(getRef('main_header'), slideOutLeft, animOptions)
+                                    animateTo(getRef('main_navbar'), slideOutLeft, animOptions)
                                     animateTo(getRef('asset_list_wrapper'), slideOutLeft, animOptions).onfinish = () => {
                                         getRef('main_header').classList.add('hide-on-mobile')
+                                        getRef('main_navbar').classList.add('hide-on-mobile')
                                         getRef('asset_list_wrapper').classList.add('hide-on-mobile')
                                         getRef('asset_page').classList.remove('hide-on-mobile')
                                         animateTo(getRef('asset_page'), slideInLeft, animOptions)
@@ -930,6 +933,7 @@
                                 }
                             } else {
                                 getRef('main_header').classList.add('hide-on-mobile')
+                                getRef('main_navbar').classList.add('hide-on-mobile')
                                 getRef('asset_list_wrapper').classList.add('hide-on-mobile')
                                 getRef('asset_page').classList.remove('hide-on-mobile')
                             }
@@ -953,7 +957,9 @@
                                         getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
                                         animateTo(getRef('asset_list_wrapper'), slideInRight, animOptions)
                                         getRef('main_header').classList.remove('hide-on-mobile')
+                                        getRef('main_navbar').classList.remove('hide-on-mobile')
                                         animateTo(getRef('main_header'), slideInRight, animOptions)
+                                        animateTo(getRef('main_navbar'), slideInRight, animOptions)
                                     }
                                 }
                             } else {
@@ -1086,6 +1092,7 @@
                 getRef('main_header').style = ''
                 getRef('asset_list_wrapper').style = ''
                 getRef('asset_page').style = ''
+                getRef('main_navbar').style = ''
             }
         }
         mobileQuery.addEventListener('change', handleMobileChange)
@@ -2012,7 +2019,7 @@
                 render.userOrders();
                 proxy.secret.then(_ => null).catch(_ => null);
                 showPage(window.location.hash);
-            }).catch(error => console.error(error))
+            }).catch(error => notify(error.data, 'error'))
                 .finally(() => {
                     hideProcess('login_button_wrapper')
                 })

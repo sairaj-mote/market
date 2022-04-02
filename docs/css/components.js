@@ -140,26 +140,26 @@ customElements.define('sm-button',
     })
 const smForm = document.createElement('template');
 smForm.innerHTML = `
-        <style>
-        *{
-            padding: 0;
-            margin: 0;
-            box-sizing: border-box;
-        }
-        :host{
-            display: flex;
-            width: 100%;
-        }
-        form{
-            display: grid;
-            gap: var(--gap, 1.5rem);
-            width: 100%;
-        }
-        </style>
-        <form part="form" onsubmit="return false">
-            <slot></slot>
-        </form>
-    `;
+            <style>
+            *{
+                padding: 0;
+                margin: 0;
+                box-sizing: border-box;
+            }
+            :host{
+                display: flex;
+                width: 100%;
+            }
+            form{
+                display: grid;
+                gap: var(--gap, 1.5rem);
+                width: 100%;
+            }
+            </style>
+            <form part="form" onsubmit="return false">
+                <slot></slot>
+            </form>
+        `;
 
 customElements.define('sm-form', class extends HTMLElement {
     constructor() {
