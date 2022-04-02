@@ -325,11 +325,11 @@ ul {
 }
 
 .observe-empty-state:empty {
-  display: none;
+  display: none !important;
 }
 
 .observe-empty-state:not(:empty) + .empty-state {
-  display: none;
+  display: none !important;
 }
 
 .icon {
@@ -633,6 +633,36 @@ sm-checkbox {
   font-weight: 500;
   min-width: 8ch;
 }
+
+#exchange_wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+#asset_page {
+  height: 100%;
+  nav {
+    padding: 1rem 0;
+    .icon-only {
+      margin-left: -0.7rem;
+    }
+  }
+}
+#trade_form {
+  height: 100%;
+  &::part(form) {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  & > * {
+    margin-bottom: 1rem;
+  }
+  & > :last-child {
+    margin-top: auto;
+  }
+}
+
 #my_orders,
 #market {
   width: min(42rem, 100%);
@@ -640,15 +670,6 @@ sm-checkbox {
   .icon {
     height: 1.2rem;
     width: 1.2rem;
-  }
-}
-#orders_section__header--primary {
-  sm-tab-header {
-    --gap: 1.5rem;
-  }
-  sm-tab {
-    font-size: 0.9rem;
-    --padding: 0.8rem 0;
   }
 }
 
@@ -919,7 +940,7 @@ sm-checkbox {
 @media screen and (max-width: 40rem) and (any-hover: none) {
   .cancel-order {
     span {
-      display: none;
+      display: none !important;
     }
   }
 }
@@ -937,7 +958,14 @@ sm-checkbox {
     }
   }
   .hide-on-mobile {
-    display: none;
+    display: none !important;
+  }
+  #asset_page {
+    display: flex;
+    flex-direction: column;
+  }
+  #price_chart_wrapper {
+    flex: 1;
   }
 }
 @media screen and (min-width: 40rem) {
@@ -969,7 +997,7 @@ sm-checkbox {
     grid-template-columns: 1fr 90vw 1fr;
   }
   .hide-on-desktop {
-    display: none;
+    display: none !important;
   }
   #home {
     display: grid;
@@ -1052,7 +1080,7 @@ sm-checkbox {
       margin-right: 0;
     }
     .item__title {
-      display: none;
+      display: none !important;
     }
   }
 }
@@ -1060,15 +1088,18 @@ sm-checkbox {
   #home {
     grid-template-columns: 10rem 1fr;
   }
+  #asset_page {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    nav {
+      grid-column: 1/-1;
+    }
+  }
 }
 @media screen and (min-width: 72rem) {
   .page-layout {
     grid-template-columns: 1fr 80vw 1fr;
-  }
-  .is-signed-in {
-    #exchange_wrapper {
-      grid-template-columns: 16rem minmax(0, 1fr) 20rem;
-    }
   }
 }
 @media screen and (min-width: 120rem) {

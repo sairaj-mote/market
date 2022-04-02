@@ -93,62 +93,73 @@
                     </div>
                     <sm-button onclick="floExchangeAPI.clearAllLocalData()">clear local data</sm-button>
                 </sm-form>
-                <section id="exchange_wrapper">
-                    <div id="asset_list_wrapper" class="grid gap-1 align-start hide user-content">
+                <section id="exchange_wrapper" class="hide user-content">
+                    <div id="asset_list_wrapper" class="grid gap-1 align-start">
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
-                    <div id="price_chart_wrapper" class="flex direction-column gap-0-5 hide user-content">
-                        <div class="flex align-center space-between" style="z-index: 5;">
-                            <div id="chart_asset"></div>
-                            <strip-select>
-                                <strip-option value="day" selected>D</strip-option>
-                                <strip-option value="week">W</strip-option>
-                                <strip-option value="month">M</strip-option>
-                                <strip-option value="year">Y</strip-option>
-                                <strip-option value="all-time">ALL</strip-option>
-                            </strip-select>
-                        </div>
-                        <div class="flex" style="position: relative;">
-                            <div id="price_history_chart"></div>
-                        </div>
-                    </div>
-                    <sm-form id="trade_form" class="user-content hide hide-on-mobile">
-                        <div class="flex space-between align-center">
-                            <a href="#/exchange" class="button icon-only hide-on-desktop">
+                    <div id="asset_page" class="hide-on-mobile">
+                        <nav class="flex align-center space-between hide-on-desktop">
+                            <a href="#/exchange" class="button icon-only">
                                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                     width="24px" fill="#000000">
                                     <path d="M0 0h24v24H0V0z" fill="none" />
                                     <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
                                 </svg>
                             </a>
-                            <h4 id="traded_asset">Trade FLO</h4>
-                            <strip-select id="trade_type_selector" class="tab">
-                                <strip-option value="buy" selected>Buy</strip-option>
-                                <strip-option value="sell">Sell</strip-option>
+                            <strip-select id="trading_view_switcher">
+                                <strip-option value="trade" selected>Trade</strip-option>
+                                <strip-option value="chart">Chart</strip-option>
                             </strip-select>
+                        </nav>
+                        <div id="price_chart_wrapper" class="flex direction-column gap-0-5 hide-on-mobile">
+                            <div class="flex align-center space-between">
+                                <div id="chart_asset"></div>
+                                <strip-select id="price_duration_selector">
+                                    <strip-option value="hour" title="1 Hour price interval" selected>H</strip-option>
+                                    <strip-option value="day" title="1 Day price interval">D</strip-option>
+                                </strip-select>
+                            </div>
+                            <div class="flex" style="position: relative; flex: 1">
+                                <div id="price_history_chart"></div>
+                            </div>
                         </div>
-                        <sm-input id="get_price" placeholder="Max price (₹)" type="number" step="0.01" required animate>
-                        </sm-input>
-                        <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.0001" required animate>
-                        </sm-input>
-                        </sm-input>
-                        <sm-input id="get_total" placeholder="Total (₹)" type="number" min="0.01" step="0.01" required
-                            animate>
-                        </sm-input>
-                        <div id="quantity_selector" class="flex align-center quantity-selector">
-                            <span id="quantity_type">Rupee</span>
-                            <button class="button" value="0.25" title="Buy FLO worth 25% of total rupee">25%</button>
-                            <button class="button" value="0.5" title="Buy FLO worth 50% of total rupee">50%</button>
-                            <button class="button" value="0.75" title="Buy FLO worth 75% of total rupee">75%</button>
-                            <button class="button" value="1" title="Buy FLO worth 100% of total rupee">100%</button>
-                        </div>
-                        <div id="trade_button_wrapper" class="stateful-button-wrapper flex align-center justify-center">
-                            <sm-button id="trade_button" class="uppercase w-100" variant="primary" onclick="tradeFlo()">
-                                BUY
-                                FLO
-                            </sm-button>
-                        </div>
-                    </sm-form>
+                        <sm-form id="trade_form">
+                            <div class="flex space-between align-center">
+                                <h4 id="traded_asset">Trade FLO</h4>
+                                <strip-select id="trade_type_selector" class="tab">
+                                    <strip-option value="buy" selected>Buy</strip-option>
+                                    <strip-option value="sell">Sell</strip-option>
+                                </strip-select>
+                            </div>
+                            <sm-input id="get_price" placeholder="Max price (₹)" type="number" step="0.01" required
+                                animate>
+                            </sm-input>
+                            <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.0001" required
+                                animate>
+                            </sm-input>
+                            </sm-input>
+                            <sm-input id="get_total" placeholder="Total (₹)" type="number" min="0.01" step="0.01"
+                                required animate>
+                            </sm-input>
+                            <div id="quantity_selector" class="flex align-center quantity-selector">
+                                <span id="quantity_type">Rupee</span>
+                                <button class="button" value="0.25"
+                                    title="Buy FLO worth 25% of total rupee">25%</button>
+                                <button class="button" value="0.5" title="Buy FLO worth 50% of total rupee">50%</button>
+                                <button class="button" value="0.75"
+                                    title="Buy FLO worth 75% of total rupee">75%</button>
+                                <button class="button" value="1" title="Buy FLO worth 100% of total rupee">100%</button>
+                            </div>
+                            <div id="trade_button_wrapper"
+                                class="stateful-button-wrapper flex align-center justify-center">
+                                <sm-button id="trade_button" class="uppercase w-100" variant="primary"
+                                    onclick="tradeFlo()">
+                                    BUY
+                                    FLO
+                                </sm-button>
+                            </div>
+                        </sm-form>
+                    </div>
                 </section>
             </section>
             <section id="my_orders" class="grid gap-1 hide mobile-page">
@@ -942,7 +953,8 @@
                     }
                     if (params.hasOwnProperty('asset') && params.asset !== '') {
                         getRef('asset_list_wrapper').classList.add('hide-on-mobile')
-                        getRef('trade_form').classList.remove('hide-on-mobile')
+                        getRef('main_header').classList.add('hide-on-mobile')
+                        getRef('asset_page').classList.remove('hide-on-mobile')
 
                         if (!chart) {
                             chart = LightweightCharts.createChart(getRef('price_history_chart'), {
@@ -954,37 +966,11 @@
                             lineSeries = chart.addLineSeries();
                             setChartTheme()
                         }
-                        floExchangeAPI.getRateHistory(params.asset, '2 weeks').then(data => {
-                            data = data.map(({ time, rate }) => {
-                                return {
-                                    time: new Date(time).getTime() / 1000,
-                                    value: rate
-                                }
-                            })
-                            lineSeries.setData(data);
-                            let width
-                            let height
-                            new ResizeObserver(entries => {
-                                height = entries[0].contentRect.height;
-                                width = entries[0].contentRect.width;
-                                chart.applyOptions({ width, height });
-                            }).observe(getRef('price_history_chart').parentNode);
-                            function setLastBarText() {
-                                getRef('chart_asset').innerHTML = `<h4> ${params.asset}/INR</h4><p>${formatAmount(data[data.length - 1].value)}</p>`;
-                            }
-                            setLastBarText();
-                            chart.subscribeCrosshairMove(function (param) {
-                                if (param === undefined || param.time === undefined || param.point.x < 0 || param.point.x > width || param.point.y < 0 || param.point.y > height) {
-                                    setLastBarText();
-                                } else {
-                                    const price = param.seriesPrices.get(lineSeries);
-                                    getRef('chart_asset').innerHTML = `<h4> ${params.asset}/INR</h4><p>${formatAmount(price)}</p>`;
-                                }
-                            });
-                        })
+                        render.chart(params.asset)
                     } else {
+                        getRef('main_header').classList.remove('hide-on-mobile')
                         getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
-                        getRef('trade_form').classList.add('hide-on-mobile')
+                        getRef('asset_page').classList.add('hide-on-mobile')
                     }
                     break;
                 case 'my_orders':
@@ -1217,6 +1203,36 @@
                 card.appendChild(assetBalance)
                 return card
             },
+            chart(asset, duration = '48 weeks') {
+                floExchangeAPI.getRateHistory(asset, duration).then(data => {
+                    data = data.map(({ time, rate }) => {
+                        return {
+                            time: new Date(time).getTime() / 1000,
+                            value: rate
+                        }
+                    })
+                    lineSeries.setData(data);
+                    let width
+                    let height
+                    new ResizeObserver(entries => {
+                        height = entries[0].contentRect.height;
+                        width = entries[0].contentRect.width;
+                        chart.applyOptions({ width, height });
+                    }).observe(getRef('price_history_chart').parentNode);
+                    function setLastBarText() {
+                        getRef('chart_asset').innerHTML = `<h4> ${asset}/INR</h4><p>${formatAmount(data[data.length - 1].value)}</p>`;
+                    }
+                    setLastBarText();
+                    chart.subscribeCrosshairMove(function (param) {
+                        if (param === undefined || param.time === undefined || param.point.x < 0 || param.point.x > width || param.point.y < 0 || param.point.y > height) {
+                            setLastBarText();
+                        } else {
+                            const price = param.seriesPrices.get(lineSeries);
+                            getRef('chart_asset').innerHTML = `<h4> ${asset}/INR</h4><p>${formatAmount(price)}</p>`;
+                        }
+                    });
+                })
+            }
         }
 
         function showProcess(id) {
@@ -1229,6 +1245,17 @@
             getRef(id).children[0].disabled = false
             getRef(id).querySelector('sm-spinner')?.remove()
         }
+
+        getRef('trading_view_switcher').addEventListener('change', e => {
+            if (e.target.value === 'trade') {
+                getRef('price_chart_wrapper').classList.add('hide-on-mobile')
+                getRef('trade_form').classList.remove('hide-on-mobile')
+            } else {
+                getRef('trade_form').classList.add('hide-on-mobile')
+                getRef('price_chart_wrapper').classList.remove('hide-on-mobile')
+            }
+        })
+
         let tradeType = 'buy'
         getRef('trade_type_selector').addEventListener('change', e => {
             tradeType = e.detail.value
@@ -1244,6 +1271,9 @@
                     button.title = `Sell ${button.textContent} of total ${selectedAsset}`
                 }
             })
+        })
+        getRef('price_duration_selector').addEventListener('change', e => {
+            render.chart(pagesData.params.asset, e.detail.value === 'hour' ? '48 weeks' : 'all-time')
         })
         async function tradeFlo() {
             const asset = pagesData.params.asset;
